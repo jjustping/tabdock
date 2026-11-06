@@ -713,9 +713,10 @@ function enterFs() {
   try { const p = f.call(fsEl, { navigationUI: "hide" }); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ }
 }
 function inFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-if (!canFs) $("#fsBtn").classList.add("hidden");
+const inApp = /TabDockApp\//.test(navigator.userAgent);   // Android app is fullscreen already
+if (!canFs || inApp) $("#fsBtn").classList.add("hidden");
 $("#fsBtn").onclick = () => inFs() ? document.exitFullscreen() : enterFs();
-const autoFs = localStorage.getItem("dock_fs") !== "0" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+const autoFs = !inApp && localStorage.getItem("dock_fs") !== "0" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 if (autoFs && canFs) document.addEventListener("pointerup", () => { if (!inFs()) enterFs(); }, { capture: true });
 document.addEventListener("fullscreenchange", () => $("#fsBtn").classList.toggle("on", inFs()));
 renderClock(); setInterval(renderClock, 5000);

@@ -17,7 +17,7 @@
 и проверки ссылок wfolio). Сделано под Mac mini M4 + Honor Pad 9, но подойдёт любой Mac с macOS 13+ и любой
 планшет с современным браузером.
 
-### Что умеет (v0.2)
+### Что умеет (v0.3)
 
 | Блок | Что делает |
 |---|---|
@@ -55,6 +55,26 @@ cd ~/tabdock
 ```
 
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
+
+### Приложение для Android (v0.3)
+
+Лучше, чем вкладка Chrome: `android/` — маленькое приложение (28 КБ) с WebView, которое
+* **само находит Mac** через Bonjour (`_tabdock._tcp`) и опросом сети — браузер так не умеет;
+* открывается на весь экран, **не даёт экрану гаснуть**, держит альбомную ориентацию;
+* помнит последний Mac и вход; если Mac выключили или перезагрузили — показывает «Жду …» и **сам
+  открывает панель**, как только Mac снова в сети; если пропал совсем — переходит на другой найденный TabDock;
+* ссылки наружу (галереи wfolio и т.п.) открывает в обычном браузере.
+
+Сборка без Android Studio и Gradle (нужны Android SDK и JDK 17, `brew install openjdk@17`):
+
+```bash
+./android/build.sh                       # → android/build/TabDock.apk
+adb install -r android/build/TabDock.apk
+```
+
+Ключ подписи создаётся при первой сборке в `~/.android/tabdock-release.keystore` — сохраните его, иначе
+обновить приложение поверх не получится (только удалить и поставить заново). Первый вход в приложении —
+паролем, или передать ключ из QR: `adb shell am start -n com.jjustping.tabdock/.MainActivity -d "<ссылка из QR>"`.
 
 ### Подключение планшета
 
@@ -137,7 +157,12 @@ data/                ваши данные: config.json, reminders.json, notes.j
 выдуманные съёмки с обложками-заглушками, календарь и «Mac mini»; настоящий каталог не читается.
 Добавьте `?privacy=1` к адресу, чтобы размыть обложки и ключ в QR. Все картинки в `docs/img` сняты так.
 
-### Что проверено, а что нет (v0.2, 6 ноября 2026)
+### Что проверено, а что нет (v0.3, 6 ноября 2026)
+
+v0.3, Android-приложение — **на настоящем Honor Pad 9** (Android 14): установка через adb, приложение само нашло
+MacBook в сети и открыло вход; вход по ключу; после перезапуска приложения вход сохраняется; без сервера —
+экран «Жду …», после запуска сервера панель открылась сама. Веб-версия в Chrome на планшете тоже проверена
+(полный экран по первому касанию). Не проверено: переход на другой Mac, работа после перезагрузки планшета.
 
 v0.2 (подключение и wfolio), на MacBook Air M1: пароль (задать только с Mac, вход, неверный пароль, блокировка
 после 5 попыток — HTTP 429), страница входа с LAN-адреса, поиск в сети (headless Firefox нашёл оба запущенных
@@ -180,7 +205,7 @@ Everything runs locally on the home network: no cloud, no accounts, no subscript
 for the weather and for checking wfolio links). Built for a Mac mini M4 + Honor Pad 9, but any Mac on macOS 13+
 and any tablet with a modern browser will do.
 
-### Features (v0.2)
+### Features (v0.3)
 
 * **Reminders**: its own list. Quick add, tap to complete, due dates, ★ important, tags.
 * **Shoots · Capture One**: reads Capture One catalogs **read-only**. Each user album is a shoot,
@@ -212,6 +237,13 @@ cd ~/tabdock && ./install.sh        # venv + calendar helper + LaunchAgent, open
 
 Keep the folder outside Desktop/Documents/Downloads: background agents can't read those.
 To run it by hand: `.venv/bin/python server.py` → http://localhost:8787
+
+### Android app (v0.3)
+
+`android/` is a tiny (28 KB) WebView app that finds the Mac by itself (Bonjour `_tabdock._tcp` + subnet probe),
+runs fullscreen, keeps the screen on, remembers the last Mac and sign-in, reopens the dock by itself when the Mac
+comes back, and fails over to another TabDock. Build without Gradle: `./android/build.sh` (Android SDK + JDK 17),
+then `adb install -r android/build/TabDock.apk`. Keep `~/.android/tabdock-release.keystore` to be able to update.
 
 ### Pair the tablet
 

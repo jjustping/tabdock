@@ -19,3 +19,7 @@ reminders.json
 notes.json
 shoots.json
 wfolio.json
+android/build/
+android/assets/connect.js
+*.keystore
+*.jks
