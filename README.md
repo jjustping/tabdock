@@ -4,6 +4,8 @@
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
+**⬇ [Скачать APK для Android-планшета / Download the Android APK](https://github.com/jjustping/tabdock/releases/latest)** — `TabDock-0.3.0.apk`, 28 КБ.
+
 ---
 
 ## Русский
@@ -81,6 +83,9 @@ cd ~/tabdock
 * помнит последний Mac и вход; если Mac выключили или перезагрузили — показывает «Жду …» и **сам
   открывает панель**, как только Mac снова в сети; если пропал совсем — переходит на другой найденный TabDock;
 * ссылки наружу (галереи wfolio и т.п.) открывает в обычном браузере.
+
+Готовый APK — в [релизах](https://github.com/jjustping/tabdock/releases/latest): скачайте на планшет, откройте,
+разрешите установку из этого источника и нажмите «Установить».
 
 Сборка без Android Studio и Gradle (нужны Android SDK и JDK 17, `brew install openjdk@17`):
 
@@ -297,7 +302,7 @@ To run it by hand: `.venv/bin/python server.py` → http://localhost:8787
 `android/` is a tiny (28 KB) WebView app that finds the Mac by itself (Bonjour `_tabdock._tcp` + subnet probe),
 runs fullscreen, keeps the screen on, remembers the last Mac and sign-in, reopens the dock by itself when the Mac
 comes back, and fails over to another TabDock. Build without Gradle: `./android/build.sh` (Android SDK + JDK 17),
-then `adb install -r android/build/TabDock.apk`. Keep `~/.android/tabdock-release.keystore` to be able to update.
+then `adb install -r android/build/TabDock.apk`. Ready-made APK: [latest release](https://github.com/jjustping/tabdock/releases/latest). Keep `~/.android/tabdock-release.keystore` to be able to update.
 
 ### Pair the tablet
 
