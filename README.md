@@ -2,7 +2,7 @@
 
 [Русский](#русский) · [English](#english)
 
-![Главная](docs/img/home.png)
+![TabDock — обзор / overview](docs/img/overview.png)
 
 ---
 
@@ -31,9 +31,26 @@
 | **Подключение** (v0.2) | Отдельная вкладка: вход по QR **или по паролю**, планшет сам ищет TabDock в домашней сети и показывает список, автопереключение, если текущий Mac пропал. |
 | **Галереи wfolio** (v0.2) | Ссылки на клиентские галереи со сроком хранения: сколько дней осталось, предупреждение за 14 дней, раз в 6 часов док проверяет, открывается ли ссылка. Привязка к съёмке Capture One. |
 
-![Как это работает](docs/img/diagram.png)
+### Как это работает
 
-Скриншоты: [вход](docs/img/login.png) · [подключение](docs/img/connect.png) · [wfolio](docs/img/wfolio.png) · [главная](docs/img/home.png) · [съёмки](docs/img/shoots.png) · [справка](docs/img/notes.png) · [Mac](docs/img/mac.png) · [настройки](docs/img/settings.png)
+![Схема работы](docs/img/diagram.png)
+*Планшет и Mac в домашней сети; в интернет уходят только погода и проверка ссылок wfolio.*
+
+### Экраны
+
+![Главная](docs/img/home.png)
+*Главная: напоминания, съёмки Capture One с прогрессом, погода и календарь, музыка, быстрые действия.*
+
+![Справка](docs/img/notes.png)
+*Справка: свои шпаргалки и ссылки, разделы, цвета, закрепление.*
+
+![Mac](docs/img/mac.png)
+*Mac: процессор, температура, память, диски (внешние можно извлечь), системные действия и приложения.*
+
+![Настройки](docs/img/settings.png)
+*Настройки: город для погоды, календарь, приложения в быстрых действиях, каталоги Capture One.*
+
+(Все экраны сняты в демо-режиме: съёмки и обложки выдуманные.)
 
 ### Установка на Mac mini
 
@@ -78,6 +95,12 @@ adb install -r android/build/TabDock.apk
 
 ### Подключение планшета
 
+![Вход на планшете](docs/img/login.png)
+*Вход на планшете: пароль слева, справа TabDock, найденные в сети автоматически.*
+
+![Подключение](docs/img/connect.png)
+*Вкладка «Подключение»: QR-код, пароль, ключ доступа, список Mac в сети и автоподключение.*
+
 1. Планшет и Mac в одной сети.
 2. На Mac нажмите ▦ (вверху справа) — появится QR-код.
 3. Отсканируйте камерой планшета и откройте ссылку в Chrome. Планшет запомнится (cookie на год).
@@ -99,6 +122,9 @@ adb install -r android/build/TabDock.apk
 отключает все ранее подключённые устройства. С самого Mac (localhost) вход не нужен.
 
 ### wfolio
+
+![Галереи wfolio](docs/img/wfolio.png)
+*Галереи wfolio: сколько дней хранения осталось, открывается ли ссылка, к какой съёмке привязана.*
 
 У wfolio **нет открытого API**, вебхуков или выгрузки со сроками хранения (проверено по документации
 docs.wfolio.pro 6 ноября 2026; CSV-выгрузка проекта содержит только избранное, без дат). Поэтому:
@@ -125,6 +151,9 @@ macOS спросит разрешения у `python3` при первом об�
 Если календарь не нужен — «Настройки → Календарь → Выключить».
 
 ### Как считается прогресс съёмок
+
+![Съёмки](docs/img/shoots.png)
+*Съёмки: статус, прогресс экспорта, сколько кадров отобрано и выгружено, срок wfolio.*
 
 * **Съёмка** = пользовательский альбом в каталоге (служебные «Недавние импорты» пропускаются).
   Если альбомов нет, съёмками считаются импорты.
@@ -228,6 +257,31 @@ and any tablet with a modern browser will do.
   The dock checks every link every 6 hours (active / expired) and warns 14 days ahead. No wfolio credentials are
   used.
 
+### How it works
+
+![How it works](docs/img/diagram.png)
+*Tablet and Mac on the home network; only the weather and wfolio link checks go to the internet.*
+
+### Screens (demo data)
+
+![Home](docs/img/home.png)
+*Home: reminders, Capture One shoots with progress, weather & calendar, music, quick actions.*
+
+![Shoots](docs/img/shoots.png)
+*Shoots: status, export progress, picked/exported counts, wfolio expiry.*
+
+![wfolio](docs/img/wfolio.png)
+*wfolio galleries: days of storage left, link alive or expired, linked shoot.*
+
+![Reference](docs/img/notes.png)
+*Reference: your own cheat sheets and links.*
+
+![Mac](docs/img/mac.png)
+*Mac: CPU, temperature, memory, disks, system actions and apps.*
+
+![Settings](docs/img/settings.png)
+*Settings: weather city, calendar, quick-action apps, Capture One catalogs.*
+
 ### Install
 
 ```bash
@@ -247,6 +301,12 @@ then `adb install -r android/build/TabDock.apk`. Keep `~/.android/tabdock-releas
 
 ### Pair the tablet
 
+![Login](docs/img/login.png)
+*Tablet login: password on the left, TabDock servers found on the LAN on the right.*
+
+![Connect](docs/img/connect.png)
+*Connect tab: QR code, password, access key, servers on the LAN, auto-connect.*
+
 Press ▦ on the Mac, scan the QR code with the tablet, then in Chrome use ⋮ → "Add to Home screen".
 Devices without the key only see a "not paired" page. *Settings → New key* revokes all paired devices.
 
@@ -256,11 +316,14 @@ The first time, macOS asks to allow `python3` access to Pictures (for the Captur
 Calendars, Automation (Music/Spotify/Calendar) and Screen Recording (for the screenshot button).
 Click Allow, or turn them on in System Settings → Privacy & Security.
 
-### Tested / not tested (v0.1)
+### Tested / not tested (v0.3)
 
 Tested on a MacBook Air M1 (macOS 15.7), started by hand: the server, the API, key auth, reading a
 real Capture One catalog, sensors, volume, weather, and the UI at 1280×800.
-**Not tested yet**: the Mac mini itself, the Honor tablet, the full `install.sh`/LaunchAgent run,
-Calendar access, a playing Music/Spotify track, and Capture One sessions (only catalogs are supported).
+On a real Honor Pad 9 (Android 14): the web UI in Chrome (fullscreen on first tap) and the Android app
+(finds the Mac by itself, keeps the sign-in after restart, reopens the dock when the server comes back).
+Also: password login, LAN scan, Bonjour advertising, wfolio link checks.
+**Not tested yet**: the Mac mini itself, the full `install.sh`/LaunchAgent run, failover to another Mac,
+a playing Music/Spotify track, and Capture One sessions (only catalogs are supported).
 
 License: MIT.
