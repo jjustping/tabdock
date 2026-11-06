@@ -1,0 +1,41 @@
+/* Liquid Glass — translucent layered glass over a soft colour field (macOS/iOS 26 inspired) */
+:root {
+  --bg: #0b1020; --panel: rgba(255,255,255,.07); --panel-2: rgba(255,255,255,.09); --line: rgba(255,255,255,.14);
+  --text: #f5f7fb; --muted: rgba(235,240,255,.62); --dim: rgba(235,240,255,.38);
+  --accent: #0a84ff; --accent-2: #ff9f0a; --blue: #64d2ff; --green: #30d158; --amber: #ffd60a; --red: #ff453a; --violet: #bf5af2;
+  --font: -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-num: -apple-system, "SF Pro Rounded", ui-rounded, "SF Pro Display", system-ui, sans-serif;
+  --r: 30px;
+  --card-bg: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 45%, rgba(255,255,255,.08));
+  --card-border: 1px solid rgba(255,255,255,.16);
+  --card-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(255,255,255,.06), 0 18px 50px rgba(0,0,0,.35);
+  --card-blur: blur(28px) saturate(180%);
+  --chip-bg: rgba(255,255,255,.10); --inner-bg: rgba(255,255,255,.08); --btn-bg: rgba(255,255,255,.10);
+  --btn-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+  --primary-bg: linear-gradient(180deg, #3d9bff, #0a7aff); --primary-text: #fff; --on-accent: #fff;
+  --tabs-bg: rgba(30,34,52,.45); --tabs-border: 1px solid rgba(255,255,255,.16); --tab-active-bg: rgba(255,255,255,.16);
+  --h-transform: none; --h-spacing: 0; --h-size: 18px; --h-color: rgba(245,247,251,.92);
+  --md-text: rgba(240,244,255,.84); --track: rgba(255,255,255,.12);
+}
+body { background:
+  radial-gradient(40% 50% at 12% 18%, rgba(88,86,214,.55), transparent 70%),
+  radial-gradient(35% 45% at 88% 12%, rgba(10,132,255,.45), transparent 70%),
+  radial-gradient(45% 50% at 70% 92%, rgba(255,159,10,.30), transparent 70%),
+  radial-gradient(40% 45% at 22% 95%, rgba(48,209,88,.25), transparent 70%), #0b1020; background-attachment: fixed; }
+.card h2 { font-weight: 650; }
+.tabs { border-top: 0; background: transparent; padding: 4px 0 12px; }
+nav.tabs > button.active { box-shadow: inset 0 1px 0 rgba(255,255,255,.3); }
+body > nav.tabs { margin: 0 auto 10px; width: min(860px, calc(100% - 40px)); border-radius: 999px; padding: 6px; gap: 2px;
+  background: var(--tabs-bg); border: var(--tabs-border); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 40px rgba(0,0,0,.4); }
+body > nav.tabs > button { border-radius: 999px; padding: 6px 0; flex: 1 1 0; }
+.stat, .chip, .icon-btn { border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); border-radius: 18px; }
+.chip { border-radius: 999px; }
+.btn, .seg button, .tile, .fchip, .app-pick button { border: 1px solid rgba(255,255,255,.12); }
+.btn { border-radius: 999px; } .tile { border-radius: 20px; } .btn.sq { border-radius: 16px; }
+input[type=text], input[type=password], input[type=date], input[type=number], input[type=search], textarea, select {
+  background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.12); border-radius: 16px; }
+.cover { border-radius: 14px; }
+.sheet { background: rgba(5,8,20,.35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.banner { background: rgba(30,40,60,.55); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); border-color: rgba(255,255,255,.25); }
+.ctrls .btn.play { background: rgba(255,255,255,.92); color: #0b1020; }

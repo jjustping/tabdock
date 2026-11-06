@@ -50,12 +50,12 @@ function handleEvents(evs) {
   const fresh = evs.filter((e) => e.id > lastEvent && Date.now() / 1000 - e.at < 600);
   lastEvent = maxId; localStorage.setItem("dock_last_event", lastEvent);
   for (const e of fresh) {
-    if (e.type === "export_done") banner("✅ Экспорт закончился", `«${e.name}»: +${e.added} кадр${e.added % 10 === 1 && e.added % 100 !== 11 ? "" : "ов"}${e.target ? ` · ${e.done} из ${e.target}` : ""}`);
+    if (e.type === "export_done") banner("Экспорт закончился", `«${e.name}»: +${e.added} кадр${e.added % 10 === 1 && e.added % 100 !== 11 ? "" : "ов"}${e.target ? ` · ${e.done} из ${e.target}` : ""}`);
   }
 }
 function banner(title, text) {
   const b = document.createElement("div"); b.className = "banner";
-  b.innerHTML = `<b>${esc(title)}</b><span>${esc(text)}</span>`;
+  b.innerHTML = `${ic("check", "banner-ic")}<div><b>${esc(title)}</b><span>${esc(text)}</span></div>`;
   b.onclick = () => b.remove();
   document.body.appendChild(b); chime();
   setTimeout(() => b.classList.add("show"), 20);
@@ -95,7 +95,7 @@ function md(src) {
     if (cb) {
       if (!inList) { html += '<ul class="checklist">'; inList = true; }
       const on = cb[1].trim() !== "";
-      html += `<li class="chk ${on ? "on" : ""}" data-line="${idx}"><span class="box">${on ? "✓" : ""}</span>${inline(cb[2])}</li>`;
+      html += `<li class="chk ${on ? "on" : ""}" data-line="${idx}"><span class="box">${on ? ic("check") : ""}</span>${inline(cb[2])}</li>`;
       continue;
     }
     if (/^\s*[-•]\s+/.test(l)) { if (!inList) { html += "<ul>"; inList = true; } html += "<li>" + inline(l.replace(/^\s*[-•]\s+/, "")) + "</li>"; continue; }
@@ -144,8 +144,8 @@ function renderClock() {
 function renderTop() {
   const s = S.state.sys || {}, w = S.weather || {};
   $("#weatherChip").innerHTML = w.temp != null
-    ? `${w.icon} <b>${Math.round(w.temp)}°</b> <span class="muted">${esc(w.text)} · ${esc(w.place || "")}</span>`
-    : `<span class="muted">${w.configured === false ? "☁︎ Город для погоды — в Настройках" : "☁︎ Погода…"}</span>`;
+    ? `${ic(weatherIcon(w.code), "wx")} <b>${Math.round(w.temp)}°</b> <span class="muted">${esc(w.text)} · ${esc(w.place || "")}</span>`
+    : `<span class="muted">${w.configured === false ? ic("cloud") + " Город для погоды — в Настройках" : ic("cloud") + " Погода…"}</span>`;
   const t = s.temp || {}, m = s.mem || {};
   const root = (s.disks || []).find((d) => !d.external);
   const cls = (v, w1, w2) => v == null ? "" : v >= w2 ? "hot" : v >= w1 ? "warn" : "";
@@ -174,11 +174,11 @@ function remindersSorted() {
 function remRow(r) {
   const due = dueLabel(r.due);
   return `<div class="rem ${r.done ? "done" : ""}" data-id="${r.id}">
-    <button class="check" data-act="toggle">✓</button>
+    <button class="check" data-act="toggle">${ic("check")}</button>
     <div class="txt" data-act="edit">${esc(r.text)}
       ${due || r.list ? `<div class="meta">${due ? `<span class="tag due ${due.cls}">${due.txt}</span>` : ""}${r.list ? `<span class="tag">${esc(r.list)}</span>` : ""}</div>` : ""}
     </div>
-    ${r.important ? '<span class="star">★</span>' : ""}
+    ${r.important ? `<span class="star">${ic("star")}</span>` : ""}
   </div>`;
 }
 function renderReminders() {
@@ -188,9 +188,9 @@ function renderReminders() {
   el.innerHTML = `<h2>Напоминания <span class="count">${open.length || ""}</span>
       <button class="act" id="remDoneBtn">${done.length ? (showDone ? "Скрыть выполненные" : "Выполненные · " + done.length) : ""}</button></h2>
     <form class="add-row" id="remForm"><input type="text" id="remInput" placeholder="Новое напоминание…" autocomplete="off" enterkeyhint="done">
-      <button class="btn sq" type="button" id="remMore" title="Дата и важность">📅</button>
-      <button class="btn primary sq" type="submit">+</button></form>
-    <div class="list">${open.map(remRow).join("") || '<div class="empty">Всё сделано ✨</div>'}
+      <button class="btn sq" type="button" id="remMore" title="Дата и важность">${ic("calendar")}</button>
+      <button class="btn primary sq" type="submit">${ic("plus")}</button></form>
+    <div class="list">${open.map(remRow).join("") || '<div class="empty">Всё сделано</div>'}
       ${showDone && done.length ? `<div class="day-h">Выполненные</div>${done.map(remRow).join("")}
         <div style="text-align:center;padding:10px"><button class="btn danger" id="remClear">Очистить выполненные</button></div>` : ""}</div>`;
   if (keep !== null) { const i = $("#remInput"); i.value = keep; i.focus(); }
@@ -225,7 +225,7 @@ function editReminder(r, presetText) {
       <input type="date" id="rDue" value="${esc(r.due || "")}" style="margin-top:8px"></div>
     <div class="field"><label>Список / тег</label><input type="text" id="rList" value="${esc(r.list || "")}" placeholder="например: Фото, Дом, Диджеинг" list="rLists">
       <datalist id="rLists">${lists.map((l) => `<option value="${esc(l)}">`).join("")}</datalist></div>
-    <div class="field"><div class="seg"><button id="rImp" class="${r.important ? "on" : ""}">★ Важное</button></div></div>
+    <div class="field"><div class="seg"><button id="rImp" class="${r.important ? "on" : ""}">${ic("star")} Важное</button></div></div>
     <div class="actions-row">${isNew ? "" : '<button class="btn danger left" id="rDel">Удалить</button>'}
       <button class="btn" id="rCancel">Отмена</button><button class="btn primary" id="rSave">Сохранить</button></div>`, (b) => {
     const syncSeg = () => $$("#rDueSeg button", b).forEach((x) => x.classList.toggle("on", x.dataset.d === $("#rDue").value));
@@ -261,7 +261,7 @@ function renderShootsCard() {
   const todo = items.filter((s) => s.status !== "done" && s.status !== "delivered");
   const frames = todo.reduce((a, s) => a + Math.max(0, s.target - s.done), 0);
   const top = items.slice(0, 3);
-  $("#shootsCard").innerHTML = `<h2>Съёмки <button class="act" data-tab="shoots">Все →</button></h2>
+  $("#shootsCard").innerHTML = `<h2>Съёмки <button class="act" data-tab="shoots">Все ${ic("chevron")}</button></h2>
     <div class="shoots-summary">
       <div class="sum"><b>${todo.length}</b><small>в работе / ждут</small></div>
       <div class="sum"><b>${frames}</b><small>кадров осталось</small></div>
@@ -277,7 +277,7 @@ function renderShootsCard() {
 }
 function renderShootsView() {
   const sh = S.shoots || {}, items = sh.items || [];
-  const errs = (sh.errors || []).map((e) => `<div class="card" style="border-color:var(--red)">⚠️ ${esc(e.catalog)}: ${esc(e.error)}</div>`).join("");
+  const errs = (sh.errors || []).map((e) => `<div class="card" style="border-color:var(--red)">${ic("alert")} ${esc(e.catalog)}: ${esc(e.error)}</div>`).join("");
   $("#shootsView").innerHTML = `<div class="toolbar"><h2 style="margin:0;font-size:24px">Съёмки</h2><div class="spacer"></div>
       <span class="muted" style="font-size:14px">${(sh.catalogs || []).length} каталог(а) · обновляется автоматически</span>
       <button class="btn" id="shAdd">+ Съёмка вручную</button></div>${errs}
@@ -315,7 +315,7 @@ function editShoot(key) {
       <div class="field"><label>Срок сдачи</label><input type="date" id="sDeadline" value="${esc(s.deadline || "")}"></div></div>
     <div class="field"><label>Клиент</label><input type="text" id="sClient" value="${esc(s.client)}"></div>
     <div class="field"><label>Заметка</label><input type="text" id="sNote" value="${esc(s.note)}" placeholder="что осталось, пожелания клиента…"></div>
-    ${galleryFor(s.key) ? `<div class="hint" style="color:var(--text)">🔗 wfolio: ${esc(gTitle(galleryFor(s.key)))} · ${esc(gDays(galleryFor(s.key)).txt)}</div>` : ""}
+    ${galleryFor(s.key) ? `<div class="hint" style="color:var(--text)">${ic("link")} wfolio: ${esc(gTitle(galleryFor(s.key)))} · ${esc(gDays(galleryFor(s.key)).txt)}</div>` : ""}
     ${s.source === "folder" ? `<div class="hint">Папка: ${esc(s.path || "")} · ${s.total} исходников · ${s.work_files || 0} рабочих файлов · ${s.exported} готовых</div>` : manual ? "" : `<div class="hint">${s.total} кадров · ${s.picked} отобрано · ${s.exported} экспортировано${s.last_export ? " · последний экспорт " + fmtDate(s.last_export) : ""} · каталог ${esc(s.catalog_name)}</div>`}
     <div class="actions-row">
       ${manual ? '<button class="btn danger left" id="sDel">Удалить</button>' : `<button class="btn left" id="sHide">${s.hidden ? "Показать" : "Скрыть"}</button><button class="btn" id="sOpen">${s.source === "folder" ? "Открыть папку" : "Открыть в Capture One"}</button>`}
@@ -361,13 +361,13 @@ function catalogHealth() {
   const out = [];
   for (const v of sh.volumes || []) {
     const d = disks.find((x) => x.mount === v.mount);
-    if (!v.connected) out.push(`<div class="health bad">⚠ Диск «${esc(v.name)}» с каталогом не подключён — съёмки не обновляются</div>`);
-    else if (d && d.pct >= 90) out.push(`<div class="health warn">💾 На «${esc(v.name)}» осталось ${fmtBytes(d.free)} (${Math.round(100 - d.pct)}%)</div>`);
+    if (!v.connected) out.push(`<div class="health bad">${ic("alert")} Диск «${esc(v.name)}» с каталогом не подключён — съёмки не обновляются</div>`);
+    else if (d && d.pct >= 90) out.push(`<div class="health warn">${ic("drive")} На «${esc(v.name)}» осталось ${fmtBytes(d.free)} (${Math.round(100 - d.pct)}%)</div>`);
   }
   for (const b of sh.backups || []) {
     const n = daysAgo(b.last);
-    if (n == null) out.push(`<div class="health warn">🗄 Бэкапов каталога «${esc(b.name)}» не найдено</div>`);
-    else if (n >= 14) out.push(`<div class="health ${n >= 30 ? "bad" : "warn"}">🗄 Последний бэкап каталога — ${n} дн. назад</div>`);
+    if (n == null) out.push(`<div class="health warn">${ic("archive")} Бэкапов каталога «${esc(b.name)}» не найдено</div>`);
+    else if (n >= 14) out.push(`<div class="health ${n >= 30 ? "bad" : "warn"}">${ic("archive")} Последний бэкап каталога — ${n} дн. назад</div>`);
   }
   return out.join("");
 }
@@ -375,16 +375,16 @@ function catalogHealth() {
 // ---------------- deadlines: shoots, wfolio expiry, reminders (next 14 days) ----------------
 function deadlines() {
   const items = [], lim = todayStr(14);
-  for (const s of (S.shoots.items || [])) if (s.deadline && !s.hidden && s.status !== "delivered" && s.deadline <= lim) items.push({ date: s.deadline, icon: "◐", text: "Сдать «" + s.name + "»", tab: "shoots" });
-  for (const g of (S.wfolio || [])) if (g.expires && g.expires <= lim && (g.check || {}).status !== "expired") items.push({ date: g.expires, icon: "⏳", text: "wfolio: «" + gTitle(g) + "» истекает", tab: "shoots" });
-  for (const r of (S.reminders || [])) if (r.due && !r.done && r.due <= lim) items.push({ date: r.due, icon: "✓", text: r.text });
+  for (const s of (S.shoots.items || [])) if (s.deadline && !s.hidden && s.status !== "delivered" && s.deadline <= lim) items.push({ date: s.deadline, icon: "aperture", text: "Сдать «" + s.name + "»", tab: "shoots" });
+  for (const g of (S.wfolio || [])) if (g.expires && g.expires <= lim && (g.check || {}).status !== "expired") items.push({ date: g.expires, icon: "hourglass", text: "wfolio: «" + gTitle(g) + "» истекает", tab: "shoots" });
+  for (const r of (S.reminders || [])) if (r.due && !r.done && r.due <= lim) items.push({ date: r.due, icon: "check", text: r.text });
   return items.sort((a, b) => a.date < b.date ? -1 : 1);
 }
 function deadlinesHtml() {
   const list = deadlines(); if (!list.length) return "";
   return `<div class="day-h">Ближайшие сроки</div>` + list.slice(0, 5).map((d) => {
     const l = dueLabel(d.date);
-    return `<div class="ev dl" ${d.tab ? `data-tab="${d.tab}"` : ""}><div class="tm"><span class="tag due ${l.cls}">${esc(l.txt)}</span></div><div class="tt">${esc(d.icon)} ${esc(d.text)}</div></div>`;
+    return `<div class="ev dl" ${d.tab ? `data-tab="${d.tab}"` : ""}><div class="tm"><span class="tag due ${l.cls}">${esc(l.txt)}</span></div><div class="tt">${ic(d.icon)} ${esc(d.text)}</div></div>`;
   }).join("");
 }
 
@@ -393,7 +393,7 @@ function renderCalendar() {
   const c = S.calendar || {}, w = S.weather || {};
   const fc = (w.days || []).slice(0, 4).map((d, i) => {
     const dt = new Date(d.date + "T12:00");
-    return `<div class="d">${i === 0 ? "сегодня" : RU_DS[dt.getDay()]}<b>${d.icon}</b>${Math.round(d.max)}° <span class="dim">${Math.round(d.min)}°</span>${d.rain ? `<div class="dim">💧${d.rain}%</div>` : ""}</div>`;
+    return `<div class="d">${i === 0 ? "сегодня" : RU_DS[dt.getDay()]}<b>${ic(weatherIcon(d.code), "wx")}</b>${Math.round(d.max)}° <span class="dim">${Math.round(d.min)}°</span>${d.rain ? `<div class="dim">${ic("drop", "sm")}${d.rain}%</div>` : ""}</div>`;
   }).join("");
   let evHtml = "";
   if (!c.ok) {
@@ -427,11 +427,11 @@ function renderPlayer() {
   if (volDragging) return;
   const vol = m.volume;
   el.innerHTML = `<h2>Сейчас играет ${p ? `<span class="dim" style="text-transform:none;letter-spacing:0">· ${esc(p.app)}</span>` : ""}</h2>
-    <div class="player"><div class="art" style="${p && p.art ? `background-image:url('${esc(p.art)}')` : ""}">${p && p.art ? "" : "♪"}</div>
+    <div class="player"><div class="art" style="${p && p.art ? `background-image:url('${esc(p.art)}')` : ""}">${p && p.art ? "" : ic("note")}</div>
       <div class="meta"><div class="t">${p ? esc(p.title) : "Ничего не играет"}</div><div class="a">${p ? esc([p.artist, p.album].filter(Boolean).join(" — ")) : "Apple Music / Spotify"}</div>
       ${p && p.duration ? `<div class="progress-line"><i style="width:${Math.min(100, 100 * p.position / p.duration)}%"></i></div><div class="dim" style="font-size:12px;margin-top:4px">${fmtDur(p.position)} / ${fmtDur(p.duration)}</div>` : ""}</div></div>
-    <div class="ctrls"><button class="btn" data-m="previous">⏮</button><button class="btn play" data-m="playpause">${p && p.state === "playing" ? "⏸" : "▶"}</button><button class="btn" data-m="next">⏭</button>
-      <button class="btn" data-m="mute">${m.muted ? "🔇" : "🔊"}</button></div>
+    <div class="ctrls"><button class="btn" data-m="previous">${ic("prev")}</button><button class="btn play" data-m="playpause">${ic(p && p.state === "playing" ? "pause" : "play")}</button><button class="btn" data-m="next">${ic("next")}</button>
+      <button class="btn" data-m="mute">${ic(m.muted ? "mute" : "volume")}</button></div>
     <div class="vol">${vol == null ? '<span class="dim" style="font-size:13px">Громкость этого выхода нельзя менять программно</span>' :
       `<input type="range" min="0" max="100" value="${vol}" id="volRange" style="--p:${vol}%"><span class="v" id="volV">${vol}</span>`}</div>`;
   $$("[data-m]", el).forEach((b) => b.onclick = async () => { const r = await api("/api/media", { cmd: b.dataset.m }); S.state.media = r.media; renderPlayer(); });
@@ -450,23 +450,23 @@ function renderPlayer() {
 
 // ---------------- render: quick actions ----------------
 const SYS_TILES = [
-  { a: "awake", ic: "☕", t: "Не спать" },
-  { a: "screenshot", ic: "⌗", t: "Скриншот" },
-  { a: "display_sleep", ic: "◐", t: "Экран выкл." },
-  { a: "sleep", ic: "⏾", t: "Сон", confirm: true },
+  { a: "awake", ic: "cup", t: "Не спать" },
+  { a: "screenshot", ic: "frame", t: "Скриншот" },
+  { a: "display_sleep", ic: "display", t: "Экран выкл." },
+  { a: "sleep", ic: "moon", t: "Сон", confirm: true },
 ];
 async function doAction(action, arg) {
   try { const r = await api("/api/action", { action, arg }); toast(r.message || (r.ok ? "Готово" : "Не получилось")); if ("awake" in r) { S.state.awake = r.awake; renderTop(); renderQuick(); } }
   catch (e) { toast("Ошибка: " + e.message); }
 }
 function appTile(a) {
-  return `<button class="tile" data-app="${esc(a.name)}" ${a.installed ? "" : 'style="opacity:.35"'}><img src="/api/app_icon?name=${encodeURIComponent(a.name)}" onerror="this.outerHTML='<span class=ic>▢</span>'" alt="">${esc(a.name)}</button>`;
+  return `<button class="tile" data-app="${esc(a.name)}" ${a.installed ? "" : 'style="opacity:.35"'}><img src="/api/app_icon?name=${encodeURIComponent(a.name)}" onerror="this.outerHTML=ic('app','ic')" alt="">${esc(a.name)}</button>`;
 }
 function renderQuick() {
   const apps = (S.apps || []).filter((a) => a.installed).slice(0, 8);
   $("#quickCard").innerHTML = `<h2>Быстрые действия <button class="act" data-tab="settings">Изменить</button></h2>
     <div class="tiles">${apps.map(appTile).join("")}
-    ${SYS_TILES.map((t) => `<button class="tile ${t.a === "awake" && S.state.awake ? "on" : ""}" data-sys="${t.a}" ${t.confirm ? 'data-confirm="1"' : ""}><span class="ic">${t.ic}</span>${t.t}</button>`).join("")}</div>`;
+    ${SYS_TILES.map((t) => `<button class="tile ${t.a === "awake" && S.state.awake ? "on" : ""}" data-sys="${t.a}" ${t.confirm ? 'data-confirm="1"' : ""}><span class="ic">${ic(t.ic)}</span>${t.t}</button>`).join("")}</div>`;
   bindTiles($("#quickCard"));
 }
 function bindTiles(root) {
@@ -484,7 +484,7 @@ function spark(vals, w = 300, h = 60) {
 }
 function renderMacMini() {
   const s = S.state.sys || {};
-  $("#macMiniCard").innerHTML = `<h2>${esc(s.hostname || "Mac")} <button class="act" data-tab="mac">Подробно →</button></h2>
+  $("#macMiniCard").innerHTML = `<h2>${esc(s.hostname || "Mac")} <button class="act" data-tab="mac">Подробно ${ic("chevron")}</button></h2>
     <div class="mini-rows"><div><span>CPU</span>${s.cpu != null ? Math.round(s.cpu) + "%" : "—"}</div><div><span>Температура</span>${s.temp && s.temp.cpu != null ? Math.round(s.temp.cpu) + "°C" : "—"}</div>
     <div><span>Память</span>${s.mem ? fmtBytes(s.mem.used) + " / " + fmtBytes(s.mem.total) : "—"}</div><div><span>Работает</span>${s.uptime ? fmtUptime(s.uptime) : "—"}</div></div>
     ${spark(s.cpu_history)}`;
@@ -497,19 +497,19 @@ function renderMacView() {
     const isCat = catVols.some((v) => v.mount === d.mount);
     const meta = [img ? "образ диска" : d.model, img ? "" : d.bus, d.fs, d.smart && !/not supported/i.test(d.smart) ? "SMART: " + (d.smart === "Verified" ? "в порядке" : d.smart) : ""].filter(Boolean).join(" · ");
     const full = !img && d.pct > 90;
-    return `<div class="disk"><div class="nm">${img ? "📀" : d.external ? "💾" : "🖥\ufe0f"} ${esc(d.name)}
+    return `<div class="disk"><div class="nm">${ic(img ? "disc" : d.external ? "drive" : "computer")} ${esc(d.name)}
         ${isCat ? '<span class="tag cat">каталог C1</span>' : ""}<small class="dim">${esc(d.external ? meta : "системный")}</small></div>
       <div class="bar ${full ? "" : "done"}"><i style="width:${d.pct}%;${full ? "background:var(--red)" : ""}"></i></div>
       <div class="fr">${fmtBytes(d.free)} свободно<br><span class="dim">из ${fmtBytes(d.total)}</span></div>
-      ${d.external ? `<button class="btn" data-eject="${esc(d.mount)}">⏏</button>` : ""}</div>`;
-  }).join("") + catVols.filter((v) => !v.connected).map((v) => `<div class="disk"><div class="nm">💾 ${esc(v.name)} <span class="tag cat">каталог C1</span><small class="dim">не подключён</small></div><div class="bar"><i style="width:0"></i></div><div class="fr" style="color:var(--red)">отключён</div></div>`).join("");
-  const folders = (S.config.folders || []).map((f) => `<button class="tile" data-folder="${esc(f.path)}"><span class="ic">📁</span>${esc(f.title)}</button>`).join("");
+      ${d.external ? `<button class="btn" data-eject="${esc(d.mount)}">${ic("eject")}</button>` : ""}</div>`;
+  }).join("") + catVols.filter((v) => !v.connected).map((v) => `<div class="disk"><div class="nm">${ic("drive")} ${esc(v.name)} <span class="tag cat">каталог C1</span><small class="dim">не подключён</small></div><div class="bar"><i style="width:0"></i></div><div class="fr" style="color:var(--red)">отключён</div></div>`).join("");
+  const folders = (S.config.folders || []).map((f) => `<button class="tile" data-folder="${esc(f.path)}"><span class="ic">${ic("folder")}</span>${esc(f.title)}</button>`).join("");
   $("#macView").innerHTML = `
     <div class="card"><h2>${esc(s.hostname || "")} · ${esc(s.chip || s.model || "")} · ${s.cores || "?"} ядер</h2>
       <div class="meters">
         <div class="meter"><small>Процессор</small><b>${s.cpu != null ? Math.round(s.cpu) : "—"}%</b>${spark(s.cpu_history)}</div>
         <div class="meter"><small>Температура SoC</small><b>${t.cpu != null ? Math.round(t.cpu) + "°" : "—"}</b><small>средняя ${t.cpu_avg != null ? Math.round(t.cpu_avg) + "°" : "—"} · SSD ${t.ssd != null ? Math.round(t.ssd) + "°" : "—"}</small>
-          <small>${s.thermal === "throttled" ? "⚠️ троттлинг" : "охлаждение в норме"}</small></div>
+          <small>${s.thermal === "throttled" ? "троттлинг!" : "охлаждение в норме"}</small></div>
         <div class="meter"><small>Память</small><b>${m.pct != null ? Math.round(m.pct) : "—"}%</b><small>${fmtBytes(m.used)} из ${fmtBytes(m.total)}${m.swap_mb ? " · swap " + Math.round(m.swap_mb) + " МБ" : ""}</small>
           <div class="bar"><i style="width:${m.pct || 0}%"></i></div></div>
         <div class="meter"><small>Нагрузка (1/5/15 мин)</small><b style="font-size:26px">${(s.load || []).join(" · ")}</b><small>работает ${s.uptime ? fmtUptime(s.uptime) : "—"}</small><small>IP ${esc(s.ip || "")}</small></div>
@@ -517,7 +517,7 @@ function renderMacView() {
     <div class="grid-2 section-gap">
       <div class="card"><h2>Диски</h2>${disks || '<div class="empty">—</div>'}</div>
       <div class="card"><h2>Система</h2><div class="tiles">
-        ${SYS_TILES.map((x) => `<button class="tile ${x.a === "awake" && S.state.awake ? "on" : ""}" data-sys="${x.a}" ${x.confirm ? 'data-confirm="1"' : ""}><span class="ic">${x.ic}</span>${x.t}</button>`).join("")}
+        ${SYS_TILES.map((x) => `<button class="tile ${x.a === "awake" && S.state.awake ? "on" : ""}" data-sys="${x.a}" ${x.confirm ? 'data-confirm="1"' : ""}><span class="ic">${ic(x.ic)}</span>${x.t}</button>`).join("")}
         ${folders}</div>
         <h2 style="margin-top:16px">Приложения</h2><div class="tiles">${(S.apps || []).filter((a) => a.installed).map(appTile).join("")}</div></div>
     </div>`;
@@ -535,16 +535,16 @@ function renderNotesView() {
       <button class="fchip ${noteFilter ? "" : "on"}" data-f="">Все · ${notes.length}</button>
       ${tags.map((t) => `<button class="fchip ${noteFilter === t ? "on" : ""}" data-f="${esc(t)}">${esc(t)}</button>`).join("")}
       <div class="spacer"></div><button class="btn primary" id="nAdd">+ Заметка</button></div>
-    <div class="notes-grid">${list.map((n) => `<div class="note ${n.color}" data-id="${n.id}"><h3>${n.pinned ? "📌 " : ""}${esc(n.title)}<button class="ed" data-ed>✎</button></h3>
+    <div class="notes-grid">${list.map((n) => `<div class="note ${n.color}" data-id="${n.id}"><h3>${n.pinned ? ic("pin", "pin") : ""}${esc(n.title)}<button class="ed" data-ed>${ic("pencil")}</button></h3>
       ${n.tag ? `<span class="tag">${esc(n.tag)}</span>` : ""}<div class="md">${md(n.body)}</div>
-      ${/^\s*[-•]\s+\[(x|х)\]/im.test(n.body) ? '<button class="btn reset-chk" data-reset>↺ Снять все отметки</button>' : ""}
-      ${(n.links || []).length ? `<div class="links">${n.links.filter((l) => /^(https?:\/\/|mailto:|tel:)/i.test(l.url)).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">🔗 ${esc(l.title || l.url)}<small>${esc(l.url.replace(/^https?:\/\//, ""))}</small></a>`).join("")}</div>` : ""}
+      ${/^\s*[-•]\s+\[(x|х)\]/im.test(n.body) ? `<button class="btn reset-chk" data-reset>${ic("reset")} Снять все отметки</button>` : ""}
+      ${(n.links || []).length ? `<div class="links">${n.links.filter((l) => /^(https?:\/\/|mailto:|tel:)/i.test(l.url)).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${ic("link")} ${esc(l.title || l.url)}<small>${esc(l.url.replace(/^https?:\/\//, ""))}</small></a>`).join("")}</div>` : ""}
     </div>`).join("") || '<div class="empty">Пока пусто — добавьте первую шпаргалку</div>'}</div>`;
   $$("#notesView .chk").forEach((li) => li.onclick = async () => {
     const note = S.notes.find((n) => n.id === li.closest(".note").dataset.id); if (!note) return;
     const lines = note.body.split("\n"), i = +li.dataset.line;
     lines[i] = lines[i].replace(/\[( |x|х)\]/i, (m, c) => c.trim() ? "[ ]" : "[x]");
-    li.classList.toggle("on"); li.querySelector(".box").textContent = li.classList.contains("on") ? "✓" : "";
+    li.classList.toggle("on"); li.querySelector(".box").innerHTML = li.classList.contains("on") ? ic("check") : "";
     const r = await api("/api/notes", { op: "edit", id: note.id, body: lines.join("\n") }); S.notes = r.notes;
   });
   $$("#notesView [data-reset]").forEach((b) => b.onclick = async () => {
@@ -567,7 +567,7 @@ function editNote(n) {
     <div class="row"><div class="field" style="flex:2"><label>Заголовок</label><input type="text" id="nTitle" value="${esc(n.title)}"></div>
       <div class="field"><label>Раздел</label><input type="text" id="nTag" value="${esc(n.tag)}" list="nTags"><datalist id="nTags">${tags.map((t) => `<option value="${esc(t)}">`).join("")}</datalist></div></div>
     <div class="field"><label>Цвет</label><div class="seg" id="nColors">${COLORS.map((c) => `<button data-c="${c}" style="color:var(--${c === "teal" ? "accent" : c})">●</button>`).join("")}
-      <button id="nPin" class="${n.pinned ? "on" : ""}" style="margin-left:auto">📌 Закрепить</button></div></div>
+      <button id="nPin" class="${n.pinned ? "on" : ""}" style="margin-left:auto">${ic("pin")} Закрепить</button></div></div>
     <div class="field"><label>Текст — «- » список, «- [ ] » чек-лист, **жирный**, \`код\`</label><textarea id="nBody">${esc(n.body)}</textarea></div>
     <div class="field"><label>Ссылки</label><div id="nLinks">${linksHtml()}</div><button class="btn" id="nAddLink">+ Ссылка</button></div>
     <div class="actions-row">${isNew ? "" : '<button class="btn danger left" id="nDel">Удалить</button>'}<button class="btn" id="nCancel">Отмена</button><button class="btn primary" id="nSave">Сохранить</button></div>`, (b) => {
@@ -590,10 +590,60 @@ function editNote(n) {
   });
 }
 
+// ---------------- Capture One catalogs chooser ----------------
+async function loadCatalogs(c) {
+  let d; try { d = await api("/api/catalogs"); } catch (e) { $("#catList").textContent = "Не удалось получить список"; return; }
+  const manual = d.manual || [];
+  const all = [...d.found];
+  for (const m of manual) if (!all.find((x) => x.path === m)) all.push({ path: m, sources: ["вручную"], exists: true, kind: "catalog" });
+  const active = new Set(d.active);
+  $("#catList").innerHTML = all.map((e) => {
+    const name = e.path.split("/").pop().replace(/\.(cocatalog|cosessiondb)$/, "");
+    const where = e.path.startsWith("/Volumes/") ? "диск «" + e.path.split("/")[2] + "»" : "этот Mac";
+    return `<div class="srv cat-row ${active.has(e.path) ? "on" : ""}" data-cat="${esc(e.path)}">
+      <span class="check" style="width:28px;height:28px">${active.has(e.path) ? ic("check") : ""}</span>
+      <div class="n"><b>${esc(name)}${e.current ? ' <span class="tag cat">открыт в Capture One</span>' : ""}${e.kind === "session" ? ' <span class="tag">сеанс, бета</span>' : ""}</b>
+      <small>${esc(where)} · ${esc(e.path)}${e.exists ? "" : " · не найден"} · ${esc((e.sources || []).join(", "))}</small></div></div>`;
+  }).join("") || '<div class="muted">Каталоги не найдены — впишите путь вручную</div>';
+  $$("#catList [data-cat]").forEach((row) => row.onclick = async () => {
+    const path = row.dataset.cat;
+    const base = manual.length ? manual : [...active];
+    const next = base.includes(path) ? base.filter((x) => x !== path) : [...base, path];
+    S = await api("/api/config", { c1_catalogs: next }); renderAll();
+  });
+}
+
+// ---------------- skins ----------------
+const SKINS = [
+  { id: "classic", name: "Классика", desc: "Тёмная, как было", pv: ["#0a0c0f", "#14171c", "#4fd1c5"] },
+  { id: "glass", name: "Liquid Glass", desc: "Стекло и мягкий свет", pv: ["linear-gradient(135deg,#3b2c8f,#0a3d8f 50%,#7a4b12)", "rgba(255,255,255,.22)", "#0a84ff"] },
+  { id: "aero-vista", name: "Aero · Vista", desc: "Чёрное стекло, сияние", pv: ["linear-gradient(180deg,#000,#02303a 60%,#04402a)", "linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.05) 50%,rgba(0,0,0,.4) 51%)", "#3cd6ff"] },
+  { id: "aero-seven", name: "Aero · Seven", desc: "Небо, трава, пузыри", pv: ["linear-gradient(180deg,#2f8fe8,#9fd9ff 70%,#57c22c 71%)", "linear-gradient(180deg,#fff,rgba(255,255,255,.6) 50%,rgba(215,240,255,.7) 51%)", "#0a8fdc"] },
+  { id: "macosx", name: "Mac OS X", desc: "Aqua и полоски", pv: ["repeating-linear-gradient(180deg,#f3f3f3 0 2px,#e2e2e2 2px 4px)", "#fbfbfb", "linear-gradient(180deg,#d4ecff,#2f86e8 50%,#b5ddff)"] },
+  { id: "paper", name: "Бумага", desc: "Светлый минимализм", pv: ["#f4f3ef", "#ffffff", "#17171a"] },
+  { id: "oled", name: "OLED", desc: "Чёрный, монохром", pv: ["#000", "#0b0b0c", "#f2f2f2"] },
+];
+function currentSkin() { const q = location.search.match(/[?&]skin=([a-z0-9-]+)/); return (q && q[1]) || localStorage.getItem("dock_skin") || (S.config || {}).skin || window.__SKIN__ || "classic"; }
+function applySkin(id) {
+  localStorage.setItem("dock_skin", id);
+  $("#skinCss").href = id === "classic" ? "data:text/css," : "/static/skins/" + id + ".css";
+  document.body.dataset.skin = id;
+}
+function skinsHtml() {
+  const cur = currentSkin();
+  return `<div class="skins">${SKINS.map((k) => `<button class="skin ${k.id === cur ? "on" : ""}" data-skin="${k.id}">
+    <div class="pv" style="background:${k.pv[0]}"><i style="left:10px;top:12px;width:56%;height:62%;background:${k.pv[1]};box-shadow:0 2px 8px rgba(0,0,0,.25)"></i>
+      <i style="right:10px;top:12px;width:28%;height:28%;background:${k.pv[1]}"></i><i style="right:10px;bottom:12px;width:28%;height:22%;background:${k.pv[2]}"></i></div>
+    <b>${esc(k.name)}</b><small>${esc(k.desc)}</small></button>`).join("")}</div>`;
+}
+
 // ---------------- render: settings ----------------
 function renderSettings() {
   const c = S.config || {}, w = S.weather || {};
-  $("#settingsView").innerHTML = `<div class="grid-2">
+  $("#settingsView").innerHTML = `<div class="card" style="margin-bottom:16px"><h2>Оформление</h2>${skinsHtml()}
+    <div class="row" style="margin-top:12px"><div class="hint" style="margin:0">Скин запоминается на этом устройстве. ${S.is_local ? "" : ""}</div>
+      <button class="btn" id="skinDefault" style="flex:none">Сделать скином по умолчанию для всех</button></div></div>
+  <div class="grid-2">
     <div class="card"><h2>Погода</h2>
       <div class="field"><label>Город ${c.place ? "— сейчас: " + esc(c.place.name) : ""}</label>
         <form class="add-row" id="geoForm"><input type="search" id="geoQ" placeholder="Название города"><button class="btn primary" type="submit">Найти</button></form>
@@ -616,9 +666,13 @@ function renderSettings() {
     <div class="hint">Каждая подпапка = съёмка. Исходники — RAW (или JPEG, если RAW нет) в папке съёмки; рабочие файлы — .photon, .psd;
       готово — изображения в подпапке экспорта. Прогресс = готовые / исходники. Обновляется раз в минуту.</div></div>
   <div class="card section-gap"><h2>Каталоги Capture One</h2>
-    ${(S.shoots.catalogs || []).map((p) => `<div class="mono" style="padding:6px 0">${esc(p)}</div>`).join("") || '<div class="muted">Не найдено</div>'}
-    <div class="hint">${(c.c1_catalogs || []).length ? "Заданы вручную в data/config.json." : "Найдены автоматически (Spotlight + ~/Pictures). Чтобы указать вручную — впишите пути в «c1_catalogs» в data/config.json."}
-    Каталог читается только для чтения — Capture One можно держать открытым.</div></div>
+    <div class="seg" style="margin-bottom:12px"><button id="catAuto" class="${(c.c1_catalogs || []).length ? "" : "on"}">Автоматически</button>
+      <button id="catManual" class="${(c.c1_catalogs || []).length ? "on" : ""}">Выбрать вручную</button></div>
+    <div id="catList" class="muted">Ищу каталоги на Mac и внешних дисках…</div>
+    <form class="row" id="catForm" style="margin-top:10px"><input type="text" id="catPath" placeholder="/Volumes/Диск/Мой каталог.cocatalog"><button class="btn primary" style="flex:none">Добавить путь</button></form>
+    <div class="hint">«Автоматически» — каталог, который Capture One открывал последним (меняется вместе с ним). Каталоги ищутся
+      в настройках Capture One, через Spotlight, в «Изображениях» и в корне внешних дисков; любой путь можно вписать вручную.
+      Читаются только для чтения — Capture One можно держать открытым.</div></div>
   <p class="hint">TabDock ${esc(S.state.version || "")} · данные хранятся на Mac в папке data/</p>`;
   $("#geoForm").onsubmit = async (e) => {
     e.preventDefault(); const q = $("#geoQ").value.trim(); if (!q) return;
@@ -635,6 +689,16 @@ function renderSettings() {
     renderAll(); const err = (S.shoots.errors || []).find((x) => x.catalog === path); toast(err ? err.error : "Папка добавлена");
   };
   $("#edForm").onsubmit = async (e) => { e.preventDefault(); S = await api("/api/config", { export_dirs: $("#edDirs").value.split(",").map((x) => x.trim()).filter(Boolean) }); renderAll(); toast("Сохранено"); };
+  loadCatalogs(c);
+  $("#catAuto").onclick = async () => { S = await api("/api/config", { c1_catalogs: [] }); renderAll(); toast("Каталог берётся из Capture One"); };
+  $("#catManual").onclick = () => { $("#catManual").classList.add("on"); $("#catAuto").classList.remove("on"); toast("Отметьте нужные каталоги ниже"); };
+  $("#catForm").onsubmit = async (e) => {
+    e.preventDefault(); const v = $("#catPath").value.trim(); if (!v) return;
+    S = await api("/api/config", { c1_catalogs: [...new Set([...(c.c1_catalogs || []), v])] }); renderAll();
+    const err = (S.shoots.errors || []).find((x) => x.catalog === v.replace(/\/$/, "")); toast(err ? err.error : "Каталог добавлен");
+  };
+  $$("[data-skin]").forEach((b) => b.onclick = () => { applySkin(b.dataset.skin); renderSettings(); });
+  $("#skinDefault").onclick = async () => { S = await api("/api/config", { skin: currentSkin() }); renderAll(); toast("Новые устройства откроются в этом скине"); };
   $("#calOn").onclick = async () => { S = await api("/api/config", { calendar: true }); renderAll(); };
   $("#calOff").onclick = async () => { S = await api("/api/config", { calendar: false }); renderAll(); };
   $$("#appPick [data-a]").forEach((b) => b.onclick = async () => { S = await api("/api/config", { apps: c.apps.filter((a) => a !== b.dataset.a) }); renderAll(); });
@@ -672,7 +736,7 @@ function wfolioAlert() {
   const soon = (S.wfolio || []).filter((g) => g.days_left != null && g.days_left <= 14 && (g.check || {}).status !== "expired");
   if (!soon.length) return "";
   const g = soon[0];
-  return `<div class="wf-alert" data-tab="shoots">⏳ wfolio: «${esc(gTitle(g))}» — ${esc(gDays(g).txt)}${soon.length > 1 ? ` и ещё ${soon.length - 1}` : ""}</div>`;
+  return `<div class="wf-alert" data-tab="shoots">${ic("hourglass")} wfolio: «${esc(gTitle(g))}» — ${esc(gDays(g).txt)}${soon.length > 1 ? ` и ещё ${soon.length - 1}` : ""}</div>`;
 }
 function wfolioSection() {
   const list = S.wfolio || [];
@@ -685,7 +749,7 @@ function wfolioSection() {
       return `<div class="wf" data-id="${g.id}"><span class="wf-dot" style="color:${st[1]}" title="${st[2]}">${st[0]}</span>
         <div class="wf-n"><b>${esc(gTitle(g))}</b><small>${esc([g.client, shootName(g.shoot_key) ? "съёмка: " + shootName(g.shoot_key) : "", st[2]].filter(Boolean).join(" · "))}</small></div>
         <span class="tag due ${d.cls}">${esc(d.txt)}</span>
-        <a class="btn" href="${esc(g.url)}" target="_blank" rel="noopener">Открыть</a><button class="btn sq" data-wfed>✎</button></div>`;
+        <a class="btn" href="${esc(g.url)}" target="_blank" rel="noopener">Открыть</a><button class="btn sq" data-wfed>${ic("pencil")}</button></div>`;
     }).join("") || '<div class="empty">Добавьте ссылку на галерею клиента и срок хранения — док напомнит, когда он подходит к концу</div>'}</div>
     <p class="hint">У wfolio нет открытого API, поэтому галереи добавляются по ссылке, а срок хранения — вручную (как в настройках проекта wfolio).
       Док раз в 6 часов сам открывает ссылку и проверяет, жива ли галерея. Логин и пароль wfolio не нужны и не хранятся.</p>`;
@@ -742,7 +806,7 @@ function renderConnect() {
   const hasPw = S.auth && S.auth.password;
   $("#connectView").innerHTML = `<div class="grid-2">
     <div class="card"><h2>Этот Mac</h2>
-      <div class="srv-big"><span class="ic">🖥️</span><div><b>${esc(sys.hostname || "Mac")}</b><div class="muted">${esc(sys.chip || "")} · ${esc(sys.ip || "")}:${location.port || 80}</div>
+      <div class="srv-big"><span class="ic">${ic("computer")}</span><div><b>${esc(sys.hostname || "Mac")}</b><div class="muted">${esc(sys.chip || "")} · ${esc(sys.ip || "")}:${location.port || 80}</div>
       <div class="muted" style="font-size:13px">в сети как «TabDock (${esc(sys.hostname || "")})» · Bonjour _tabdock._tcp</div></div></div>
       <h2 style="margin-top:18px">Вход с другого устройства</h2>
       <div class="qr-box"><div class="qr" id="qrInline" style="width:200px;height:200px"></div>

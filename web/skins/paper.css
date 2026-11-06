@@ -1,0 +1,23 @@
+/* Paper — calm light minimal for every day */
+:root {
+  --bg: #f4f3ef; --panel: #ffffff; --panel-2: #f2f1ec; --line: #e4e2db;
+  --text: #17171a; --muted: #6d6b66; --dim: #a5a29b;
+  --accent: #e2552b; --accent-2: #e2552b; --blue: #2f6fd6; --green: #2e8b57; --amber: #b7791f; --red: #c8372d; --violet: #6b4fc8;
+  --font: "Inter", -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --r: 18px; --card-border: 1px solid var(--line); --card-shadow: 0 1px 2px rgba(20,20,20,.04);
+  --chip-bg: #fff; --inner-bg: #f4f3ef; --btn-bg: #f4f3ef;
+  --primary-bg: #17171a; --primary-text: #fff; --on-accent: #fff;
+  --tabs-bg: #f4f3ef; --tabs-border: 1px solid var(--line); --tab-active-bg: #fff;
+  --h-transform: none; --h-spacing: 0; --h-size: 16px; --h-color: #17171a;
+  --md-text: #2b2a27; --track: #ebe9e2;
+}
+html { color-scheme: light; }
+.card h2 { font-weight: 650; }
+.btn, .seg button, .tile, .fchip, .app-pick button, .stat, .icon-btn, .chip { border: 1px solid var(--line); color: var(--text); }
+.tabs button.active { color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.06); } .tabs button.active span { color: var(--accent); }
+input[type=text], input[type=password], input[type=date], input[type=number], input[type=search], textarea, select {
+  background: #fff; border: 1px solid var(--line); color: var(--text); color-scheme: light; }
+.bar > i { background: var(--text); } .bar.done > i { background: var(--green); } .bar.sel > i { background: var(--blue); }
+.ctrls .btn.play { background: var(--text); color: #fff; }
+.banner { background: #fff; border-color: var(--line); box-shadow: 0 10px 30px rgba(0,0,0,.12); } .banner b { color: var(--text); } .banner span { color: var(--muted); }
+.toast { background: #17171a; color: #fff; } .sheet { background: rgba(20,20,20,.25); }

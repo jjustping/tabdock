@@ -275,3 +275,68 @@ select { -webkit-appearance: none; appearance: none; }
 .reset-chk { margin-top: 8px; min-height: 40px; font-size: 14px; }
 .tag.cat { background: rgba(79,209,197,.15); color: var(--accent); margin-left: 6px; }
 .disk .nm { width: 240px; } .disk .nm small { display: block; font-weight: 400; font-size: 12px; margin-top: 2px; }
+
+/* ===================== theme layer (skins override these variables) ===================== */
+:root {
+  --font: -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: var(--font);
+  --card-bg: var(--panel);
+  --card-border: 1px solid var(--line);
+  --card-shadow: none;
+  --card-blur: none;
+  --chip-bg: var(--panel);
+  --inner-bg: var(--panel-2);
+  --btn-bg: var(--panel-2);
+  --btn-shadow: none;
+  --primary-bg: var(--accent);
+  --primary-text: #06201d;
+  --tabs-bg: #0c0e12;
+  --tabs-border: 1px solid var(--line);
+  --tab-active-bg: var(--panel-2);
+  --h-transform: uppercase;
+  --h-spacing: 1.2px;
+  --h-size: 13px;
+  --h-color: var(--muted);
+  --md-text: #cfd5dd;
+  --on-accent: #06201d;
+  --track: var(--panel-2);
+}
+body { font-family: var(--font); background: var(--bg); color: var(--text); }
+.clock #time, .pct, .sum b, .meter b, .stat b { font-family: var(--font-num); }
+.card, .note, .shoot-card, .sheet-body {
+  background: var(--card-bg); border: var(--card-border); box-shadow: var(--card-shadow);
+  -webkit-backdrop-filter: var(--card-blur); backdrop-filter: var(--card-blur); }
+.chip, .stat, .icon-btn { background: var(--chip-bg); -webkit-backdrop-filter: var(--card-blur); backdrop-filter: var(--card-blur); }
+.card h2 { text-transform: var(--h-transform); letter-spacing: var(--h-spacing); font-size: var(--h-size); color: var(--h-color); }
+.btn, .seg button, .tile, .fchip, .app-pick button, .srv, .sum, .forecast .d, .note .links a, input, textarea, select { box-shadow: var(--btn-shadow); }
+.btn, .seg button, .tile, .app-pick button { background: var(--btn-bg); }
+.btn.primary { background: var(--primary-bg); color: var(--primary-text); border-color: transparent; }
+.check { color: transparent; } .rem.done .check, .chk.on .box { color: var(--on-accent); }
+.tabs { background: var(--tabs-bg); border-top: var(--tabs-border); }
+.tabs button.active { background: var(--tab-active-bg); }
+.note .md { color: var(--md-text); }
+.bar, .progress-line { background: var(--track); }
+/* icons */
+svg.i { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; }
+.tabs button span svg.i { width: 26px; height: 26px; }
+.icon-btn svg.i { width: 24px; height: 24px; }
+.tile .ic svg.i { width: 30px; height: 30px; }
+.ctrls .btn svg.i { width: 26px; height: 26px; }
+.check svg.i { width: 20px; height: 20px; } .chk .box svg.i { width: 16px; height: 16px; }
+.art svg.i { width: 36px; height: 36px; color: var(--dim); }
+svg.wx { width: 1.25em; height: 1.25em; } .forecast svg.wx { width: 28px; height: 28px; }
+svg.sm { width: .9em; height: .9em; } svg.pin { color: var(--accent); margin-right: 4px; }
+.star svg.i { fill: currentColor; } .card h2 .act svg.i { width: 1em; height: 1em; }
+.banner { flex-direction: row; align-items: center; gap: 14px; } .banner div { display: flex; flex-direction: column; gap: 3px; }
+.banner .banner-ic { width: 34px; height: 34px; color: var(--green); }
+.srv-big .ic svg.i { width: 40px; height: 40px; }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.skin { border-radius: 16px; overflow: hidden; border: 2px solid transparent; background: var(--inner-bg); text-align: left; padding: 0; }
+.skin.on { border-color: var(--accent); }
+.skin .pv { height: 92px; position: relative; }
+.skin .pv i { position: absolute; border-radius: 8px; }
+.skin b { display: block; padding: 10px 12px 2px; font-size: 15px; } .skin small { display: block; padding: 0 12px 10px; color: var(--muted); font-size: 12px; }
+#bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+.cat-row { cursor: pointer; } .cat-row .check { flex: none; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--dim); }
+.cat-row.on .check { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.cat-row small { word-break: break-all; }

@@ -44,7 +44,7 @@ def describe(code):
     e, ru, en = CODES.get(int(code or 0), ("🌡", "—", "—"))
     if not e.endswith("\ufe0f"):
         e += "\ufe0f"  # force colour emoji presentation
-    return {"icon": e, "text": ru, "text_en": en}
+    return {"code": int(code or 0), "icon": e, "text": ru, "text_en": en}
 
 
 class Weather:

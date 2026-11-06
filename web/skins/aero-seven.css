@@ -1,0 +1,44 @@
+/* Frutiger Aero · Seven — sky, grass, bubbles, glossy white glass (Windows 7 / mid-2000s) */
+:root {
+  --bg: #7cc6ff; --panel: rgba(255,255,255,.58); --panel-2: rgba(255,255,255,.55); --line: rgba(255,255,255,.85);
+  --text: #0c2a44; --muted: #44708f; --dim: #7fa3bc;
+  --accent: #0a8fdc; --accent-2: #ff9a1f; --blue: #1a8fe0; --green: #3aa61c; --amber: #e39b00; --red: #e0372b; --violet: #7a4fd8;
+  --font: "Segoe UI", Frutiger, "Frutiger Linotype", "Myriad Pro", Tahoma, -apple-system, Roboto, sans-serif;
+  --r: 16px;
+  --card-bg: linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.55) 45%, rgba(225,244,255,.45) 46%, rgba(255,255,255,.62) 100%);
+  --card-border: 1px solid rgba(255,255,255,.95);
+  --card-shadow: 0 0 0 1px rgba(40,120,180,.25), inset 0 1px 0 #fff, 0 10px 30px rgba(0,60,120,.25);
+  --card-blur: blur(12px) saturate(160%);
+  --chip-bg: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.6) 50%, rgba(215,240,255,.6) 51%, rgba(255,255,255,.8));
+  --inner-bg: rgba(255,255,255,.65);
+  --btn-bg: linear-gradient(180deg, #fff 0%, #f0f8ff 48%, #d7ecfb 52%, #eef8ff 100%);
+  --btn-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(0,60,120,.25);
+  --primary-bg: linear-gradient(180deg, #8fdcff 0%, #35b4f5 48%, #0b8ad6 52%, #4cc4ff 100%); --primary-text: #fff; --on-accent: #fff;
+  --tabs-bg: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55) 50%, rgba(200,232,255,.6) 51%, rgba(255,255,255,.75));
+  --tabs-border: 1px solid #fff; --tab-active-bg: radial-gradient(ellipse at 50% 110%, rgba(53,180,245,.5), rgba(255,255,255,.5) 70%);
+  --h-transform: none; --h-spacing: 0; --h-size: 18px; --h-color: #0b4f80;
+  --md-text: #1b3a52; --track: rgba(10,80,140,.12);
+}
+html { color-scheme: light; }
+body { background:
+  radial-gradient(120% 60% at 50% 125%, #4fbf2a 0 38%, #8ee05a 46%, transparent 47%),
+  radial-gradient(90% 45% at 15% 120%, #2f9e17 0 45%, transparent 46%),
+  linear-gradient(180deg, #2f8fe8 0%, #6cc0ff 45%, #c9ecff 78%, #e9f8ff 100%); background-attachment: fixed; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background:
+  radial-gradient(circle at 12% 30%, rgba(255,255,255,.75) 0 3px, rgba(255,255,255,.18) 4px 28px, rgba(255,255,255,.45) 29px 30px, transparent 31px),
+  radial-gradient(circle at 82% 22%, rgba(255,255,255,.75) 0 4px, rgba(255,255,255,.15) 5px 44px, rgba(255,255,255,.45) 45px 46px, transparent 47px),
+  radial-gradient(circle at 64% 48%, rgba(255,255,255,.7) 0 2px, rgba(255,255,255,.15) 3px 18px, rgba(255,255,255,.45) 19px 20px, transparent 21px),
+  radial-gradient(circle at 30% 60%, rgba(255,255,255,.7) 0 3px, rgba(255,255,255,.12) 4px 34px, rgba(255,255,255,.4) 35px 36px, transparent 37px),
+  radial-gradient(circle at 92% 62%, rgba(255,255,255,.7) 0 2px, rgba(255,255,255,.12) 3px 22px, rgba(255,255,255,.4) 23px 24px, transparent 25px); }
+.btn, .seg button, .tile, .fchip, .app-pick button, .stat, .icon-btn, .chip { border: 1px solid rgba(60,140,200,.45); color: #0c2a44; }
+.btn { border-radius: 999px; } .btn.sq { border-radius: 12px; } .tile { border-radius: 14px; }
+.btn.primary { text-shadow: 0 1px 1px rgba(0,60,120,.45); border: 1px solid #0b74b8; }
+.tabs { border-radius: 0; } .tabs button { color: #2b5a7c; } .tabs button.active { color: #08365a; }
+input[type=text], input[type=password], input[type=date], input[type=number], input[type=search], textarea, select {
+  background: rgba(255,255,255,.85); border: 1px solid #8fc3e6; color: #0c2a44; border-radius: 10px; color-scheme: light; }
+.bar > i, .bar.done > i { background: linear-gradient(180deg, #b6f58a, #4fc41c 50%, #2e9b0c 51%, #5ad62a); }
+.bar.sel > i { background: linear-gradient(180deg, #a9e4ff, #2aaef0 50%, #0b84d0 51%, #3cc0ff); }
+.ctrls .btn.play { background: radial-gradient(circle at 50% 30%, #d9f6ff, #33b6f2 55%, #0a78c2); color: #fff; border-radius: 50%; }
+.banner { background: rgba(255,255,255,.9); border-color: #7cc7f2; } .banner b { color: #0c2a44; } .banner span { color: #2b5a7c; }
+.toast { background: rgba(255,255,255,.95); color: #0c2a44; } .stat.warn b { color: #b86a00; } .tag { color: #2b5a7c; }
+.sheet { background: rgba(0,40,80,.25); }

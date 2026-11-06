@@ -9,6 +9,10 @@
 <link rel="icon" href="/static/icon.svg">
 <title>TabDock</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" id="skinCss" href="data:text/css,">
+<script>(function () { var q = location.search.match(/[?&]skin=([a-z0-9-]+)/);
+  var s = (q && q[1]) || localStorage.getItem("dock_skin") || window.__SKIN__ || "";
+  if (s && s !== "classic") document.getElementById("skinCss").href = "/static/skins/" + s + ".css"; })();</script>
 </head>
 <body>
 <header class="top">
@@ -16,9 +20,9 @@
   <button class="chip weather-chip" id="weatherChip" data-tab="mac"></button>
   <div class="spacer"></div>
   <div class="stats" id="topStats"></div>
-  <button class="icon-btn" id="awakeBtn" title="Не давать Mac засыпать">☕</button>
-  <button class="icon-btn" id="fsBtn" title="Во весь экран">⛶</button>
-  <button class="icon-btn" id="qrBtn" title="Подключить планшет">▦</button>
+  <button class="icon-btn" id="awakeBtn" title="Не давать Mac засыпать" data-ic="cup"></button>
+  <button class="icon-btn" id="fsBtn" title="Во весь экран" data-ic="expand"></button>
+  <button class="icon-btn" id="qrBtn" title="Подключить планшет" data-ic="qr"></button>
 </header>
 
 <main id="views">
@@ -45,17 +49,18 @@
 </main>
 
 <nav class="tabs">
-  <button data-tab="home" class="active"><span>⌂</span>Главная</button>
-  <button data-tab="shoots"><span>◐</span>Съёмки</button>
-  <button data-tab="notes"><span>☰</span>Справка</button>
-  <button data-tab="mac"><span>⌘</span>Mac</button>
-  <button data-tab="connect"><span>⇄</span>Подключение</button>
-  <button data-tab="settings"><span>⚙</span>Настройки</button>
+  <button data-tab="home" class="active"><span data-ic="home"></span>Главная</button>
+  <button data-tab="shoots"><span data-ic="aperture"></span>Съёмки</button>
+  <button data-tab="notes"><span data-ic="book"></span>Справка</button>
+  <button data-tab="mac"><span data-ic="computer"></span>Mac</button>
+  <button data-tab="connect"><span data-ic="link"></span>Подключение</button>
+  <button data-tab="settings"><span data-ic="gear"></span>Настройки</button>
 </nav>
 
 <div id="sheet" class="sheet hidden"><div class="sheet-body" id="sheetBody"></div></div>
 <div id="toast" class="toast"></div>
 <div id="offline" class="offline hidden">Нет связи с Mac — переподключаюсь…</div>
+<script src="/static/icons.js"></script>
 <script src="/static/connect.js"></script>
 <script src="/static/app.js"></script>
 </body>

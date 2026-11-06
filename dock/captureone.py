@@ -46,22 +46,98 @@ JOIN ZIMAGE i ON i.Z_PK = ic.ZIMAGE GROUP BY 1, 2
 """
 
 
-def discover():
-    """Find Capture One catalogs on this Mac (Spotlight + ~/Pictures)."""
-    found = set(glob.glob(os.path.expanduser("~/Pictures/*.cocatalog")))
+def _c1_prefs():
+    """Catalogs/sessions Capture One remembers (current one first), from its preferences."""
+    import plistlib
+    import urllib.parse
+    current, recent = None, []
+    prefs = sorted(glob.glob(os.path.expanduser("~/Library/Preferences/com.captureone.captureone*.plist")) +
+                   glob.glob(os.path.expanduser("~/Library/Preferences/com.phaseone.captureone*.plist")),
+                   key=os.path.getmtime, reverse=True)
+    for pf in prefs:
+        try:
+            out = subprocess.run(["/usr/bin/defaults", "export", pf[:-6], "-"], capture_output=True, timeout=8).stdout
+            data = plistlib.loads(out) if out else {}
+        except Exception:
+            continue
+
+        def walk(v, key=""):
+            nonlocal current
+            if isinstance(v, dict):
+                for k, x in v.items():
+                    walk(x, k)
+            elif isinstance(v, (list, tuple)):
+                for x in v:
+                    walk(x, key)
+            elif isinstance(v, str) and (".cocatalog" in v or ".cosessiondb" in v):
+                path = urllib.parse.unquote(v[7:] if v.startswith("file://") else v)
+                path = _container(path)
+                if key == "keySessionURL" and not current:
+                    current = path
+                if path not in recent:
+                    recent.append(path)
+        walk(data)
+    return current, recent
+
+
+def _container(path):
+    """…/X.cocatalog/X.cocatalogdb -> …/X.cocatalog ; session file stays as is."""
+    path = path.rstrip("/")
+    if path.endswith(".cocatalogdb"):
+        return os.path.dirname(path)
+    return path
+
+
+def discover_detailed():
+    """All catalogs/sessions we can see: [{path, kind, current, sources, exists}]."""
+    found = {}
+
+    def add(path, src):
+        path = _container(path)
+        if not path.startswith("/") or "/Backups/" in path or "/.Trash" in path or "/._" in path:
+            return
+        e = found.setdefault(path, {"path": path, "sources": [], "current": False,
+                                    "kind": "session" if path.endswith(".cosessiondb") else "catalog"})
+        if src not in e["sources"]:
+            e["sources"].append(src)
+
+    current, recent = _c1_prefs()
+    for r in recent:
+        add(r, "Capture One")
+    for p in glob.glob(os.path.expanduser("~/Pictures/*.cocatalog")):
+        add(p, "Изображения")
     try:
-        out = subprocess.run(["/usr/bin/mdfind", "kMDItemFSName == '*.cocatalog'"],
+        out = subprocess.run(["/usr/bin/mdfind", "kMDItemFSName == '*.cocatalog' || kMDItemFSName == '*.cosessiondb'"],
                              capture_output=True, text=True, timeout=8).stdout
         for line in out.splitlines():
-            if line.endswith(".cocatalog") and "/Backups/" not in line and "/.Trash" not in line:
-                found.add(line)
+            add(line, "Spotlight")
     except Exception:
         pass
-    return sorted(found)
+    # external disks are often not indexed by Spotlight: look two levels deep on every volume
+    for pat in ("/Volumes/*/*.cocatalog", "/Volumes/*/*/*.cocatalog", "/Volumes/*/*/*.cosessiondb"):
+        for p in glob.glob(pat):
+            add(p, "диск")
+    if current:
+        add(current, "Capture One")
+        found[_container(current)]["current"] = True
+    for e in found.values():
+        e["exists"] = os.path.exists(e["path"])
+    return sorted(found.values(), key=lambda e: (not e["current"], not e["exists"], e["path"]))
+
+
+def discover():
+    return [e["path"] for e in discover_detailed() if e["exists"] and e["kind"] == "catalog"]
+
+
+def default_catalogs():
+    """Without manual choice: the catalog Capture One has open/opened last; otherwise everything found."""
+    d = discover_detailed()
+    cur = [e["path"] for e in d if e["current"] and e["exists"]]
+    return cur or [e["path"] for e in d if e["exists"] and e["kind"] == "catalog"]
 
 
 def db_path(catalog):
-    if catalog.endswith(".cocatalogdb"):
+    if catalog.endswith(".cocatalogdb") or catalog.endswith(".cosessiondb"):
         return catalog
     dbs = glob.glob(os.path.join(catalog, "*.cocatalogdb"))
     return dbs[0] if dbs else None
@@ -81,7 +157,7 @@ NO_ACCESS = ("macOS не даёт TabDock доступ к этому диску.
 
 def read_catalog(catalog):
     try:
-        os.listdir(catalog)
+        os.listdir(catalog if os.path.isdir(catalog) else os.path.dirname(catalog))
     except PermissionError:
         raise PermissionError(NO_ACCESS)
     except FileNotFoundError:

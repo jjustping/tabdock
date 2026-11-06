@@ -1,0 +1,43 @@
+/* Mac OS X · Aqua — pinstripes, Lucida Grande, glossy aqua, traffic lights (10.0–10.4 era) */
+:root {
+  --bg: #ececec; --panel: #fbfbfb; --panel-2: #f1f1f1; --line: #b9b9b9;
+  --text: #111; --muted: #5d5d5d; --dim: #9a9a9a;
+  --accent: #2a73d9; --accent-2: #f0a020; --blue: #2a73d9; --green: #2f9e2f; --amber: #c88a00; --red: #d0342c; --violet: #7f4fc9;
+  --font: "Lucida Grande", "Lucida Sans Unicode", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --r: 8px;
+  --card-bg: #fbfbfb; --card-border: 1px solid #8c8c8c;
+  --card-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.2);
+  --chip-bg: linear-gradient(180deg, #fdfdfd, #e3e3e3); --inner-bg: #f3f3f3;
+  --btn-bg: linear-gradient(180deg, #ffffff 0%, #f2f2f2 50%, #e2e2e2 51%, #f4f4f4 100%);
+  --btn-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 1px 0 #fff;
+  --primary-bg: linear-gradient(180deg, #d4ecff 0%, #74b8f4 45%, #2f86e8 50%, #5aa6f2 85%, #b5ddff 100%); --primary-text: #fff; --on-accent: #fff;
+  --tabs-bg: linear-gradient(180deg, #d9d9d9, #bdbdbd); --tabs-border: 1px solid #8c8c8c;
+  --tab-active-bg: linear-gradient(180deg, #f4f4f4, #cfcfcf);
+  --h-transform: none; --h-spacing: 0; --h-size: 13px; --h-color: #222;
+  --md-text: #222; --track: #d8d8d8;
+}
+html { color-scheme: light; }
+body { background: repeating-linear-gradient(180deg, #f3f3f3 0 2px, #e6e6e6 2px 4px); }
+/* every card is a window with a title bar and traffic lights */
+.card { padding-top: 0; overflow: hidden; }
+.card > h2:first-child { margin: 0 -18px 12px; padding: 7px 14px 7px 74px; position: relative; justify-content: center; font-weight: 600;
+  background: linear-gradient(180deg, #ececec, #d3d3d3); border-bottom: 1px solid #9a9a9a; text-shadow: 0 1px 0 #fff; }
+.card > h2:first-child::before { content: ""; position: absolute; left: 12px; top: 50%; width: 13px; height: 13px; margin-top: -6.5px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #ffb3ab, #e0443b 55%, #a51c14);
+  box-shadow: 20px 0 0 0 #e8b33a, 40px 0 0 0 #5fba3c, inset 0 0 0 .5px rgba(0,0,0,.4); }
+.card > h2:first-child .act { position: absolute; right: 12px; }
+.btn, .seg button, .tile, .fchip, .app-pick button, .stat, .icon-btn, .chip { border: 1px solid #8f8f8f; color: #111; }
+.btn { border-radius: 999px; } .btn.sq, .icon-btn, .stat { border-radius: 6px; } .tile { border-radius: 8px; }
+.btn.primary { border: 1px solid #1a5bb5; text-shadow: 0 -1px 0 rgba(0,40,120,.4); }
+.tabs { border-radius: 0; } .tabs button { color: #333; } .tabs button.active { color: #000; box-shadow: inset 0 0 0 1px #8c8c8c; }
+.tabs button.active span { color: #2a73d9; }
+input[type=text], input[type=password], input[type=date], input[type=number], input[type=search], textarea, select {
+  background: #fff; border: 1px solid #8f8f8f; box-shadow: inset 0 1px 2px rgba(0,0,0,.25); border-radius: 4px; color: #111; color-scheme: light; }
+input[type=search] { border-radius: 999px; }
+.bar { border: 1px solid #9a9a9a; } .bar > i, .bar.done > i { background: linear-gradient(180deg, #cfe6ff, #5ca4ef 45%, #2a7fe0 50%, #6fb2f5 85%, #bfe0ff);
+  background-size: auto; }
+.ctrls .btn.play { color: #fff; background: var(--primary-bg); border: 1px solid #1a5bb5; }
+.banner { background: #fbfbfb; border: 1px solid #8c8c8c; } .banner b { color: #111; } .banner span { color: #444; }
+.toast { background: #fbfbfb; color: #111; border-color: #8c8c8c; } .tag { background: #e6e6e6; color: #444; }
+.sheet { background: rgba(0,0,0,.3); }
+.check { border-color: #8f8f8f; background: linear-gradient(180deg, #fff, #e2e2e2); }

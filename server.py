@@ -32,7 +32,7 @@ from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 WEB = os.path.join(HERE, "web")
 
 
@@ -60,6 +60,10 @@ class App:
         self.calendar = CalendarFeed(lambda: not self.demo and self.config().get("calendar", True))
         self._catalogs = None
         self._catalogs_at = 0
+        self.discovered = []
+        self._discover_kick = threading.Event()
+        self._discover_done = threading.Event()
+        threading.Thread(target=self._discover_loop, daemon=True).start()
         self.version_ts = time.time()
         self.events = []          # [{id, type, at, ...}] newest last, for toasts on the tablet
         self._event_id = 0
@@ -116,10 +120,26 @@ class App:
             return ["~/Pictures/Demo.cocatalog"]
         if cfg.get("c1_catalogs"):
             return cfg["c1_catalogs"]
-        if self._catalogs is None or time.time() - self._catalogs_at > 600:
-            self._catalogs = captureone.discover()
-            self._catalogs_at = time.time()
-        return self._catalogs
+        if self._catalogs is None:
+            self._discover_kick.set()
+            self._discover_done.wait(5)      # first call: give discovery a moment, never block longer
+        return self._catalogs or []
+
+    def _discover_loop(self):
+        """Catalog discovery touches other apps' prefs and external disks; macOS may hold such calls
+        while a permission dialog is open, so it runs here and requests only read the cached result."""
+        while True:
+            try:
+                if not self.demo:
+                    found = captureone.discover_detailed()
+                    self.discovered = found
+                    cur = [e["path"] for e in found if e["current"] and e["exists"]]
+                    self._catalogs = cur or [e["path"] for e in found if e["exists"] and e["kind"] == "catalog"]
+            except Exception:
+                pass
+            self._discover_done.set()
+            self._discover_kick.wait(600)
+            self._discover_kick.clear()
 
     def shoots(self):
         data = self.store.load("shoots", {"manual": {}, "custom": []})
@@ -369,18 +389,23 @@ def op_config(app, body):
             cfg["folders"] = body["folders"][:12]
         if "calendar" in body:
             cfg["calendar"] = bool(body["calendar"])
+        if "skin" in body:
+            cfg["skin"] = re.sub(r"[^a-z0-9-]", "", str(body["skin"]))[:30]
         if "folder_roots" in body and isinstance(body["folder_roots"], list):
             cfg["folder_roots"] = [{"path": str(r.get("path", ""))[:500], "app": str(r.get("app", ""))[:60]}
                                    for r in body["folder_roots"] if isinstance(r, dict) and r.get("path")][:12]
         if "export_dirs" in body and isinstance(body["export_dirs"], list):
             cfg["export_dirs"] = [str(x).strip().lower()[:40] for x in body["export_dirs"] if str(x).strip()][:20]
         if "c1_catalogs" in body and isinstance(body["c1_catalogs"], list):
-            cfg["c1_catalogs"] = [c for c in body["c1_catalogs"] if isinstance(c, str)]
+            cfg["c1_catalogs"] = [os.path.expanduser(c.strip()).rstrip("/") for c in body["c1_catalogs"]
+                                  if isinstance(c, str) and c.strip()][:12]
         if body.get("new_token"):
             import secrets
             cfg["token"] = secrets.token_urlsafe(12)
         return True
     r = app.store.update("config", default_config, fn)
+    if "c1_catalogs" in body:
+        app._discover_kick.set()
     if "folder_roots" in body or "export_dirs" in body:
         app.folders.refresh()
     if "calendar" in body:
@@ -495,6 +520,8 @@ class Handler(BaseHTTPRequestHandler):
         init = json.dumps(d, ensure_ascii=False, default=str).replace("</", "<\\/")
         tab = qs.get("tab", [""])[0]
         boot = "<script>window.__INIT__=%s;window.__TAB__=%s;</script>" % (init, json.dumps(tab))
+        skin = re.sub(r"[^a-z0-9-]", "", str(self.app.config().get("skin") or ""))
+        html = html.replace("<head>", '<head><script>window.__SKIN__="%s";</script>' % skin, 1)
         return self._send(200, html.replace("<script src=", boot + "\n<script src=", 1), "text/html; charset=utf-8")
 
     def do_HEAD(self):
@@ -585,6 +612,10 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/app_icon":
             f = act_mod.app_icon(qs.get("name", [""])[0], app.cache_dir)
             return self._file(f, "image/png", cache=True) if f else self._send(404, {})
+        if p == "/api/catalogs":
+            app._discover_kick.set()
+            return self._send(200, {"found": app.discovered,
+                                    "active": app.catalogs(), "manual": app.config().get("c1_catalogs", [])})
         if p == "/api/apps_installed":
             return self._send(200, act_mod.installed_apps())
         if p == "/api/weather":

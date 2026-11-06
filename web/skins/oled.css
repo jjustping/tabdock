@@ -1,0 +1,18 @@
+/* OLED — true black, monochrome, quiet at night */
+:root {
+  --bg: #000; --panel: #0b0b0c; --panel-2: #141416; --line: #1d1d20;
+  --text: #f2f2f2; --muted: #8a8a8e; --dim: #4c4c50;
+  --accent: #f2f2f2; --accent-2: #f2f2f2; --blue: #9fb7ff; --green: #8fd19e; --amber: #e8c46a; --red: #ff7b72; --violet: #c3a6ff;
+  --font: "Inter", -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --r: 16px; --card-border: 1px solid var(--line);
+  --chip-bg: #0b0b0c; --inner-bg: #141416; --btn-bg: #141416;
+  --primary-bg: #f2f2f2; --primary-text: #000; --on-accent: #000;
+  --tabs-bg: #000; --tabs-border: 1px solid var(--line); --tab-active-bg: #141416;
+  --h-transform: none; --h-spacing: 0; --h-size: 15px; --h-color: #d6d6d8;
+  --md-text: #c9c9cc; --track: #1a1a1d;
+}
+.card h2 { font-weight: 600; }
+.bar > i { background: #f2f2f2; } .bar.done > i { background: var(--green); } .bar.sel > i { background: var(--blue); }
+.tabs button.active span { color: #fff; }
+.ctrls .btn.play { background: #f2f2f2; color: #000; }
+.banner { background: #0b0b0c; border-color: #2a2a2e; } .banner span { color: var(--muted); }
