@@ -66,6 +66,46 @@
 
 (Все экраны сняты в демо-режиме: съёмки и обложки выдуманные.)
 
+### Темы оформления (скины)
+
+![Все скины](docs/img/skins.png)
+
+Скин выбирается в **«Настройки → Оформление»** и запоминается на каждом устройстве отдельно: на планшете может быть
+Aero, а на Mac — «Бумага». Кнопка «Сделать скином по умолчанию для всех» задаёт скин для новых устройств. Для
+просмотра без переключения можно открыть адрес с `?skin=glass` (или `aero-vista`, `aero-seven`, `macosx`, `paper`, `oled`).
+Во всех скинах — нарисованные иконки, без эмодзи.
+
+| Скин | Настроение |
+|---|---|
+| **Классика** | тёмная, спокойная — оформление первых версий |
+| **Liquid Glass** | полупрозрачное стекло с бликом по краю, мягкий цветной свет, плавающая «капсула» вкладок |
+| **Aero · Vista** | Frutiger Aero в духе Windows Vista: чёрное глянцевое стекло, «северное сияние», голубые глянцевые кнопки |
+| **Aero · Seven** | Frutiger Aero в духе Windows 7: небо, зелёный холм, пузыри, белое глянцевое стекло, «травяные» индикаторы |
+| **Mac OS X** | Aqua 2000-х: полосатый фон, Lucida Grande, глянцевые синие кнопки, каждая карточка — окно со «светофором» |
+| **Бумага** | светлый минимализм на каждый день, тёплый белый, чёрные кнопки, один акцент |
+| **OLED** | чистый чёрный и монохром — для ночи и OLED-экранов |
+
+![Liquid Glass](docs/img/skins/glass.png)
+*Liquid Glass*
+
+![Aero Vista](docs/img/skins/aero-vista.png)
+*Aero · Vista*
+
+![Aero Seven](docs/img/skins/aero-seven.png)
+*Aero · Seven*
+
+![Mac OS X](docs/img/skins/macosx.png)
+*Mac OS X*
+
+![Бумага](docs/img/skins/paper.png)
+*Бумага*
+
+![OLED](docs/img/skins/oled.png)
+*OLED*
+
+Свой скин — это один CSS-файл в `web/skins/`: он переопределяет переменные (`--bg`, `--card-bg`, `--accent`, `--r`, …)
+и при желании добавляет детали. Добавьте его в список `SKINS` в `web/app.js`.
+
 ### Установка на Mac mini
 
 ```bash
@@ -356,6 +396,22 @@ and any tablet with a modern browser will do.
 
 ![Settings](docs/img/settings.png)
 *Settings: weather city, calendar, quick-action apps, Capture One catalogs.*
+
+### Skins
+
+![All skins](docs/img/skins.png)
+
+Pick a skin in **Settings → Appearance**; it is remembered per device (Aero on the tablet, Paper on the Mac), and one
+can be set as the default for new devices. Preview without switching: add `?skin=glass` (or `aero-vista`, `aero-seven`,
+`macosx`, `paper`, `oled`) to the address. All skins use drawn line icons, no emoji.
+
+* **Classic** — the original dark look.
+* **Liquid Glass** — translucent glass with specular edges over soft colour, floating tab capsule.
+* **Aero · Vista** / **Aero · Seven** — Frutiger Aero: black glossy glass with aurora; sky, grass, bubbles and glossy white glass.
+* **Mac OS X** — 2000s Aqua: pinstripes, Lucida Grande, glossy blue buttons, every card is a window with traffic lights.
+* **Paper** / **OLED** — everyday minimal, light and true-black.
+
+A skin is one CSS file in `web/skins/` overriding theme variables; register it in `SKINS` in `web/app.js`.
 
 ### Install
 
