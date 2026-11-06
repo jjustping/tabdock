@@ -24,7 +24,7 @@
 и проверки ссылок wfolio). Сделано под Mac mini M4 + Honor Pad 9, но подойдёт любой Mac с macOS 13+ и любой
 планшет с современным браузером.
 
-### Что умеет (v0.4)
+### Что умеет (v0.5)
 
 | Блок | Что делает |
 |---|---|
@@ -36,6 +36,11 @@
 | **Быстрые действия** | Запуск выбранных приложений (иконки берутся из самих приложений), «Не спать» (caffeinate), скриншот на Рабочий стол, выключить экран, сон (двойное касание для подтверждения), открыть папки. |
 | **Погода и календарь** | Погода Open-Meteo (бесплатно, без ключа) на 4 дня; события Календаря macOS на сегодня и завтра. |
 | **Подключение** (v0.2) | Отдельная вкладка: вход по QR **или по паролю**, планшет сам ищет TabDock в домашней сети и показывает список, автопереключение, если текущий Mac пропал. |
+| **Съёмки по папкам** (v0.5) | Для редакторов без каталога — Photon Studio, Photoshop и др.: подпапка = съёмка, исходники (RAW) против готовых файлов в подпапке экспорта, рабочие `.photon`/`.psd`, обложка. Настраивается в «Настройках». |
+| **«Экспорт закончился»** (v0.5) | Когда Capture One или экспорт в папку перестаёт добавлять файлы, на планшете появляется баннер со звуком: «Свадьба: +24 кадра, 60 из 96». |
+| **Ближайшие сроки** (v0.5) | Сдача съёмок, истечение галерей wfolio и напоминания со сроком на 14 дней вперёд — в одном списке на главной. |
+| **Чек-листы** (v0.5) | В справке строки `- [ ] пункт` отмечаются касанием; «Снять все отметки» перед следующей съёмкой. |
+| **Диски и бэкапы** (v0.5) | Внешние диски: модель, USB/Thunderbolt, файловая система, SMART, свободное место; отметка диска с каталогом и предупреждения «диск с каталогом не подключён», «мало места», «бэкап каталога N дней назад». |
 | **Галереи wfolio** (v0.2) | Ссылки на клиентские галереи со сроком хранения: сколько дней осталось, предупреждение за 14 дней, раз в 6 часов док проверяет, открывается ли ссылка. Привязка к съёмке Capture One. |
 
 ### Как это работает
@@ -291,7 +296,7 @@ Everything runs locally on the home network: no cloud, no accounts, no subscript
 for the weather and for checking wfolio links). Built for a Mac mini M4 + Honor Pad 9, but any Mac on macOS 13+
 and any tablet with a modern browser will do.
 
-### Features (v0.4)
+### Features (v0.5)
 
 * **Reminders**: its own list. Quick add, tap to complete, due dates, ★ important, tags.
 * **Shoots · Capture One**: reads Capture One catalogs **read-only**. Each user album is a shoot,
@@ -310,6 +315,9 @@ and any tablet with a modern browser will do.
 * **Connect tab (v0.2)**: sign in with the QR code **or a password**. The login page finds TabDock servers on
   the LAN by itself (it probes `/api/hello` across the /24 subnet; the server also advertises Bonjour
   `_tabdock._tcp`) and can fail over to another server automatically.
+* **v0.5**: folder-based shoots for Photon Studio / Photoshop (RAW vs exported files), "export finished" banner with
+  a chime, upcoming deadlines (shoots, wfolio expiry, reminders), tappable checklists in notes, external disk details
+  (model, bus, file system, SMART) with catalog-disk and catalog-backup warnings.
 * **wfolio galleries (v0.2)**: wfolio has no public API, so you add gallery links with their storage end date.
   The dock checks every link every 6 hours (active / expired) and warns 14 days ahead. No wfolio credentials are
   used.

@@ -113,6 +113,36 @@ def memory():
     }
 
 
+_dinfo = {}  # mount -> (time, info)
+SKIP_VOLUMES = {"Recovery", "Preboot", "VM", "Update", "xarts", "iSCPreboot", "Hardware"}
+
+
+def disk_info(mount):
+    """Model, bus (USB/Thunderbolt), file system, SMART for a volume; cached for 10 minutes."""
+    import plistlib
+    now = time.time()
+    c = _dinfo.get(mount)
+    if c and now - c[0] < 600:
+        return c[1]
+    info = {}
+    try:
+        out = subprocess.run(["/usr/sbin/diskutil", "info", "-plist", mount], capture_output=True, timeout=8).stdout
+        d = plistlib.loads(out) if out else {}
+        info = {
+            "model": (d.get("MediaName") or d.get("IORegistryEntryName") or "").strip(),
+            "bus": d.get("BusProtocol") or "",
+            "fs": d.get("FilesystemUserVisibleName") or d.get("FilesystemName") or "",
+            "smart": d.get("SMARTStatus") or "",
+            "ssd": d.get("SolidState"),
+            "ejectable": bool(d.get("Ejectable")),
+            "device": d.get("DeviceIdentifier") or "",
+        }
+    except Exception:
+        pass
+    _dinfo[mount] = (now, info)
+    return info
+
+
 def disks():
     res = []
     out = run(["/bin/df", "-k"])
@@ -125,14 +155,19 @@ def disks():
             name, ext = "Macintosh HD", False
         elif mount.startswith("/Volumes/"):
             name, ext = mount[len("/Volumes/"):], True
+            if name in SKIP_VOLUMES:
+                continue
         else:
             continue
         total, used, avail = int(parts[1]) * 1024, int(parts[2]) * 1024, int(parts[3]) * 1024
         # APFS: "used" excludes other volumes in the container -> use total-avail
         used = total - avail
-        res.append({"name": name, "mount": mount, "total": total, "used": used,
-                    "free": avail, "pct": round(100.0 * used / total, 1) if total else 0,
-                    "external": ext})
+        item = {"name": name, "mount": mount, "total": total, "used": used,
+                "free": avail, "pct": round(100.0 * used / total, 1) if total else 0,
+                "external": ext}
+        if ext:
+            item.update(disk_info(mount))
+        res.append(item)
     res.sort(key=lambda d: (d["external"], d["name"]))
     return res
 

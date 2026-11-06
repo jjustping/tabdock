@@ -30,8 +30,36 @@ async function loadAll() {
   catch (e) { setOffline(true); }
 }
 async function loadState() {
-  try { S.state = await api("/api/state"); setOffline(false); renderLive(); }
+  try { S.state = await api("/api/state"); setOffline(false); renderLive(); handleEvents(S.state.events); }
   catch (e) { setOffline(true); }
+}
+
+// "export finished" and other server events -> banner + short chime (once per event, per device)
+let lastEvent = +(localStorage.getItem("dock_last_event") || 0);
+function chime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1320].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+      const t = ctx.currentTime + i * 0.18; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.start(t); o.stop(t + 0.4); });
+  } catch (e) { /* audio needs a first tap on some browsers */ }
+}
+function handleEvents(evs) {
+  if (!evs || !evs.length) return;
+  const maxId = Math.max(...evs.map((e) => e.id));
+  if (maxId < lastEvent) lastEvent = 0;               // server restarted
+  const fresh = evs.filter((e) => e.id > lastEvent && Date.now() / 1000 - e.at < 600);
+  lastEvent = maxId; localStorage.setItem("dock_last_event", lastEvent);
+  for (const e of fresh) {
+    if (e.type === "export_done") banner("✅ Экспорт закончился", `«${e.name}»: +${e.added} кадр${e.added % 10 === 1 && e.added % 100 !== 11 ? "" : "ов"}${e.target ? ` · ${e.done} из ${e.target}` : ""}`);
+  }
+}
+function banner(title, text) {
+  const b = document.createElement("div"); b.className = "banner";
+  b.innerHTML = `<b>${esc(title)}</b><span>${esc(text)}</span>`;
+  b.onclick = () => b.remove();
+  document.body.appendChild(b); chime();
+  setTimeout(() => b.classList.add("show"), 20);
+  setTimeout(() => { b.classList.remove("show"); setTimeout(() => b.remove(), 400); }, 12000);
 }
 
 function toast(msg) {
@@ -58,10 +86,18 @@ function dueLabel(due) {
   const d = new Date(due + "T12:00"); return { cls: "", txt: RU_DS[d.getDay()] + ", " + d.getDate() + " " + RU_MON[d.getMonth()] };
 }
 function md(src) {
-  const lines = esc(src || "").split("\n"); let html = "", inList = false;
+  const lines = esc(src || "").split("\n"); let html = "", inList = false, idx = -1;
   const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`(.+?)`/g, "<code>$1</code>")
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
   for (const l of lines) {
+    idx++;
+    const cb = /^\s*[-•]\s+\[( |x|х)\]\s+(.*)$/i.exec(l);
+    if (cb) {
+      if (!inList) { html += '<ul class="checklist">'; inList = true; }
+      const on = cb[1].trim() !== "";
+      html += `<li class="chk ${on ? "on" : ""}" data-line="${idx}"><span class="box">${on ? "✓" : ""}</span>${inline(cb[2])}</li>`;
+      continue;
+    }
     if (/^\s*[-•]\s+/.test(l)) { if (!inList) { html += "<ul>"; inList = true; } html += "<li>" + inline(l.replace(/^\s*[-•]\s+/, "")) + "</li>"; continue; }
     if (inList) { html += "</ul>"; inList = false; }
     if (l.trim()) html += "<p>" + inline(l) + "</p>";
@@ -117,8 +153,15 @@ function renderTop() {
     <div class="stat ${cls(s.cpu, 70, 90)}"><small>CPU</small><b>${s.cpu != null ? Math.round(s.cpu) + "%" : "—"}</b></div>
     <div class="stat ${cls(t.cpu, 75, 90)}"><small>Темп.</small><b>${t.cpu != null ? Math.round(t.cpu) + "°" : "—"}</b></div>
     <div class="stat ${cls(m.pct, 80, 92)}"><small>Память</small><b>${m.pct != null ? Math.round(m.pct) + "%" : "—"}</b></div>
-    <div class="stat ${cls(root && root.pct, 85, 95)}"><small>Диск</small><b>${root ? fmtBytes(root.free) : "—"}</b></div>`;
+    <div class="stat ${cls(root && root.pct, 85, 95)}"><small>Диск</small><b>${root ? fmtBytes(root.free) : "—"}</b></div>${catDiskStat(s, cls)}`;
   $("#awakeBtn").classList.toggle("on", !!S.state.awake);
+}
+
+function catDiskStat(s, cls) {
+  const v = ((S.shoots || {}).volumes || [])[0]; if (!v) return "";
+  const d = (s.disks || []).find((x) => x.mount === v.mount);
+  if (!d) return `<div class="stat hot" data-tab="mac"><small>${esc(v.name)}</small><b>нет</b></div>`;
+  return `<div class="stat ${cls(d.pct, 85, 95)}" data-tab="mac"><small>${esc(v.name)}</small><b>${fmtBytes(d.free)}</b></div>`;
 }
 
 // ---------------- render: reminders ----------------
@@ -207,6 +250,7 @@ function shootSub(s) {
   const parts = [];
   if (s.shot_from) parts.push(fmtDate(s.shot_from));
   if (s.source === "manual") parts.push("вручную");
+  else if (s.source === "folder") parts.push(s.done + " из " + s.target + " готово · " + s.catalog_name);
   else parts.push(s.done + " из " + s.target + (s.target_manual ? " (цель)" : s.picked ? " отобранных" : " кадров") + " экспортировано");
   if (s.deadline) parts.push("срок " + s.deadline.slice(8) + "." + s.deadline.slice(5, 7));
   return parts.join(" · ");
@@ -217,12 +261,12 @@ function renderShootsCard() {
   const todo = items.filter((s) => s.status !== "done" && s.status !== "delivered");
   const frames = todo.reduce((a, s) => a + Math.max(0, s.target - s.done), 0);
   const top = items.slice(0, 3);
-  $("#shootsCard").innerHTML = `<h2>Съёмки · Capture One <button class="act" data-tab="shoots">Все →</button></h2>
+  $("#shootsCard").innerHTML = `<h2>Съёмки <button class="act" data-tab="shoots">Все →</button></h2>
     <div class="shoots-summary">
       <div class="sum"><b>${todo.length}</b><small>в работе / ждут</small></div>
       <div class="sum"><b>${frames}</b><small>кадров осталось</small></div>
       <div class="sum"><b>${items.length - todo.length}</b><small>готово</small></div></div>
-    ${wfolioAlert()}
+    ${wfolioAlert()}${catalogHealth()}
     ${top.map((s) => `<div class="shoot" data-key="${esc(s.key)}">
         <div class="cover" style="${s.cover ? `background-image:url('${s.cover}')` : ""}"></div>
         <div class="info"><div class="name">${esc(s.name)}</div>
@@ -245,6 +289,7 @@ function renderShootsView() {
         <div class="pct" style="font-size:26px;width:auto">${Math.round(s.progress * 100)}%</div></div>
         <div class="bar ${barCls(s)}"><i style="width:${Math.round(s.progress * 100)}%"></i></div>
         <div class="nums">${s.source === "manual" ? `<span><b>${s.done}</b> / ${s.target} готово</span>` :
+          s.source === "folder" ? `<span><b>${s.total}</b> исходников</span>${s.work_files ? `<span><b>${s.work_files}</b> в работе</span>` : ""}<span><b>${s.exported}</b> готово</span>` :
           `<span><b>${s.total}</b> кадров</span><span><b>${s.picked}</b> отобрано</span><span><b>${s.exported}</b> экспорт</span>`}
           ${s.deadline ? `<span>срок <b>${s.deadline.slice(8)}.${s.deadline.slice(5, 7)}</b></span>` : ""}</div>
         ${galleryFor(s.key) ? `<div class="hint"><span class="tag due ${gDays(galleryFor(s.key)).cls}">wfolio · ${esc(gDays(galleryFor(s.key)).txt)}</span></div>` : ""}
@@ -271,9 +316,9 @@ function editShoot(key) {
     <div class="field"><label>Клиент</label><input type="text" id="sClient" value="${esc(s.client)}"></div>
     <div class="field"><label>Заметка</label><input type="text" id="sNote" value="${esc(s.note)}" placeholder="что осталось, пожелания клиента…"></div>
     ${galleryFor(s.key) ? `<div class="hint" style="color:var(--text)">🔗 wfolio: ${esc(gTitle(galleryFor(s.key)))} · ${esc(gDays(galleryFor(s.key)).txt)}</div>` : ""}
-    ${manual ? "" : `<div class="hint">${s.total} кадров · ${s.picked} отобрано · ${s.exported} экспортировано${s.last_export ? " · последний экспорт " + fmtDate(s.last_export) : ""} · каталог ${esc(s.catalog_name)}</div>`}
+    ${s.source === "folder" ? `<div class="hint">Папка: ${esc(s.path || "")} · ${s.total} исходников · ${s.work_files || 0} рабочих файлов · ${s.exported} готовых</div>` : manual ? "" : `<div class="hint">${s.total} кадров · ${s.picked} отобрано · ${s.exported} экспортировано${s.last_export ? " · последний экспорт " + fmtDate(s.last_export) : ""} · каталог ${esc(s.catalog_name)}</div>`}
     <div class="actions-row">
-      ${manual ? '<button class="btn danger left" id="sDel">Удалить</button>' : `<button class="btn left" id="sHide">${s.hidden ? "Показать" : "Скрыть"}</button><button class="btn" id="sOpen">Открыть в Capture One</button>`}
+      ${manual ? '<button class="btn danger left" id="sDel">Удалить</button>' : `<button class="btn left" id="sHide">${s.hidden ? "Показать" : "Скрыть"}</button><button class="btn" id="sOpen">${s.source === "folder" ? "Открыть папку" : "Открыть в Capture One"}</button>`}
       <button class="btn" id="sCancel">Отмена</button><button class="btn primary" id="sSave">Сохранить</button></div>`, (b) => {
     let st = s.status_manual ? s.status : "";
     const sync = () => $$("#sSeg button", b).forEach((x) => x.classList.toggle("on", x.dataset.s === st));
@@ -289,7 +334,7 @@ function editShoot(key) {
     if (manual) $("#sDel").onclick = (e) => armed(e.target, async () => { const r = await api("/api/shoots", { op: "delete", key }); S.shoots = r.shoots; closeSheet(); renderAll(); });
     else {
       $("#sHide").onclick = () => save({ hidden: !s.hidden });
-      $("#sOpen").onclick = async () => { const r = await api("/api/action", { action: "open_shoot", catalog: s.catalog }); toast(r.message); };
+      $("#sOpen").onclick = async () => { const r = await api("/api/action", s.source === "folder" ? { action: "open_folder", key: s.key } : { action: "open_shoot", catalog: s.catalog }); toast(r.message); };
     }
   });
 }
@@ -307,6 +352,40 @@ function addManualShoot() {
     };
     setTimeout(() => $("#mName").focus(), 50);
   });
+}
+
+// ---------------- catalog health: disk connected, free space, last backup ----------------
+function daysAgo(ts) { return ts ? Math.floor((Date.now() / 1000 - ts) / 86400) : null; }
+function catalogHealth() {
+  const sh = S.shoots || {}, disks = (S.state.sys || {}).disks || [];
+  const out = [];
+  for (const v of sh.volumes || []) {
+    const d = disks.find((x) => x.mount === v.mount);
+    if (!v.connected) out.push(`<div class="health bad">⚠ Диск «${esc(v.name)}» с каталогом не подключён — съёмки не обновляются</div>`);
+    else if (d && d.pct >= 90) out.push(`<div class="health warn">💾 На «${esc(v.name)}» осталось ${fmtBytes(d.free)} (${Math.round(100 - d.pct)}%)</div>`);
+  }
+  for (const b of sh.backups || []) {
+    const n = daysAgo(b.last);
+    if (n == null) out.push(`<div class="health warn">🗄 Бэкапов каталога «${esc(b.name)}» не найдено</div>`);
+    else if (n >= 14) out.push(`<div class="health ${n >= 30 ? "bad" : "warn"}">🗄 Последний бэкап каталога — ${n} дн. назад</div>`);
+  }
+  return out.join("");
+}
+
+// ---------------- deadlines: shoots, wfolio expiry, reminders (next 14 days) ----------------
+function deadlines() {
+  const items = [], lim = todayStr(14);
+  for (const s of (S.shoots.items || [])) if (s.deadline && !s.hidden && s.status !== "delivered" && s.deadline <= lim) items.push({ date: s.deadline, icon: "◐", text: "Сдать «" + s.name + "»", tab: "shoots" });
+  for (const g of (S.wfolio || [])) if (g.expires && g.expires <= lim && (g.check || {}).status !== "expired") items.push({ date: g.expires, icon: "⏳", text: "wfolio: «" + gTitle(g) + "» истекает", tab: "shoots" });
+  for (const r of (S.reminders || [])) if (r.due && !r.done && r.due <= lim) items.push({ date: r.due, icon: "✓", text: r.text });
+  return items.sort((a, b) => a.date < b.date ? -1 : 1);
+}
+function deadlinesHtml() {
+  const list = deadlines(); if (!list.length) return "";
+  return `<div class="day-h">Ближайшие сроки</div>` + list.slice(0, 5).map((d) => {
+    const l = dueLabel(d.date);
+    return `<div class="ev dl" ${d.tab ? `data-tab="${d.tab}"` : ""}><div class="tm"><span class="tag due ${l.cls}">${esc(l.txt)}</span></div><div class="tt">${esc(d.icon)} ${esc(d.text)}</div></div>`;
+  }).join("");
 }
 
 // ---------------- render: calendar + weather ----------------
@@ -337,7 +416,7 @@ function renderCalendar() {
         <div class="dot" style="background:${esc(e.color)}"></div><div class="tt">${esc(e.title)}<small>${esc([e.calendar, e.location].filter(Boolean).join(" · "))}</small></div></div>`;
     }).join("")).join("") || '<div class="empty">Сегодня и завтра событий нет</div>';
   }
-  $("#calendarCard").innerHTML = `<h2>Погода и календарь</h2>${fc ? `<div class="forecast">${fc}</div>` : ""}<div class="list">${evHtml}</div>`;
+  $("#calendarCard").innerHTML = `<h2>Погода, сроки, календарь</h2>${fc ? `<div class="forecast">${fc}</div>` : ""}<div class="list">${deadlinesHtml()}${evHtml}</div>`;
 }
 
 // ---------------- render: player ----------------
@@ -412,10 +491,18 @@ function renderMacMini() {
 }
 function renderMacView() {
   const s = S.state.sys || {}, t = s.temp || {}, m = s.mem || {};
-  const disks = (s.disks || []).map((d) => `<div class="disk"><div class="nm">${d.external ? "💾" : "🖥\ufe0f"} ${esc(d.name)}</div>
-      <div class="bar ${d.pct > 90 ? "" : "done"}"><i style="width:${d.pct}%;${d.pct > 90 ? "background:var(--red)" : ""}"></i></div>
+  const catVols = (S.shoots.volumes || []);
+  const disks = (s.disks || []).map((d) => {
+    const img = d.bus === "Disk Image";
+    const isCat = catVols.some((v) => v.mount === d.mount);
+    const meta = [img ? "образ диска" : d.model, img ? "" : d.bus, d.fs, d.smart && !/not supported/i.test(d.smart) ? "SMART: " + (d.smart === "Verified" ? "в порядке" : d.smart) : ""].filter(Boolean).join(" · ");
+    const full = !img && d.pct > 90;
+    return `<div class="disk"><div class="nm">${img ? "📀" : d.external ? "💾" : "🖥\ufe0f"} ${esc(d.name)}
+        ${isCat ? '<span class="tag cat">каталог C1</span>' : ""}<small class="dim">${esc(d.external ? meta : "системный")}</small></div>
+      <div class="bar ${full ? "" : "done"}"><i style="width:${d.pct}%;${full ? "background:var(--red)" : ""}"></i></div>
       <div class="fr">${fmtBytes(d.free)} свободно<br><span class="dim">из ${fmtBytes(d.total)}</span></div>
-      ${d.external ? `<button class="btn" data-eject="${esc(d.mount)}">⏏</button>` : ""}</div>`).join("");
+      ${d.external ? `<button class="btn" data-eject="${esc(d.mount)}">⏏</button>` : ""}</div>`;
+  }).join("") + catVols.filter((v) => !v.connected).map((v) => `<div class="disk"><div class="nm">💾 ${esc(v.name)} <span class="tag cat">каталог C1</span><small class="dim">не подключён</small></div><div class="bar"><i style="width:0"></i></div><div class="fr" style="color:var(--red)">отключён</div></div>`).join("");
   const folders = (S.config.folders || []).map((f) => `<button class="tile" data-folder="${esc(f.path)}"><span class="ic">📁</span>${esc(f.title)}</button>`).join("");
   $("#macView").innerHTML = `
     <div class="card"><h2>${esc(s.hostname || "")} · ${esc(s.chip || s.model || "")} · ${s.cores || "?"} ядер</h2>
@@ -450,8 +537,21 @@ function renderNotesView() {
       <div class="spacer"></div><button class="btn primary" id="nAdd">+ Заметка</button></div>
     <div class="notes-grid">${list.map((n) => `<div class="note ${n.color}" data-id="${n.id}"><h3>${n.pinned ? "📌 " : ""}${esc(n.title)}<button class="ed" data-ed>✎</button></h3>
       ${n.tag ? `<span class="tag">${esc(n.tag)}</span>` : ""}<div class="md">${md(n.body)}</div>
+      ${/^\s*[-•]\s+\[(x|х)\]/im.test(n.body) ? '<button class="btn reset-chk" data-reset>↺ Снять все отметки</button>' : ""}
       ${(n.links || []).length ? `<div class="links">${n.links.filter((l) => /^(https?:\/\/|mailto:|tel:)/i.test(l.url)).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">🔗 ${esc(l.title || l.url)}<small>${esc(l.url.replace(/^https?:\/\//, ""))}</small></a>`).join("")}</div>` : ""}
     </div>`).join("") || '<div class="empty">Пока пусто — добавьте первую шпаргалку</div>'}</div>`;
+  $$("#notesView .chk").forEach((li) => li.onclick = async () => {
+    const note = S.notes.find((n) => n.id === li.closest(".note").dataset.id); if (!note) return;
+    const lines = note.body.split("\n"), i = +li.dataset.line;
+    lines[i] = lines[i].replace(/\[( |x|х)\]/i, (m, c) => c.trim() ? "[ ]" : "[x]");
+    li.classList.toggle("on"); li.querySelector(".box").textContent = li.classList.contains("on") ? "✓" : "";
+    const r = await api("/api/notes", { op: "edit", id: note.id, body: lines.join("\n") }); S.notes = r.notes;
+  });
+  $$("#notesView [data-reset]").forEach((b) => b.onclick = async () => {
+    const note = S.notes.find((n) => n.id === b.closest(".note").dataset.id); if (!note) return;
+    const r = await api("/api/notes", { op: "edit", id: note.id, body: note.body.replace(/^(\s*[-•]\s+)\[(x|х)\]/gim, "$1[ ]") });
+    S.notes = r.notes; renderNotesView();
+  });
   $$("#notesView [data-f]").forEach((b) => b.onclick = () => { noteFilter = b.dataset.f; renderNotesView(); });
   $$("#notesView [data-ed]").forEach((b) => b.onclick = () => editNote(S.notes.find((n) => n.id === b.closest(".note").dataset.id)));
   $("#nAdd").onclick = () => editNote(null);
@@ -468,7 +568,7 @@ function editNote(n) {
       <div class="field"><label>Раздел</label><input type="text" id="nTag" value="${esc(n.tag)}" list="nTags"><datalist id="nTags">${tags.map((t) => `<option value="${esc(t)}">`).join("")}</datalist></div></div>
     <div class="field"><label>Цвет</label><div class="seg" id="nColors">${COLORS.map((c) => `<button data-c="${c}" style="color:var(--${c === "teal" ? "accent" : c})">●</button>`).join("")}
       <button id="nPin" class="${n.pinned ? "on" : ""}" style="margin-left:auto">📌 Закрепить</button></div></div>
-    <div class="field"><label>Текст — «- » список, **жирный**, \`код\`</label><textarea id="nBody">${esc(n.body)}</textarea></div>
+    <div class="field"><label>Текст — «- » список, «- [ ] » чек-лист, **жирный**, \`код\`</label><textarea id="nBody">${esc(n.body)}</textarea></div>
     <div class="field"><label>Ссылки</label><div id="nLinks">${linksHtml()}</div><button class="btn" id="nAddLink">+ Ссылка</button></div>
     <div class="actions-row">${isNew ? "" : '<button class="btn danger left" id="nDel">Удалить</button>'}<button class="btn" id="nCancel">Отмена</button><button class="btn primary" id="nSave">Сохранить</button></div>`, (b) => {
     const syncC = () => $$("#nColors [data-c]", b).forEach((x) => x.classList.toggle("on", x.dataset.c === color));
@@ -507,6 +607,14 @@ function renderSettings() {
     <div class="app-pick" id="appPick">${(c.apps || []).map((a) => `<button class="on" data-a="${esc(a)}">${esc(a)} ×</button>`).join("")}</div>
     <form class="add-row" id="appForm" style="margin-top:12px"><input type="search" id="appQ" placeholder="Добавить приложение: начните вводить название" list="appList"><datalist id="appList"></datalist><button class="btn primary">Добавить</button></form>
     <div class="hint">На главной показываются первые 8 установленных.</div></div>
+  <div class="card section-gap"><h2>Папки со съёмками · Photon Studio, Photoshop и др.</h2>
+    ${(c.folder_roots || []).map((r, i) => `<div class="srv"><div class="n"><b>${esc(r.app || "Папки")}</b><small class="mono">${esc(r.path)}</small></div><button class="btn sq danger" data-froot="${i}">×</button></div>`).join("") || '<div class="muted" style="margin-bottom:10px">Не добавлено</div>'}
+    <form class="row" id="frForm" style="margin-top:6px"><input type="text" id="frPath" placeholder="/Volumes/SSD/Съёмки" style="flex:2"><input type="text" id="frApp" placeholder="Photon Studio" list="frApps">
+      <datalist id="frApps"><option value="Photon Studio"><option value="Photoshop"><option value="Lightroom"><option value="Другое"></datalist><button class="btn primary" style="flex:none">Добавить</button></form>
+    <div class="field" style="margin-top:12px"><label>Подпапки с готовыми файлами (через запятую)</label>
+      <form class="row" id="edForm"><input type="text" id="edDirs" value="${esc((c.export_dirs || S.export_dirs_default || []).join(", "))}"><button class="btn" style="flex:none">Сохранить</button></form></div>
+    <div class="hint">Каждая подпапка = съёмка. Исходники — RAW (или JPEG, если RAW нет) в папке съёмки; рабочие файлы — .photon, .psd;
+      готово — изображения в подпапке экспорта. Прогресс = готовые / исходники. Обновляется раз в минуту.</div></div>
   <div class="card section-gap"><h2>Каталоги Capture One</h2>
     ${(S.shoots.catalogs || []).map((p) => `<div class="mono" style="padding:6px 0">${esc(p)}</div>`).join("") || '<div class="muted">Не найдено</div>'}
     <div class="hint">${(c.c1_catalogs || []).length ? "Заданы вручную в data/config.json." : "Найдены автоматически (Spotlight + ~/Pictures). Чтобы указать вручную — впишите пути в «c1_catalogs» в data/config.json."}
@@ -520,6 +628,13 @@ function renderSettings() {
       $$("#geoRes [data-i]").forEach((b) => b.onclick = async () => { S = await api("/api/config", { place: res[+b.dataset.i] }); renderAll(); toast("Город сохранён"); });
     } catch (err) { toast("Нет интернета для поиска города"); }
   };
+  $$("[data-froot]").forEach((b) => b.onclick = async () => { const roots = (c.folder_roots || []).filter((_, i) => i !== +b.dataset.froot); S = await api("/api/config", { folder_roots: roots }); renderAll(); });
+  $("#frForm").onsubmit = async (e) => {
+    e.preventDefault(); const path = $("#frPath").value.trim(); if (!path) return;
+    S = await api("/api/config", { folder_roots: [...(c.folder_roots || []), { path, app: $("#frApp").value.trim() || "Папки" }] });
+    renderAll(); const err = (S.shoots.errors || []).find((x) => x.catalog === path); toast(err ? err.error : "Папка добавлена");
+  };
+  $("#edForm").onsubmit = async (e) => { e.preventDefault(); S = await api("/api/config", { export_dirs: $("#edDirs").value.split(",").map((x) => x.trim()).filter(Boolean) }); renderAll(); toast("Сохранено"); };
   $("#calOn").onclick = async () => { S = await api("/api/config", { calendar: true }); renderAll(); };
   $("#calOff").onclick = async () => { S = await api("/api/config", { calendar: false }); renderAll(); };
   $$("#appPick [data-a]").forEach((b) => b.onclick = async () => { S = await api("/api/config", { apps: c.apps.filter((a) => a !== b.dataset.a) }); renderAll(); });

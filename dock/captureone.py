@@ -75,7 +75,17 @@ def _ts(v):
     return v + 978307200 if v < 1_000_000_000 else v
 
 
+NO_ACCESS = ("macOS не даёт TabDock доступ к этому диску. На Mac: Системные настройки → Конфиденциальность "
+             "и безопасность → Файлы и папки → python3 → «Съёмные тома» (или «Полный доступ к диску» для python3)")
+
+
 def read_catalog(catalog):
+    try:
+        os.listdir(catalog)
+    except PermissionError:
+        raise PermissionError(NO_ACCESS)
+    except FileNotFoundError:
+        raise FileNotFoundError("каталог не найден (диск не подключён?): %s" % catalog)
     db = db_path(catalog)
     if not db:
         raise FileNotFoundError("нет базы в %s" % catalog)
@@ -172,6 +182,36 @@ class CaptureOne:
             except Exception as e:
                 errors.append({"catalog": cat, "error": str(e)})
         return res, errors
+
+
+def backup_info(catalog):
+    """Newest Capture One catalog backup: `*.cocatalogdb.backup N` next to the base and
+    ~/Library/Application Support/Capture One/Backups/<catalog>/<date>/ (both layouts exist)."""
+    stamps = []
+    try:
+        for f in os.listdir(catalog):
+            if ".cocatalogdb.backup" in f and not f.startswith("._"):
+                stamps.append(os.path.getmtime(os.path.join(catalog, f)))
+    except OSError:
+        pass
+    name = os.path.splitext(os.path.basename(catalog))[0]
+    bdir = os.path.expanduser(os.path.join("~/Library/Application Support/Capture One/Backups", name))
+    try:
+        for f in os.listdir(bdir):
+            p = os.path.join(bdir, f)
+            if os.path.isdir(p):
+                stamps.append(os.path.getmtime(p))
+    except OSError:
+        pass
+    return {"catalog": catalog, "name": name, "last": max(stamps) if stamps else None, "count": len(stamps)}
+
+
+def catalog_volume(catalog):
+    """Mount point of the disk that holds the catalog (None for the system disk)."""
+    parts = catalog.split("/")
+    if len(parts) > 2 and parts[1] == "Volumes":
+        return "/" + "/".join(parts[1:3])
+    return None
 
 
 def derive(shoot, manual):

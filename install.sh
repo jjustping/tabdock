@@ -57,7 +57,11 @@ if [ ! -x "$DIR/.venv/bin/python" ]; then
   "$PY" -m venv "$DIR/.venv"
 fi
 say "Ставлю зависимости (qrcode)"
-"$DIR/.venv/bin/pip" install -q --disable-pip-version-check -r "$DIR/requirements.txt"
+if [ -d "$DIR/.wheels" ]; then   # offline install (Mac without internet): wheels copied next to the project
+  "$DIR/.venv/bin/pip" install -q --disable-pip-version-check --no-index --find-links "$DIR/.wheels" -r "$DIR/requirements.txt"
+else
+  "$DIR/.venv/bin/pip" install -q --disable-pip-version-check -r "$DIR/requirements.txt"
+fi
 
 # 2. Calendar helper (EventKit)
 if command -v swiftc >/dev/null; then

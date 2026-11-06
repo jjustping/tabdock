@@ -14,6 +14,7 @@ import json
 import mimetypes
 import re
 import socket
+import subprocess
 import os
 import sys
 import threading
@@ -26,12 +27,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from dock import actions as act_mod          # noqa: E402
-from dock import auth, bonjour, captureone, demo, sysinfo, weather, wfolio  # noqa: E402
+from dock import auth, bonjour, captureone, demo, folders, sysinfo, weather, wfolio  # noqa: E402
 from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 WEB = os.path.join(HERE, "web")
 
 
@@ -48,6 +49,9 @@ class App:
         self.store.load("shoots", {"manual": {}, "custom": []})
         self.store.load("wfolio", [])
         self.wfolio = wfolio.Checker(self.store)
+        self.folders = folders.FolderShoots(
+            lambda: ([] if self.demo else self.config().get("folder_roots", []),
+                     self.config().get("export_dirs") or folders.DEFAULT_EXPORT_DIRS), self.cache_dir)
         self.sys = sysinfo.Sampler()
         self.media = Media(self.cache_dir)
         self.actions = act_mod.Actions()
@@ -57,6 +61,44 @@ class App:
         self._catalogs = None
         self._catalogs_at = 0
         self.version_ts = time.time()
+        self.events = []          # [{id, type, at, ...}] newest last, for toasts on the tablet
+        self._event_id = 0
+        self._exports = {}        # shoot key -> {"count", "start", "changed"}
+        threading.Thread(target=self._watch_exports, daemon=True).start()
+
+    def add_event(self, **ev):
+        self._event_id += 1
+        ev.update({"id": self._event_id, "at": time.time()})
+        self.events = (self.events + [ev])[-20:]
+
+    def _watch_exports(self):
+        """Capture One export runs -> one "export finished" event per shoot, 40 s after the last new file."""
+        first = True
+        while True:
+            try:
+                items = self.shoots()["items"]
+                now = time.time()
+                for sh in items:
+                    if sh.get("source") not in ("c1", "folder"):
+                        continue
+                    cnt, st = sh.get("exported", 0), self._exports.get(sh["key"])
+                    if st is None or first:
+                        self._exports[sh["key"]] = {"count": cnt, "start": cnt, "changed": 0}
+                        continue
+                    if cnt != st["count"]:
+                        if not st["changed"]:
+                            st["start"] = st["count"]
+                        st["count"], st["changed"] = cnt, now
+                    elif st["changed"] and now - st["changed"] > 40:
+                        added = st["count"] - st["start"]
+                        if added > 0:
+                            self.add_event(type="export_done", name=sh["name"], added=added,
+                                           done=sh.get("done"), target=sh.get("target"))
+                        st["changed"] = 0
+                first = False
+            except Exception:
+                pass
+            time.sleep(10)
 
     def config(self):
         return self.store.load("config", default_config)
@@ -82,6 +124,8 @@ class App:
     def shoots(self):
         data = self.store.load("shoots", {"manual": {}, "custom": []})
         items, errors = (demo.shoots(), []) if self.demo else self.c1.shoots(self.catalogs())
+        items = items + [dict(x) for x in self.folders.items]
+        errors = errors + list(self.folders.errors)
         for c in data.get("custom", []):
             s = dict(c)
             s.update({"source": "manual", "key": "m:" + c["id"], "total": c.get("target", 0),
@@ -98,11 +142,20 @@ class App:
         order = {"editing": 0, "selecting": 1, "new": 2, "delivered": 4, "done": 3}
         out.sort(key=lambda s: (s["hidden"], order.get(s["status"], 5),
                                 s.get("deadline") or "9999", -(s.get("shot_from") or s.get("created") or 0)))
-        return {"items": out, "errors": errors, "catalogs": self.catalogs()}
+        cats = self.catalogs()
+        backups = [] if self.demo else [captureone.backup_info(c) for c in cats if os.path.isdir(c)]
+        vols = []
+        for c in cats:
+            v = captureone.catalog_volume(c)
+            if v:
+                vols.append({"catalog": c, "mount": v, "name": v.split("/")[-1], "connected": os.path.isdir(v)})
+        return {"items": out, "errors": errors, "catalogs": cats, "backups": backups, "volumes": vols}
 
     def cover_file(self, key):
         if self.demo:
             return None
+        if key.startswith("dir:"):
+            return self.folders.thumb(key)
         items, _ = self.c1.shoots(self.catalogs())
         for s in items:
             if s["key"] == key:
@@ -110,7 +163,7 @@ class App:
         return None
 
     def state(self):
-        return {"sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake,
+        return {"events": self.events, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake,
                 "now": time.time(), "version": VERSION}
 
     def everything(self):
@@ -127,6 +180,7 @@ class App:
             "url": self.url(),
             "qr": qr_svg(self.url()),
             "wfolio": self.galleries(),
+            "export_dirs_default": folders.DEFAULT_EXPORT_DIRS,
             "auth": {"password": bool(cfg.get("password_hash"))},
         }
 
@@ -315,6 +369,11 @@ def op_config(app, body):
             cfg["folders"] = body["folders"][:12]
         if "calendar" in body:
             cfg["calendar"] = bool(body["calendar"])
+        if "folder_roots" in body and isinstance(body["folder_roots"], list):
+            cfg["folder_roots"] = [{"path": str(r.get("path", ""))[:500], "app": str(r.get("app", ""))[:60]}
+                                   for r in body["folder_roots"] if isinstance(r, dict) and r.get("path")][:12]
+        if "export_dirs" in body and isinstance(body["export_dirs"], list):
+            cfg["export_dirs"] = [str(x).strip().lower()[:40] for x in body["export_dirs"] if str(x).strip()][:20]
         if "c1_catalogs" in body and isinstance(body["c1_catalogs"], list):
             cfg["c1_catalogs"] = [c for c in body["c1_catalogs"] if isinstance(c, str)]
         if body.get("new_token"):
@@ -322,6 +381,8 @@ def op_config(app, body):
             cfg["token"] = secrets.token_urlsafe(12)
         return True
     r = app.store.update("config", default_config, fn)
+    if "folder_roots" in body or "export_dirs" in body:
+        app.folders.refresh()
     if "calendar" in body:
         app.calendar.refresh_soon()
     return r
@@ -339,6 +400,12 @@ def op_action(app, body):
         allowed = [f["path"] for f in app.config().get("folders", [])]
         if arg not in allowed:
             return False, "Папка не в списке"
+    if a == "open_folder":
+        path = app.folders.path(body.get("key", ""))
+        if not path:
+            return False, "Папка не найдена"
+        subprocess.Popen(["/usr/bin/open", path])
+        return True, "Открываю папку в Finder"
     if a == "open_shoot":
         cat = body.get("catalog")
         if cat not in app.catalogs():
