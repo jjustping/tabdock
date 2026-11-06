@@ -450,7 +450,7 @@ function renderNotesView() {
       <div class="spacer"></div><button class="btn primary" id="nAdd">+ Заметка</button></div>
     <div class="notes-grid">${list.map((n) => `<div class="note ${n.color}" data-id="${n.id}"><h3>${n.pinned ? "📌 " : ""}${esc(n.title)}<button class="ed" data-ed>✎</button></h3>
       ${n.tag ? `<span class="tag">${esc(n.tag)}</span>` : ""}<div class="md">${md(n.body)}</div>
-      ${(n.links || []).length ? `<div class="links">${n.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">🔗 ${esc(l.title || l.url)}<small>${esc(l.url.replace(/^https?:\/\//, ""))}</small></a>`).join("")}</div>` : ""}
+      ${(n.links || []).length ? `<div class="links">${n.links.filter((l) => /^(https?:\/\/|mailto:|tel:)/i.test(l.url)).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">🔗 ${esc(l.title || l.url)}<small>${esc(l.url.replace(/^https?:\/\//, ""))}</small></a>`).join("")}</div>` : ""}
     </div>`).join("") || '<div class="empty">Пока пусто — добавьте первую шпаргалку</div>'}</div>`;
   $$("#notesView [data-f]").forEach((b) => b.onclick = () => { noteFilter = b.dataset.f; renderNotesView(); });
   $$("#notesView [data-ed]").forEach((b) => b.onclick = () => editNote(S.notes.find((n) => n.id === b.closest(".note").dataset.id)));
@@ -483,7 +483,7 @@ function editNote(n) {
     $("#nSave").onclick = async () => {
       readLinks();
       const body = { title: $("#nTitle").value.trim() || "Без названия", tag: $("#nTag").value.trim(), color, pinned: $("#nPin").classList.contains("on"),
-        body: $("#nBody").value, links: links.filter((l) => l.url).map((l) => ({ title: l.title, url: /^[a-z]+:/i.test(l.url) ? l.url : "https://" + l.url })) };
+        body: $("#nBody").value, links: links.filter((l) => l.url).map((l) => ({ title: l.title, url: /^(https?:\/\/|mailto:|tel:)/i.test(l.url) ? l.url : "https://" + l.url.replace(/^[a-z]+:\/*/i, "") })) };
       const r = await api("/api/notes", isNew ? { op: "add", ...body } : { op: "edit", id: n.id, ...body });
       S.notes = r.notes; closeSheet(); renderNotesView();
     };
@@ -616,7 +616,9 @@ function editGallery(g) {
 
 // ---------------- connect ----------------
 let scanState = { running: false, done: 0, total: 0, found: new Map() };
-function autoOn() { return localStorage.getItem("dock_auto") !== "0"; }
+// Browser: off by default — a browser cannot verify that another server is really yours.
+// Android app: the app verifies servers itself (pinned key), so failover is handled natively.
+function autoOn() { return localStorage.getItem("dock_auto") === "1"; }
 function renderConnect() {
   const sys = S.state.sys || {}, here = location.origin;
   const list = [...scanState.found.values()];
@@ -648,7 +650,7 @@ function renderConnect() {
         ${cur ? "" : `<button class="btn" data-go="${esc(s.base)}">Перейти</button><button class="btn sq danger" data-forget="${esc(s.base)}">×</button>`}</div>`;
     }).join("")}
     <div class="row" style="margin-top:12px"><div class="seg" style="flex:none"><button id="autoBtn" class="${autoOn() ? "on" : ""}">⟳ Автоподключение</button></div>
-      <div class="hint" style="margin:0">Если этот Mac пропал из сети больше чем на 15 секунд, планшет сам перейдёт на другой найденный TabDock.</div></div>
+      <div class="hint" style="margin:0">В браузере выключено по умолчанию: браузер не может проверить, что другой сервер — ваш. В приложении TabDock для Android автопереключение работает всегда, но только на Mac, к которым планшет уже подключался.</div></div>
     <div class="hint">Совет: закрепите за Mac mini постоянный IP в роутере (DHCP-резервирование) — тогда ярлык на планшете не сломается после перезагрузки роутера.</div></div>`;
   loadQR($("#qrInline"));
   $("#newTok").onclick = (e) => armed(e.target, async () => { S = await api("/api/config", { new_token: true }); renderAll(); toast("Новый ключ — подключите устройства заново"); });
@@ -676,7 +678,9 @@ async function scanNetwork() {
 let offlineSince = 0;
 function rememberHere() { const s = S.state.sys || {}; if (s.hostname) DockConnect.remember({ base: location.origin, name: s.hostname, model: s.chip }); }
 async function tryFailover() {
-  if (!autoOn() || !offlineSince || Date.now() - offlineSince < 15000) return;
+  if (!offlineSince || Date.now() - offlineSince < 15000) return;
+  if (window.TabDockNative && TabDockNative.lost) { TabDockNative.lost(); return; }
+  if (!autoOn()) return;
   for (const s of DockConnect.saved()) {
     if (s.base === location.origin) continue;
     const r = await DockConnect.probe(s.base);
@@ -731,4 +735,8 @@ const saved = window.__TAB__ || localStorage.getItem("dock_tab");
 if (saved && saved !== "home") { $$(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === saved)); $$(".view").forEach((v) => v.classList.toggle("active", v.dataset.view === saved)); }
 if (/[?&]privacy=1/.test(location.search)) document.body.classList.add("privacy");
 DockConnect.saved();
+// Android app: remember this Mac's identity (id + proof key) so the app never auto-connects to an impostor
+if (window.__INIT__ && window.__INIT__.pin && window.TabDockNative && TabDockNative.pin) {
+  try { TabDockNative.pin(location.origin, __INIT__.pin.id, __INIT__.pin.key, (__INIT__.state.sys || {}).hostname || ""); } catch (e) { /* old app */ }
+}
 if (window.__INIT__) { S = window.__INIT__; renderAll(); rememberHere(); } else loadAll().then(rememberHere);

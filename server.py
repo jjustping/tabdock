@@ -5,10 +5,15 @@ Run:  .venv/bin/python server.py [--port 8787] [--data DIR]
 Open: http://localhost:8787 on the Mac, then scan the QR code with the tablet.
 """
 import argparse
+import hashlib
+import hmac
+import ipaddress
+import secrets
 import io
 import json
 import mimetypes
 import re
+import socket
 import os
 import sys
 import threading
@@ -26,7 +31,7 @@ from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.2.0"
+VERSION = "0.4.0"
 WEB = os.path.join(HERE, "web")
 
 
@@ -140,11 +145,29 @@ class App:
         out.sort(key=lambda g: (g["days_left"] is None, g["days_left"] if g["days_left"] is not None else 0))
         return out
 
-    def hello(self):
+    def server_id(self):
+        cfg = self.config()
+        if not cfg.get("server_id"):
+            sid = secrets.token_hex(8)
+            self.store.update("config", default_config, lambda c: c.setdefault("server_id", sid))
+            cfg = self.config()
+        return cfg["server_id"]
+
+    def proof_key(self):
+        """Derived from the access token: lets a paired tablet check it talks to *this* Mac
+        (challenge-response) without the token itself ever being sent by the server."""
+        return hmac.new(self.config()["token"].encode(), b"tabdock-proof-v1", hashlib.sha256).hexdigest()
+
+    def proof(self, nonce):
+        msg = ("%s|%s" % (nonce, self.server_id())).encode()
+        return hmac.new(self.proof_key().encode(), msg, hashlib.sha256).hexdigest()
+
+    def hello(self, nonce=None):
         s = self.sysdata()
         return {"app": "tabdock", "version": VERSION, "name": s.get("hostname") or "Mac",
                 "model": s.get("chip") or s.get("model"), "ip": s.get("ip"), "port": self.port,
-                "password": bool(self.config().get("password_hash"))}
+                "password": bool(self.config().get("password_hash")), "id": self.server_id(),
+                **({"nonce": nonce, "proof": self.proof(nonce)} if nonce else {})}
 
 
 # ---------------- API ops ----------------
@@ -180,8 +203,14 @@ def op_reminders(app, body):
     return app.store.update("reminders", [], fn)
 
 
+SAFE_LINK = re.compile(r"^(https?://|mailto:|tel:)", re.I)
+
+
 def op_notes(app, body):
     op = body.get("op")
+    if isinstance(body.get("links"), list):   # never store javascript:/data: links
+        body["links"] = [{"title": str(l.get("title", ""))[:200], "url": str(l.get("url", ""))[:2000]}
+                         for l in body["links"] if isinstance(l, dict) and SAFE_LINK.match(str(l.get("url", "")))]
 
     def fn(notes):
         if op == "add":
@@ -395,6 +424,7 @@ class Handler(BaseHTTPRequestHandler):
             html = f.read()
         d = self.app.everything()
         d["is_local"] = self._is_local()
+        d["pin"] = {"id": self.app.server_id(), "key": self.app.proof_key()}
         init = json.dumps(d, ensure_ascii=False, default=str).replace("</", "<\\/")
         tab = qs.get("tab", [""])[0]
         boot = "<script>window.__INIT__=%s;window.__TAB__=%s;</script>" % (init, json.dumps(tab))
@@ -403,7 +433,51 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.do_GET()
 
+    # --- network guards: private networks only, no DNS rebinding, no cross-site POSTs
+    def _client_allowed(self):
+        if os.environ.get("DOCK_ALLOW_PUBLIC"):
+            return True
+        try:
+            ip = ipaddress.ip_address(self.client_address[0].split("%")[0])
+        except ValueError:
+            return False
+        if getattr(ip, "ipv4_mapped", None):
+            ip = ip.ipv4_mapped
+        return ip.is_loopback or ip.is_private or ip.is_link_local
+
+    def _host_allowed(self):
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]").lower()
+        if not host or host == "localhost" or host.endswith(".local"):
+            return True
+        try:
+            ipaddress.ip_address(host)
+            return True
+        except ValueError:
+            return host == socket.gethostname().lower().replace(".local", "")
+
+    def _guard(self):
+        if not self._client_allowed():
+            self._send(403, {"error": "TabDock answers only on private networks"})
+            return False
+        if not self._host_allowed():
+            self._send(421, {"error": "unexpected Host header"})
+            return False
+        return True
+
+    def _same_origin_post(self):
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":      # forces a CORS preflight for cross-site callers
+            return False
+        origin = self.headers.get("Origin")
+        if origin and origin != "null":
+            o = urllib.parse.urlparse(origin)
+            if o.netloc.lower() != (self.headers.get("Host") or "").lower():
+                return False
+        return True
+
     def do_GET(self):
+        if not self._guard():
+            return
         u = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(u.query)
         p = u.path
@@ -422,7 +496,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(403, {"error": "forbidden"})
             return self._file(f)
         if p == "/api/hello":
-            return self._send(200, app.hello(), extra={"Access-Control-Allow-Origin": "*"})
+            nonce = qs.get("nonce", [""])[0][:64] or None
+            return self._send(200, app.hello(nonce), extra={"Access-Control-Allow-Origin": "*"})
         if p == "/manifest.webmanifest":
             return self._file(os.path.join(WEB, "manifest.webmanifest"), "application/manifest+json")
         if not self._token_ok(qs):
@@ -459,6 +534,10 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if not self._guard():
+            return
+        if not self._same_origin_post():
+            return self._send(403, {"error": "cross-site request blocked"})
         u = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(u.query)
         n = int(self.headers.get("Content-Length") or 0)

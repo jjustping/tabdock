@@ -28,6 +28,10 @@ import android.webkit.WebViewClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -53,6 +57,7 @@ public class MainActivity extends Activity {
     private final ArrayDeque<NsdServiceInfo> toResolve = new ArrayDeque<>();
     private boolean resolving = false;
     private final Handler ui = new Handler(Looper.getMainLooper());
+    private volatile String currentUrl = "";
 
     @Override
     protected void onCreate(Bundle state) {
@@ -151,6 +156,11 @@ public class MainActivity extends Activity {
     // ---------------- web client ----------------
     private class Client extends WebViewClient {
         @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            currentUrl = url == null ? "" : url;
+        }
+
+        @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
             Uri u = req.getUrl();
             String scheme = u.getScheme();
@@ -163,10 +173,10 @@ public class MainActivity extends Activity {
 
         @Override
         public void onPageFinished(WebView view, String url) {
+            currentUrl = url == null ? "" : url;
             Uri u = Uri.parse(url);
             if ("http".equals(u.getScheme()) && isLocalHost(u.getHost())) {
                 String base = "http://" + u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : "");
-                prefs.edit().putString("last", base).apply();
                 CookieManager.getInstance().flush(); // keep the sign-in cookie across restarts
             }
         }
@@ -236,6 +246,21 @@ public class MainActivity extends Activity {
         });
     }
 
+    private boolean onStartPage() { return currentUrl.startsWith("file:///android_asset/"); }
+
+    private JSONObject pins() {
+        try { return new JSONObject(prefs.getString("pins", "{}")); } catch (Exception e) { return new JSONObject(); }
+    }
+
+    private static String hmac(String key, String msg) throws Exception {
+        Mac m = Mac.getInstance("HmacSHA256");
+        m.init(new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        byte[] out = m.doFinal(msg.getBytes(StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder();
+        for (byte b : out) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+
     private static String deviceIp() {
         try {
             for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
@@ -267,7 +292,72 @@ public class MainActivity extends Activity {
         public String saved() { return prefs.getString("last", ""); }
 
         @JavascriptInterface
-        public void forget() { prefs.edit().remove("last").apply(); }
+        public void forget() { if (onStartPage()) prefs.edit().remove("last").apply(); }
+
+        /** Called by the TabDock page after sign-in: remember this Mac's identity (TOFU pinning). */
+        @JavascriptInterface
+        public void pin(String origin, String id, String key, String name) {
+            if (origin == null || id == null || key == null) return;
+            if (!currentUrl.startsWith(origin + "/") && !currentUrl.equals(origin)) return; // only for the page's own origin
+            try {
+                JSONObject pins = pins();
+                pins.put(id, new JSONObject().put("key", key).put("base", origin).put("name", name == null ? "" : name));
+                prefs.edit().putString("pins", pins.toString()).putString("last", origin).apply();
+            } catch (Exception ignored) { }
+        }
+
+        @JavascriptInterface
+        public boolean hasPins() { return pins().length() > 0; }
+
+        /**
+         * Verify a /api/hello answer that the start page fetched with ?nonce=.
+         * pinned   – a Mac this tablet paired with, proof matches
+         * mismatch – claims a paired id (or sits on a paired address) but cannot prove it: impostor or reset key
+         * unknown  – never paired
+         */
+        @JavascriptInterface
+        public String verify(String base, String helloJson, String nonce) {
+            try {
+                JSONObject h = new JSONObject(helloJson);
+                String id = h.optString("id", "");
+                JSONObject pins = pins();
+                if (pins.has(id)) {
+                    String key = pins.getJSONObject(id).getString("key");
+                    String want = hmac(key, nonce + "|" + id);
+                    boolean ok = MessageDigest.isEqual(want.getBytes(StandardCharsets.UTF_8),
+                            h.optString("proof", "").getBytes(StandardCharsets.UTF_8));
+                    if (ok) {   // the Mac may have a new IP: remember where it is now
+                        pins.getJSONObject(id).put("base", base);
+                        prefs.edit().putString("pins", pins.toString()).apply();
+                        return "pinned";
+                    }
+                    return "mismatch";
+                }
+                java.util.Iterator<String> it = pins.keys();
+                while (it.hasNext()) {
+                    if (base.equals(pins.getJSONObject(it.next()).optString("base"))) return "mismatch";
+                }
+                return "unknown";
+            } catch (Exception e) {
+                return "unknown";
+            }
+        }
+
+        /** Before opening a server that is not verified, drop any sign-in cookie for that address. */
+        @JavascriptInterface
+        public void prepare(String base, boolean trusted) {
+            if (!onStartPage() || trusted || base == null) return;
+            CookieManager cm = CookieManager.getInstance();
+            String c = cm.getCookie(base);
+            if (c != null && c.contains("dock_k=")) {
+                cm.setCookie(base, "dock_k=; Max-Age=0; Path=/");
+                cm.flush();
+            }
+        }
+
+        /** The dashboard lost its Mac: go back to the start page, which re-verifies before reconnecting. */
+        @JavascriptInterface
+        public void lost() { ui.post(() -> web.loadUrl(START + "#lost")); }
 
         @JavascriptInterface
         public String deviceIp() { return MainActivity.deviceIp(); }

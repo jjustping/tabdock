@@ -26,11 +26,13 @@ def check_password(pw, stored):
 
 
 def allowed(ip):
-    """Max 5 wrong attempts per 5 minutes per IP."""
+    """Max 5 wrong attempts per 5 minutes per IP and 20 overall (slows down distributed guessing)."""
     with _lock:
         now = time.time()
-        _fail[ip] = [t for t in _fail.get(ip, []) if now - t < 300]
-        return len(_fail[ip]) < 5
+        for k in list(_fail):
+            _fail[k] = [t for t in _fail[k] if now - t < 300]
+        total = sum(len(v) for v in _fail.values())
+        return len(_fail.get(ip, [])) < 5 and total < 20
 
 
 def failed(ip):

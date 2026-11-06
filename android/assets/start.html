@@ -34,7 +34,7 @@
   <div class="bar" id="bar"><i></i></div></div>
  <div class="card"><h2>Подключиться вручную</h2>
   <form class="row" id="manual"><input id="addr" placeholder="IP Mac, например 192.168.1.20" inputmode="decimal" autocomplete="off"><button class="primary">Открыть</button></form>
-  <p class="muted">На Mac адрес показан во вкладке «Подключение». Порт по умолчанию 8787.</p></div>
+  <p class="muted">На Mac адрес показан во вкладке «Подключение». Порт по умолчанию 8787.<br>Приложение само открывает только тот Mac, к которому планшет уже подключался и который подтвердил свой ключ. В чужой сети ничего не откроется само, а вход не уйдёт на неподтверждённый сервер.</p></div>
  <p class="muted" id="ver"></p>
 </div>
 <script src="connect.js"></script>
@@ -44,60 +44,88 @@ const N = window.TabDockNative;
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const mode = location.hash.slice(1);           // "", "lost", "menu"
-const servers = new Map();                     // base -> {name, base, src}
+const servers = new Map();                     // base -> {name, base, src, state}
 let touched = false, opened = false;
+const firstRun = !(N && N.hasPins && N.hasPins());
 document.addEventListener("pointerdown", () => touched = true);
 if (N) $("#ver").textContent = "Приложение TabDock " + N.version();
 
-function open(base) { if (opened) return; opened = true; location.href = base.replace(/\/$/, "") + "/"; }
+const STATE = {
+  pinned: ["ваш Mac", "var(--green)"],
+  unknown: ["новый", "var(--muted)"],
+  mismatch: ["⚠ не подтверждён", "#fc8181"],
+};
+function nonce() { const a = new Uint8Array(16); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 256); return [...a].map((b) => b.toString(16).padStart(2, "0")).join(""); }
+
+// Ask the server to prove it knows this tablet's pinned key (challenge-response, see server.py: proof()).
+async function verified(base) {
+  const n = nonce();
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);
+  try {
+    const r = await fetch(base + "/api/hello?nonce=" + n, { signal: ctl.signal, cache: "no-store" });
+    const h = await r.json();
+    if (!h || h.app !== "tabdock") return null;
+    h.base = base;
+    h.state = N ? N.verify(base, JSON.stringify(h), n) : "unknown";
+    return h;
+  } catch (e) { return null; } finally { clearTimeout(t); }
+}
+
+function open(base) {
+  const s = servers.get(base);
+  const state = s ? s.state : "unknown";
+  if (state === "mismatch" && !confirm("Этот сервер выдаёт себя за ваш Mac, но не смог это подтвердить. " +
+      "Возможно, это чужая сеть или на Mac сменили ключ. Открыть всё равно (вход придётся выполнить заново)?")) return;
+  if (opened) return; opened = true;
+  if (N && N.prepare) N.prepare(base, state === "pinned" || (firstRun && state === "unknown"));   // never send the sign-in to an unverified host (first setup = trust on first use)
+  location.href = base.replace(/\/$/, "") + "/";
+}
 function render() {
-  const items = [...servers.values()];
-  $("#list").innerHTML = items.map((s) => `<div class="srv" data-b="${esc(s.base)}"><span class="dot"></span>
+  const items = [...servers.values()].sort((a, b) => (b.state === "pinned") - (a.state === "pinned"));
+  $("#list").innerHTML = items.map((s) => { const st = STATE[s.state] || STATE.unknown; return `<div class="srv" data-b="${esc(s.base)}">
+     <span class="dot" style="background:${st[1]};box-shadow:0 0 10px ${st[1]}"></span>
      <div class="n">${esc(s.name || s.base)}<small>${esc(s.base.replace("http://", ""))}${s.model ? " · " + esc(s.model) : ""}</small></div>
-     <span class="src">${s.src}</span><button class="primary">Открыть</button></div>`).join("")
+     <span class="src" style="color:${st[1]}">${st[0]}</span><button class="primary">Открыть</button></div>`; }).join("")
     || '<div class="muted">Пока никого не нашли. Проверьте, что Mac включён и TabDock запущен, или введите адрес ниже.</div>';
   document.querySelectorAll(".srv").forEach((el) => el.onclick = () => open(el.dataset.b));
 }
-function add(s, src) {
-  const old = servers.get(s.base);
-  servers.set(s.base, Object.assign({ src }, old || {}, s));
+function add(h, src) {
+  if (!h) return;
+  servers.set(h.base, Object.assign({ src }, servers.get(h.base) || {}, h));
   render();
   maybeAuto();
 }
+// Auto-open ONLY a Mac this tablet already paired with and that proved it. A brand-new app with
+// no pairing opens the single TabDock it finds (first setup); anything else waits for a tap.
 function maybeAuto() {
   if (mode === "menu" || touched || opened) return;
-  const saved = N ? N.saved() : "";
-  if (saved && servers.has(saved)) return open(saved);
-  if (!saved && servers.size === 1) setTimeout(() => { if (!touched && servers.size === 1) open([...servers.keys()][0]); }, 1500);
+  const pinned = [...servers.values()].filter((s) => s.state === "pinned");
+  if (pinned.length) return open(pinned[0].base);
+  if (firstRun && servers.size === 1) setTimeout(() => { if (!touched && servers.size === 1 && !opened) open([...servers.keys()][0]); }, 1500);
 }
 
 async function checkSaved() {
   const saved = N ? N.saved() : "";
-  if (!saved) return;
-  const r = await DockConnect.probe(saved, 2500);
-  if (r) add(r, "последний");
+  if (saved) add(await verified(saved), "последний");
 }
-
-// 1) last used Mac, 2) Bonjour via the app, 3) subnet probe like the web login page
-if (N && N.saved()) $("#status").textContent = "Жду " + N.saved().replace("http://", "") + " — как только Mac появится в сети, панель откроется сама";
+if (N && N.saved()) $("#status").textContent = mode === "lost"
+  ? "Связь с Mac потеряна — жду его в сети, панель откроется сама"
+  : "Ищу ваш Mac — как только он появится в сети, панель откроется сама";
 checkSaved();
 setInterval(checkSaved, 4000);   // the last Mac comes back (reboot, Wi-Fi drop) -> reopen it by itself
 setInterval(() => {
   if (!N) return;
   for (const s of JSON.parse(N.servers() || "[]")) {
-    if (!servers.has(s.base)) DockConnect.probe(s.base, 2500).then((r) => { if (r) add(r, "Bonjour"); });
+    if (!servers.has(s.base)) verified(s.base).then((h) => add(h, "Bonjour"));
   }
-}, 1000);
+}, 1500);
 (async function scanLoop() {
   const extra = [];
   if (N) { extra.push(N.deviceIp()); const sv = N.saved(); if (sv) extra.push(new URL(sv).hostname); }
-  await DockConnect.scan({ extraIps: extra, onFound: (s) => add(s, "сеть"),
+  await DockConnect.scan({ extraIps: extra, onFound: (s) => verified(s.base).then((h) => add(h, "сеть")),
     onProgress: (d, t) => { $("#bar i").style.width = (100 * d / t) + "%"; } });
   $("#spin").style.display = "none"; $("#bar").style.display = "none";
   render();
-  // lost the last Mac and it did not come back -> switch to another TabDock (failover)
-  const saved = N ? N.saved() : "";
-  if (mode === "lost" && !touched && servers.size && !servers.has(saved)) open([...servers.keys()][0]);
 })();
 
 $("#manual").onsubmit = async (e) => {
@@ -107,8 +135,8 @@ $("#manual").onsubmit = async (e) => {
   if (!/:\d+$/.test(a)) a += ":8787";
   const base = "http://" + a;
   $("#status").textContent = "Проверяю " + a + "…";
-  const r = await DockConnect.probe(base, 4000);
-  if (r) { opened = false; open(base); } else $("#status").textContent = "По адресу " + a + " TabDock не отвечает";
+  const h = await verified(base);
+  if (h) { add(h, "вручную"); open(base); } else $("#status").textContent = "По адресу " + a + " TabDock не отвечает";
 };
 render();
 </script></body></html>

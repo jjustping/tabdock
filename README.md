@@ -1,16 +1,21 @@
 # TabDock
 
+**Док для фотографа из планшета, который лежит без дела** · *A photographer's work dock made from an idle tablet*
+
 [Русский](#русский) · [English](#english)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать APK для Android-планшета / Download the Android APK](https://github.com/jjustping/tabdock/releases/latest)** — `TabDock-0.3.0.apk`, 28 КБ.
+**⬇ [Скачать APK для Android-планшета / Download the Android APK](https://github.com/jjustping/tabdock/releases/latest)** — `TabDock-0.4.0.apk`, 28 КБ.
 
 ---
 
 ## Русский
 
-**TabDock превращает планшет, который давно лежит без дела, в полезный док для работы на Mac.**
+**TabDock превращает планшет, который давно лежит без дела, в полезный док для работы на Mac — и сделан
+в первую очередь для фотографов.** Сейчас он читает каталоги Capture One (какие съёмки обработаны, какие ждут,
+сроки сдачи, галереи клиентов в wfolio); поддержка Lightroom Classic и редакторов вроде Photoshop и Photon Studio
+запланирована.
 Поставьте старый Android-планшет (или iPad) рядом с компьютером, и он станет вторым сенсорным экраном с тем,
 что обычно приходится искать по окнам: напоминания, прогресс обработки съёмок в Capture One, шпаргалки,
 состояние Mac, музыка и быстрые действия. Панель открывается и в браузере на самом Mac.
@@ -19,7 +24,7 @@
 и проверки ссылок wfolio). Сделано под Mac mini M4 + Honor Pad 9, но подойдёт любой Mac с macOS 13+ и любой
 планшет с современным браузером.
 
-### Что умеет (v0.3)
+### Что умеет (v0.4)
 
 | Блок | Что делает |
 |---|---|
@@ -142,6 +147,24 @@ docs.wfolio.pro 6 ноября 2026; CSV-выгрузка проекта сод�
 Автоматически подтягивать список галерей можно было бы, только «притворяясь браузером» в личном кабинете
 wfolio с вашей сессией — это хрупко и не одобрено wfolio, поэтому не сделано.
 
+### Безопасность (v0.4)
+
+* **Только частные сети.** Сервер отвечает только адресам домашних сетей (192.168.x, 10.x, 172.16–31.x, localhost);
+  запросы из интернета (если кто-то пробросит порт) получают отказ.
+* **Защита от чужих сайтов.** Страница в браузере на Mac или планшете не может ничего сделать в TabDock: POST-запросы
+  принимаются только как JSON с того же адреса (защита от CSRF), запросы с подменённым именем хоста
+  отклоняются (защита от DNS rebinding).
+* **Пароль**: хэш PBKDF2, менять можно только с самого Mac, 5 ошибок с одного адреса или 20 всего — пауза 5 минут.
+* **Планшет в чужом Wi-Fi.** Приложение для Android запоминает «отпечаток» вашего Mac при первом подключении
+  (trust on first use). Затем при каждом запуске Mac должен доказать, что знает общий секрет (запрос-ответ
+  HMAC; сам ключ по сети не передаётся). Само приложение открывает **только подтверждённый Mac**; сервер с тем же
+  именем или адресом, но без ключа, показан как «⚠ не подтверждён», и перед его открытием приложение стирает
+  ваш вход для этого адреса — пароль и ключ к чужому серверу не уйдут.
+* В браузерной версии автопереключение на другой сервер выключено по умолчанию (браузер не умеет проверять ключ).
+* Ссылки в заметках — только `http(s)`, `mailto`, `tel`.
+
+Что ещё стоит сделать — в разделе «Дальше».
+
 ### Разрешения macOS (один раз)
 
 macOS спросит разрешения у `python3` при первом обращении — нажмите «Разрешить»:
@@ -191,7 +214,14 @@ data/                ваши данные: config.json, reminders.json, notes.j
 выдуманные съёмки с обложками-заглушками, календарь и «Mac mini»; настоящий каталог не читается.
 Добавьте `?privacy=1` к адресу, чтобы размыть обложки и ключ в QR. Все картинки в `docs/img` сняты так.
 
-### Что проверено, а что нет (v0.3, 6 ноября 2026)
+### Что проверено, а что нет (v0.4, 6 ноября 2026)
+
+v0.4, безопасность: доказательство ключа в `/api/hello` (ключ не утекает), отказ при чужом Host (421),
+отказ cross-site POST и не-JSON POST (403), отбрасывание `javascript:`-ссылок. **На планшете:** обновление поверх
+0.3 сохранило вход и запомнило Mac; подменный сервер на том же адресе с другим ключом показан
+«⚠ не подтверждён» и не открылся сам; после возврата настоящего сервера панель открылась сама.
+Не проверено: доступ из публичной сети (отказ по адресу клиента проверен только кодом), два настоящих Mac.
+
 
 v0.3, Android-приложение — **на настоящем Honor Pad 9** (Android 14): установка через adb, приложение само нашло
 MacBook в сети и открыло вход; вход по ключу; после перезапуска приложения вход сохраняется; без сервера —
@@ -222,15 +252,35 @@ v0.1:
 
 ### Дальше (идеи)
 
-* Модуль «tether viewer»: кадры с X-T4 на планшете во время съёмки.
-* Синхронизация напоминаний с Apple Reminders (по желанию).
-* Serato: что играет и история сета (`~/Music/_Serato_/History`).
+**Редакторы и каталоги**
+1. Lightroom Classic — каталог `.lrcat` это SQLite: папки и коллекции как съёмки, флажки и рейтинги как отбор,
+   «есть правки» по настройкам проявки, экспорт — по опубликованным коллекциям и папке экспорта.
+2. Photon Studio и Photoshop — у них нет каталога, поэтому «съёмка = папка»: RAW в папке против готовых
+   JPEG/TIFF в подпапке экспорта; последние открытые файлы; быстрый запуск с нужным файлом.
+3. Сеансы Capture One (`.cosessiondb`), несколько каталогов, выбор «рабочего» каталога.
+4. «Tether viewer»: свежие кадры с X-T4 на планшете во время съёмки.
 
----
+**Для работы фотографа**
+* Очередь экспорта/процессинга Capture One и уведомление «экспорт закончился».
+* Импорт с карты: прогресс копирования, место на дисках, напоминание о бэкапе (дата последней копии каталога).
+* Сроки сдачи: календарь дедлайнов из съёмок и wfolio, напоминания за N дней.
+* Чек-листы перед съёмкой (аккумуляторы, карты, свет) — из справки в один тап.
+* Таймер «Помодоро» и фокус-режим macOS.
+* Сборка контакт-листа / отбор на планшете с превью (★ и метки уходят обратно в каталог).
+
+**Безопасность (рекомендации)**
+* HTTPS с самоподписанным сертификатом, отпечаток которого приложение запоминает при подключении (пароль не идёт
+  по сети открытым текстом).
+* Отдельный ключ на каждое устройство со списком и отзывом, срок жизни сессии.
+* Подтверждение нового устройства на самом Mac («Разрешить планшету подключиться?»).
+* Bonjour и доступ только в домашних сетях (для MacBook, который носят в кафе).
 
 ## English
 
-**TabDock turns a tablet that is gathering dust into a useful work dock for your Mac.**
+**TabDock turns a tablet that is gathering dust into a useful work dock for your Mac — built first of all for
+photographers.** Today it reads Capture One catalogs (which shoots are edited and which are waiting, delivery
+deadlines, client galleries on wfolio); Lightroom Classic and editors such as Photoshop and Photon Studio are
+planned.
 Put an old Android tablet (or iPad) next to your computer and it becomes a second touch screen for the things
 you usually dig through windows for: reminders, Capture One editing progress, cheat sheets, Mac status, music and
 quick actions. The same panel also opens in a browser on the Mac.
@@ -239,7 +289,7 @@ Everything runs locally on the home network: no cloud, no accounts, no subscript
 for the weather and for checking wfolio links). Built for a Mac mini M4 + Honor Pad 9, but any Mac on macOS 13+
 and any tablet with a modern browser will do.
 
-### Features (v0.3)
+### Features (v0.4)
 
 * **Reminders**: its own list. Quick add, tap to complete, due dates, ★ important, tags.
 * **Shoots · Capture One**: reads Capture One catalogs **read-only**. Each user album is a shoot,
@@ -314,6 +364,20 @@ then `adb install -r android/build/TabDock.apk`. Ready-made APK: [latest release
 
 Press ▦ on the Mac, scan the QR code with the tablet, then in Chrome use ⋮ → "Add to Home screen".
 Devices without the key only see a "not paired" page. *Settings → New key* revokes all paired devices.
+
+### Security (v0.4)
+
+Private networks only; same-origin JSON POSTs (CSRF) and Host-header checks (DNS rebinding); PBKDF2 password with
+rate limits. The Android app pins your Mac on first pairing (TOFU) and then requires an HMAC challenge-response
+on every start: it auto-opens only a verified Mac, marks look-alikes as "not verified" and wipes your sign-in
+cookie before opening one, so credentials never go to an unknown server on a foreign Wi-Fi.
+Planned: HTTPS with a pinned self-signed certificate, per-device keys with revocation, approving new devices on the Mac.
+
+### Roadmap
+
+Lightroom Classic (`.lrcat` is SQLite), Photon Studio / Photoshop via folders (RAW vs exported files), Capture One
+sessions, a tether viewer for the X-T4, export-queue notifications, card import and backup reminders, deadline
+calendar, shoot checklists.
 
 ### macOS permissions
 
