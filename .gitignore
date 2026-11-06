@@ -1,0 +1,21 @@
+.venv/
+data/
+bin/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+# never commit personal data
+cache/
+*.cot
+*.cof
+*.cop
+*.cocatalog/
+*.cocatalogdb
+*.cosessiondb
+*.log
+config.json
+reminders.json
+notes.json
+shoots.json
+wfolio.json

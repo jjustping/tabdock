@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0a0c0f"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/static/icon.svg">
+<title>TabDock — вход</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+ body { display: block; overflow: auto; }
+ .wrap { max-width: 980px; margin: 0 auto; padding: 40px 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+ .logo { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+ .logo img { width: 56px; height: 56px; } .logo h1 { margin: 0; font-size: 30px; } .logo p { margin: 2px 0 0; }
+ .srv { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; background: var(--panel-2); margin-bottom: 10px; }
+ .srv .n { flex: 1; } .srv .n b { display: block; font-size: 17px; } .srv .n small { color: var(--muted); }
+ .srv .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--dim); flex: none; }
+ .srv .dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+ .msg { min-height: 22px; margin-top: 10px; color: var(--red); }
+ .bar.scan { height: 6px; margin: 10px 0 0; } .bar.scan i { transition: width .2s; }
+ @media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+</style></head>
+<body><div class="wrap">
+ <div class="logo"><img src="/static/icon.svg" alt=""><div><h1>TabDock</h1><p class="muted" id="here"></p></div></div>
+ <div class="card"><h2>Вход по паролю</h2>
+   <form id="f"><input type="password" id="pw" placeholder="Пароль TabDock" autocomplete="current-password" enterkeyhint="go">
+   <button class="btn primary" style="width:100%;margin-top:12px">Войти</button></form>
+   <div class="msg" id="msg"></div>
+   <p class="hint">Пароль задаётся на Mac: TabDock → «Подключение» → «Пароль для входа».<br>
+   Или отсканируйте QR-код (кнопка ▦ на Mac) — тогда пароль не нужен.</p></div>
+ <div class="card"><h2>TabDock в этой сети <button class="act" id="scanBtn">Искать</button></h2>
+   <div id="list"></div><div class="bar scan hidden" id="scanBar"><i style="width:0"></i></div>
+   <p class="hint">Планшет сам ищет компьютеры с TabDock в домашней сети. Нажмите на найденный, чтобы перейти к нему.</p></div>
+</div>
+<script src="/static/connect.js"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const here = location.origin;
+let me = null; const seen = new Map();
+function row(s, on) {
+  const cur = s.base === here;
+  return `<div class="srv" data-base="${esc(s.base)}"><span class="dot ${on ? "on" : ""}"></span>
+    <div class="n"><b>${esc(s.name || s.base)}${cur ? " · этот" : ""}</b><small>${esc(s.base.replace("http://", ""))}${s.model ? " · " + esc(s.model) : ""}${s.password === false ? " · пароль не задан" : ""}</small></div>
+    ${cur ? "" : '<button class="btn">Открыть</button>'}</div>`;
+}
+function render() {
+  const items = [...seen.values()];
+  for (const s of DockConnect.saved()) if (!seen.has(s.base)) items.push({ ...s, offline: true });
+  $("#list").innerHTML = items.map((s) => row(s, !s.offline)).join("") || '<div class="muted">Пока никого не нашли</div>';
+  document.querySelectorAll(".srv .btn").forEach((b) => b.onclick = () => DockConnect.go(b.closest(".srv").dataset.base));
+}
+async function scan() {
+  $("#scanBar").classList.remove("hidden"); $("#scanBtn").disabled = true;
+  await DockConnect.scan({ onFound: (s) => { seen.set(s.base, s); render(); },
+    onProgress: (d, t) => { $("#scanBar i").style.width = (100 * d / t) + "%"; } });
+  $("#scanBar").classList.add("hidden"); $("#scanBtn").disabled = false; render();
+}
+(async () => {
+  me = await DockConnect.probe(here);
+  if (me) { seen.set(here, me); $("#here").textContent = me.name + (me.model ? " · " + me.model : ""); }
+  render();
+  for (const s of DockConnect.saved()) DockConnect.probe(s.base).then((r) => { if (r) { seen.set(r.base, r); render(); } });
+  scan();
+})();
+$("#scanBtn").onclick = scan;
+$("#f").onsubmit = async (e) => {
+  e.preventDefault(); $("#msg").textContent = "";
+  try {
+    const r = await (await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("#pw").value }) })).json();
+    if (r.ok) { if (me) DockConnect.remember(me); location.href = "/"; }
+    else $("#msg").textContent = r.message || "Не получилось";
+  } catch (err) { $("#msg").textContent = "Нет связи с Mac"; }
+};
+</script></body></html>

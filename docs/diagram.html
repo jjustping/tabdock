@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>TabDock — как это работает</title>
+<style>
+ body { margin: 0; width: 1600px; height: 1000px; background: #0a0c0f; color: #e9edf2; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; position: relative; }
+ h1 { margin: 0; position: absolute; left: 60px; top: 40px; font-size: 40px; letter-spacing: -.5px; }
+ h1 small { display: block; font-size: 18px; color: #8b94a3; font-weight: 400; margin-top: 6px; letter-spacing: 0; }
+ .zone { position: absolute; border: 2px dashed #262b34; border-radius: 28px; }
+ .zone > .lbl { position: absolute; top: -14px; left: 26px; background: #0a0c0f; padding: 0 12px; font-size: 15px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b94a3; }
+ .box { box-sizing: border-box; position: absolute; background: #14171c; border: 1px solid #262b34; border-radius: 20px; padding: 20px 22px; }
+ .box h2 { margin: 0 0 10px; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+ .box h2 .e { font-size: 30px; }
+ .box p, .box li { margin: 0; color: #b9c1cc; font-size: 16px; line-height: 1.5; }
+ .box ul { margin: 0; padding-left: 18px; }
+ .tag { display: inline-block; font-size: 13px; padding: 3px 10px; border-radius: 999px; background: #1b1f26; color: #8b94a3; margin: 2px 4px 2px 0; }
+ .teal { border-color: #4fd1c5; } .amber { border-color: #f6ad55; } .violet { border-color: #b794f4; }
+ .mod { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+ .mod div { background: #1b1f26; border-radius: 12px; padding: 10px 12px; font-size: 15px; color: #cfd5dd; }
+ .mod b { display: block; color: #e9edf2; font-size: 16px; }
+ svg { position: absolute; inset: 0; pointer-events: none; }
+ .step { position: absolute; width: 138px; font-size: 14px; line-height: 1.3; color: #e9edf2; background: #0a0c0f; padding: 2px 8px; border-radius: 8px; }
+ .num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #4fd1c5; color: #06201d; font-weight: 700; font-size: 14px; margin-right: 6px; }
+ .foot { position: absolute; left: 60px; right: 60px; bottom: 34px; font-size: 17px; color: #8b94a3; display: flex; gap: 40px; }
+ .foot b { color: #e9edf2; }
+</style></head>
+<body>
+<h1>TabDock — как это работает<small>Планшет рядом с Mac mini показывает панель; всё работает в домашней сети без облака</small></h1>
+
+<div class="zone" style="left:40px;top:150px;width:1080px;height:740px"><span class="lbl">Домашняя сеть (Wi-Fi / Ethernet)</span></div>
+<div class="zone" style="left:1160px;top:150px;width:400px;height:740px"><span class="lbl">Интернет</span></div>
+
+<!-- tablet -->
+<div class="box teal" style="left:80px;top:200px;width:330px;height:640px">
+  <h2><span class="e">📱</span>Honor Pad 9</h2>
+  <p>Chrome, ярлык на главном экране — открывается на весь экран, как приложение.</p>
+  <p style="margin-top:14px"><b style="color:#e9edf2">Первый вход — один из трёх:</b></p>
+  <ul style="margin-top:6px">
+    <li><b>QR-код</b> с экрана Mac (пароль не нужен)</li>
+    <li><b>Пароль</b>, который вы задали на Mac</li>
+    <li><b>Поиск</b>: планшет сам опрашивает сеть и показывает список найденных TabDock</li>
+  </ul>
+  <p style="margin-top:14px">Дальше планшет помнит Mac (cookie на год) и сразу открывает панель.</p>
+  <p style="margin-top:14px"><b style="color:#e9edf2">Автоподключение:</b> если Mac пропал из сети > 15 с, планшет переходит на другой найденный TabDock.</p>
+  <div style="margin-top:14px"><span class="tag">Главная</span><span class="tag">Съёмки</span><span class="tag">Справка</span><span class="tag">Mac</span><span class="tag">Подключение</span><span class="tag">Настройки</span></div>
+</div>
+
+<!-- mac -->
+<div class="box amber" style="left:560px;top:200px;width:520px;height:640px">
+  <h2><span class="e">🖥️</span>Mac mini M4 — сервер TabDock</h2>
+  <p>Стартует сам при входе в macOS (LaunchAgent), порт 8787. Объявляет себя в сети по Bonjour <code>_tabdock._tcp</code> и отвечает на <code>/api/hello</code> — так его находит планшет.</p>
+  <div class="mod">
+    <div><b>✓ Напоминания</b>свой список, data/reminders.json</div>
+    <div><b>☰ Справка</b>шпаргалки и ссылки, data/notes.json</div>
+    <div><b>◐ Capture One</b>каталог читается только для чтения: альбомы, отбор, экспорт</div>
+    <div><b>⌘ Mac</b>CPU, температура, память, диски</div>
+    <div><b>♪ Музыка</b>Music / Spotify, громкость</div>
+    <div><b>⚡ Быстрые действия</b>приложения, «не спать», скриншот, сон</div>
+    <div><b>📅 Календарь</b>события macOS (EventKit)</div>
+    <div><b>🔒 Доступ</b>ключ из QR или пароль (хэш PBKDF2), 5 попыток / 5 мин</div>
+  </div>
+  <p style="margin-top:12px">Данные хранятся только на Mac, в папке <code>data/</code>.</p>
+</div>
+
+<!-- internet -->
+<div class="box" style="left:1200px;top:220px;width:320px">
+  <h2><span class="e">☁️</span>Open-Meteo</h2>
+  <p>Погода на 4 дня. Бесплатно, без ключа. Уходят только координаты города.</p>
+</div>
+<div class="box violet" style="left:1200px;top:430px;width:320px">
+  <h2><span class="e">🖼️</span>wfolio</h2>
+  <p>Открытого API у wfolio нет. Вы добавляете ссылку на галерею и срок хранения, а Mac раз в 6 часов открывает ссылку и проверяет:</p>
+  <ul style="margin-top:6px"><li><span style="color:#68d391">●</span> галерея открывается</li><li><span style="color:#fc8181">●</span> «срок действия ссылки истёк»</li></ul>
+  <p style="margin-top:8px">Предупреждение за 14 дней. Логин и пароль wfolio не нужны.</p>
+</div>
+
+<svg viewBox="0 0 1600 1000">
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4fd1c5"/></marker>
+        <marker id="b" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b794f4"/></marker>
+        <marker id="c" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b94a3"/></marker></defs>
+  <path d="M412,330 L556,330" stroke="#4fd1c5" stroke-width="3" fill="none" marker-end="url(#a)"/>
+  <path d="M556,470 L414,470" stroke="#4fd1c5" stroke-width="3" fill="none" marker-end="url(#a)"/>
+  <path d="M412,610 L556,610" stroke="#4fd1c5" stroke-width="3" stroke-dasharray="8 6" fill="none" marker-end="url(#a)"/>
+  <path d="M1082,300 L1196,300" stroke="#8b94a3" stroke-width="3" fill="none" marker-end="url(#c)"/>
+  <path d="M1082,540 L1196,540" stroke="#b794f4" stroke-width="3" fill="none" marker-end="url(#b)"/>
+</svg>
+<div class="step" style="left:418px;top:282px"><span class="num">1</span>вход / поиск</div>
+<div class="step" style="left:418px;top:404px"><span class="num">2</span>данные<br>каждые 2,5 с</div>
+<div class="step" style="left:418px;top:562px"><span class="num">3</span>нажатия, правки</div>
+<div class="step" style="left:1088px;top:262px;width:100px">погода</div>
+<div class="step" style="left:1088px;top:492px;width:100px">проверка<br>ссылок</div>
+
+<div class="foot"><span><b>Без облака:</b> в интернет уходят только погода и проверка ссылок wfolio.</span><span><b>Без аккаунтов:</b> всё хранится на Mac.</span></div>
+</body></html>

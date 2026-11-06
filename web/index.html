@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg">
+<title>TabDock</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <div class="clock"><div id="time">--:--</div><div id="date" class="muted"></div></div>
+  <button class="chip weather-chip" id="weatherChip" data-tab="mac"></button>
+  <div class="spacer"></div>
+  <div class="stats" id="topStats"></div>
+  <button class="icon-btn" id="awakeBtn" title="Не давать Mac засыпать">☕</button>
+  <button class="icon-btn" id="qrBtn" title="Подключить планшет">▦</button>
+</header>
+
+<main id="views">
+  <section class="view active" data-view="home">
+    <div class="home-grid">
+      <div class="col">
+        <div class="card grow" id="remindersCard"></div>
+      </div>
+      <div class="col">
+        <div class="card" id="shootsCard"></div>
+        <div class="card grow" id="calendarCard"></div>
+      </div>
+      <div class="col">
+        <div class="card" id="playerCard"></div>
+        <div class="card" id="quickCard"></div>
+      </div>
+    </div>
+  </section>
+  <section class="view" data-view="shoots"><div id="shootsView" class="scroll"></div></section>
+  <section class="view" data-view="notes"><div id="notesView" class="scroll"></div></section>
+  <section class="view" data-view="mac"><div id="macView" class="scroll"></div></section>
+  <section class="view" data-view="connect"><div id="connectView" class="scroll"></div></section>
+  <section class="view" data-view="settings"><div id="settingsView" class="scroll"></div></section>
+</main>
+
+<nav class="tabs">
+  <button data-tab="home" class="active"><span>⌂</span>Главная</button>
+  <button data-tab="shoots"><span>◐</span>Съёмки</button>
+  <button data-tab="notes"><span>☰</span>Справка</button>
+  <button data-tab="mac"><span>⌘</span>Mac</button>
+  <button data-tab="connect"><span>⇄</span>Подключение</button>
+  <button data-tab="settings"><span>⚙</span>Настройки</button>
+</nav>
+
+<div id="sheet" class="sheet hidden"><div class="sheet-body" id="sheetBody"></div></div>
+<div id="toast" class="toast"></div>
+<div id="offline" class="offline hidden">Нет связи с Mac — переподключаюсь…</div>
+<script src="/static/connect.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+{"name":"TabDock","short_name":"TabDock","start_url":"/","display":"fullscreen","orientation":"landscape",
+ "background_color":"#0a0c0f","theme_color":"#0a0c0f","icons":[{"src":"/static/icon.svg","sizes":"any","type":"image/svg+xml"}]}

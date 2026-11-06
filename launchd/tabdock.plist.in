@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>@LABEL@</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@PY@</string>
+    <string>@DIR@/server.py</string>
+    <string>--port</string><string>@PORT@</string>
+  </array>
+  <key>WorkingDirectory</key><string>@DIR@</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PYTHONUNBUFFERED</key><string>1</string><key>LANG</key><string>ru_RU.UTF-8</string></dict>
+  <key>StandardOutPath</key><string>@LOG@/tabdock.out.log</string>
+  <key>StandardErrorPath</key><string>@LOG@/tabdock.err.log</string>
+</dict>
+</plist>
