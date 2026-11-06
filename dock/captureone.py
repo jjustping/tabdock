@@ -99,6 +99,16 @@ def read_catalog(catalog):
         for cid, model, n in con.execute(CAMERA_SQL):
             if model and n > cams.get(cid, ("", 0))[1]:
                 cams[cid] = (model, n)
+        # Capture One only caches thumbnails for images it has shown: pick the first image that has one
+        thumbs_dir = os.path.join(catalog, "Cache", "Thumbnails")
+        try:
+            have = {int(f[:8]) for f in os.listdir(thumbs_dir) if f.endswith(".cot") and f[:8].isdigit()}
+        except OSError:
+            have = set()
+        covers = {}
+        for cid, img in con.execute("SELECT ZCOLLECTION, ZIMAGE FROM ZIMAGEINCOLLECTION ORDER BY ZCOLLECTION, ZIMAGE"):
+            if cid not in covers and img in have:
+                covers[cid] = img
     finally:
         con.close()
 
@@ -128,7 +138,8 @@ def read_catalog(catalog):
             continue
         s = stats[r["Z_PK"]]
         cover = None
-        thumb = os.path.join(thumbs, "%08d.cot" % s["first_img"]) if s["first_img"] else None
+        img = covers.get(r["Z_PK"], s["first_img"])
+        thumb = os.path.join(thumbs, "%08d.cot" % img) if img else None
         if thumb and os.path.exists(thumb):
             cover = thumb
         parent = by_pk.get(r["ZPARENT"])

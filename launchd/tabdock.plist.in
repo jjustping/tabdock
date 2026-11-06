@@ -5,6 +5,7 @@
   <key>Label</key><string>@LABEL@</string>
   <key>ProgramArguments</key>
   <array>
+    <string>@LAUNCHER@</string>
     <string>@PY@</string>
     <string>@DIR@/server.py</string>
     <string>--port</string><string>@PORT@</string>

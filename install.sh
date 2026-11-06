@@ -66,14 +66,16 @@ fi
 # 2. Calendar helper (EventKit)
 if command -v swiftc >/dev/null; then
   say "Собираю помощник календаря"
-  "$DIR/helper/build.sh" >/dev/null && echo "  ok: bin/dock-calendar" || warn "не удалось собрать — будет AppleScript"
+  "$DIR/helper/build.sh" >/dev/null && echo "  ok: bin/dock-calendar, bin/TabDock.app" || warn "не удалось собрать помощники — календарь через AppleScript"
 else
   warn "swiftc не найден — календарь через AppleScript"
 fi
 
 # 3. LaunchAgent
 mkdir -p "$HOME/Library/LaunchAgents" "$LOGDIR"
-sed -e "s|@LABEL@|$LABEL|g" -e "s|@PY@|$DIR/.venv/bin/python|g" -e "s|@DIR@|$DIR|g" \
+LAUNCHER="$DIR/bin/TabDock.app/Contents/MacOS/TabDock"
+[ -x "$LAUNCHER" ] || LAUNCHER="/usr/bin/env"      # no Swift: run python directly
+sed -e "s|@LABEL@|$LABEL|g" -e "s|@LAUNCHER@|$LAUNCHER|g" -e "s|@PY@|$DIR/.venv/bin/python|g" -e "s|@DIR@|$DIR|g" \
     -e "s|@PORT@|$PORT|g" -e "s|@LOG@|$LOGDIR|g" "$DIR/launchd/tabdock.plist.in" > "$PLIST"
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 sleep 1
