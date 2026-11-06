@@ -268,6 +268,8 @@ v0.1:
 * Таймер «Помодоро» и фокус-режим macOS.
 * Сборка контакт-листа / отбор на планшете с превью (★ и метки уходят обратно в каталог).
 
+**Windows** — план и оценка (≈ 6–8 дней): [docs/WINDOWS.md](docs/WINDOWS.md).
+
 **Безопасность (рекомендации)**
 * HTTPS с самоподписанным сертификатом, отпечаток которого приложение запоминает при подключении (пароль не идёт
   по сети открытым текстом).
@@ -377,7 +379,7 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 Lightroom Classic (`.lrcat` is SQLite), Photon Studio / Photoshop via folders (RAW vs exported files), Capture One
 sessions, a tether viewer for the X-T4, export-queue notifications, card import and backup reminders, deadline
-calendar, shoot checklists.
+calendar, shoot checklists. Windows support: plan and estimate in [docs/WINDOWS.md](docs/WINDOWS.md).
 
 ### macOS permissions
 
