@@ -6,7 +6,7 @@
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать APK для Android-планшета / Download the Android APK](https://github.com/jjustping/tabdock/releases/latest)** — `TabDock-0.4.0.apk`, 28 КБ.
+**⬇ [Скачать APK для Android-планшета / Download the Android APK](https://github.com/jjustping/tabdock/releases/latest)** — `TabDock-0.4.1.apk`, 28 КБ.
 
 ---
 

@@ -128,8 +128,23 @@ def disk_info(mount):
     try:
         out = subprocess.run(["/usr/sbin/diskutil", "info", "-plist", mount], capture_output=True, timeout=8).stdout
         d = plistlib.loads(out) if out else {}
+        model = ""
+        parent = d.get("ParentWholeDisk")
+        if parent:   # the volume's MediaName is often just the partition label; ask the whole device
+            try:
+                po = subprocess.run(["/usr/sbin/diskutil", "info", "-plist", parent], capture_output=True, timeout=8).stdout
+                pd = plistlib.loads(po) if po else {}
+                model = (pd.get("MediaName") or "").strip()
+                if not d.get("BusProtocol"):
+                    d["BusProtocol"] = pd.get("BusProtocol")
+                if d.get("SMARTStatus") in (None, "", "Not Supported"):
+                    d["SMARTStatus"] = pd.get("SMARTStatus") or d.get("SMARTStatus")
+            except Exception:
+                pass
+        if not model or model.lower() in ("basic data partition", "untitled") or model.lower().startswith("untitled "):
+            model = ""
         info = {
-            "model": (d.get("MediaName") or d.get("IORegistryEntryName") or "").strip(),
+            "model": model,
             "bus": d.get("BusProtocol") or "",
             "fs": d.get("FilesystemUserVisibleName") or d.get("FilesystemName") or "",
             "smart": d.get("SMARTStatus") or "",

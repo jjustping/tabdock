@@ -340,3 +340,20 @@ svg.sm { width: .9em; height: .9em; } svg.pin { color: var(--accent); margin-rig
 .cat-row { cursor: pointer; } .cat-row .check { flex: none; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--dim); }
 .cat-row.on .check { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .cat-row small { word-break: break-all; }
+
+/* tablet-height layout (e.g. 1205×753 CSS px on a 2.5K 12" tablet) */
+.disk .ej { flex: none; width: 56px; padding: 0; }
+.shoot-card .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-height: 860px) {
+  .card { padding: 14px 16px; }
+  .home-grid, .col { gap: 12px; }
+  .art { width: 72px; height: 72px; }
+  .ctrls { margin-top: 10px; } .vol { margin-top: 6px; }
+  .tiles { gap: 8px; } .tile { min-height: 62px; padding: 6px 4px; gap: 4px; font-size: 11px; }
+  .tile img, .tile .ic { width: 30px; height: 30px; } .tile .ic svg.i { width: 26px; height: 26px; }
+  #quickCard h2, #playerCard h2 { margin-bottom: 8px; }
+}
+.disk .nm { width: 200px; } .disk .fr { width: 128px; }
+
+body.kb .sheet { align-items: flex-start; padding-top: 10px; }
+body.kb .sheet-body { max-height: 50vh; }

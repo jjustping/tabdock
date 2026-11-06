@@ -113,7 +113,23 @@ function openSheet(html, onMount) {
   if (onMount) onMount($("#sheetBody"));
 }
 function closeSheet() { $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML = ""; }
-$("#sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") closeSheet(); });
+// close a dialog only when the whole tap (down + up) happened on the dimmed backdrop
+let downOnBackdrop = false;
+$("#sheet").addEventListener("pointerdown", (e) => { downOnBackdrop = e.target.id === "sheet"; });
+$("#sheet").addEventListener("click", (e) => { if (e.target.id === "sheet" && downOnBackdrop) closeSheet(); downOnBackdrop = false; });
+// On-screen keyboard (touch devices): it overlays the page, so lift dialogs to the top half and
+// scroll the focused field into view instead of letting the keyboard hide it.
+const touchUI = matchMedia("(pointer: coarse)").matches;
+let kbTimer;
+document.addEventListener("focusin", (e) => {
+  if (!touchUI || !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.type === "range") return;
+  clearTimeout(kbTimer);
+  setTimeout(() => {      // after the tap finishes, so the layout change can't redirect the click
+    document.body.classList.add("kb");
+    setTimeout(() => e.target.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+  }, 260);
+});
+document.addEventListener("focusout", () => { kbTimer = setTimeout(() => document.body.classList.remove("kb"), 250); });
 
 // double-tap confirm for dangerous actions (like on DJ-Pi)
 function armed(el, fn) {
@@ -501,7 +517,7 @@ function renderMacView() {
         ${isCat ? '<span class="tag cat">каталог C1</span>' : ""}<small class="dim">${esc(d.external ? meta : "системный")}</small></div>
       <div class="bar ${full ? "" : "done"}"><i style="width:${d.pct}%;${full ? "background:var(--red)" : ""}"></i></div>
       <div class="fr">${fmtBytes(d.free)} свободно<br><span class="dim">из ${fmtBytes(d.total)}</span></div>
-      ${d.external ? `<button class="btn" data-eject="${esc(d.mount)}">${ic("eject")}</button>` : ""}</div>`;
+      ${d.external ? `<button class="btn ej" data-eject="${esc(d.mount)}">${ic("eject")}</button>` : '<span class="btn ej" style="visibility:hidden"></span>'}</div>`;
   }).join("") + catVols.filter((v) => !v.connected).map((v) => `<div class="disk"><div class="nm">${ic("drive")} ${esc(v.name)} <span class="tag cat">каталог C1</span><small class="dim">не подключён</small></div><div class="bar"><i style="width:0"></i></div><div class="fr" style="color:var(--red)">отключён</div></div>`).join("");
   const folders = (S.config.folders || []).map((f) => `<button class="tile" data-folder="${esc(f.path)}"><span class="ic">${ic("folder")}</span>${esc(f.title)}</button>`).join("");
   $("#macView").innerHTML = `
