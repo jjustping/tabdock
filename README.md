@@ -35,6 +35,28 @@
 и проверки ссылок wfolio). Сервер — компьютер с macOS 13+ или **Linux** (Ubuntu, Debian, Fedora, Arch), клиент — Android-приложение TabDock
 или любой современный браузер на планшете, телефоне или самом компьютере.
 
+### Поддержать разработчика
+
+TabDock делает один человек в свободное время. Он бесплатный, с открытым кодом, без рекламы, подписок и сбора
+данных — и таким останется. Поддержка нужна, чтобы проект развивался быстрее и не заглох:
+
+* **Время.** Каждая версия — это вечера разработки и проверки на настоящих устройствах. Поддержка позволяет
+  тратить на TabDock больше времени: чаще выпускать обновления и быстрее чинить ошибки.
+* **Железо для проверки.** Планшеты и телефоны разных марок, компьютеры с Linux, внешние диски — всё, на чём
+  TabDock должен работать надёжно, а не «у меня запускается».
+* **Магазины и новые платформы.** Публикация в RuStore и Google Play, а для приложения на iPhone/iPad — платный
+  аккаунт разработчика Apple. Без этого приложение ставится только из APK.
+* **Открытость.** Всё, что сделано, остаётся в открытом коде, бесплатно для всех — в том числе для тех, кто
+  поддержать не может.
+
+Переведите любую сумму через ЮMoney — наведите камеру на QR-код или откройте ссылку, сумму вы выбираете сами:
+
+[![Поддержать через ЮMoney](docs/img/donate.svg)](https://yoomoney.ru/to/4100115736818477)
+
+**[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — спасибо! Помочь можно и бесплатно:
+поставить звёздочку репозиторию, рассказать о TabDock знакомым, написать об ошибке или идее в
+[Issues](https://github.com/jjustping/tabdock/issues).
+
 ### Пространства и виджеты (v0.7)
 
 | | |
@@ -487,16 +509,6 @@ Windows пока не планируется (оценка — [docs/WINDOWS.md]
 * Отдельный ключ на каждое устройство со списком и отзывом; подтверждение нового устройства на компьютере.
 * Bonjour и доступ только в домашних сетях (для ноутбука, который носят с собой).
 
-### Поддержать разработчика
-
-TabDock бесплатный и с открытым кодом. Если он вам пригодился и хочется сказать спасибо — можно перевести
-любую сумму через ЮMoney: наведите камеру на QR-код или откройте ссылку, сумму вы выбираете сами.
-
-[![Поддержать через ЮMoney](docs/img/donate.svg)](https://yoomoney.ru/to/4100115736818477)
-
-**[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — спасибо! Поддержать можно и иначе:
-звёздочка репозиторию, сообщение об ошибке или идея в [Issues](https://github.com/jjustping/tabdock/issues).
-
 ## English
 
 **TabDock turns an idle tablet (or phone) into a work dock for your computer** — for everyday work, study and
@@ -504,6 +516,26 @@ fun, built with photographers in mind. On first launch you pick usage scenarios 
 **System & network**); each becomes a space of widgets you can rearrange. Photographers get the most: Capture One
 (and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
 backups. Local network only, no cloud. Server: macOS 13+ or **Linux** (Ubuntu, Debian, Fedora, Arch); client: the Android app or any browser.
+
+### Support the developer
+
+TabDock is built by one person in their spare time. It is free and open source, with no ads, subscriptions or data
+collection — and it will stay that way. Support keeps the project moving:
+
+* **Time.** Every release means evenings of development and testing on real devices. Support buys more time for
+  TabDock: more frequent updates and faster fixes.
+* **Test hardware.** Tablets and phones of different brands, Linux machines, external drives — everything TabDock
+  has to run reliably on, not just "works on my machine".
+* **Stores and new platforms.** Publishing on RuStore and Google Play, and a paid Apple developer account for an
+  iPhone/iPad app. Until then the app is installed from the APK only.
+* **Openness.** Everything stays open source and free for everyone, including those who cannot chip in.
+
+Send any amount via YooMoney — scan the QR code or open the link; you choose the amount:
+
+[![Support via YooMoney](docs/img/donate.svg)](https://yoomoney.ru/to/4100115736818477)
+
+**[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — thank you! Free ways to help: star
+the repository, tell a friend, report a bug or share an idea in [Issues](https://github.com/jjustping/tabdock/issues).
 
 **Status: beta.** Server and native Android app **TabDock 0.10.0-beta** ([download](https://github.com/jjustping/tabdock/releases)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
@@ -666,13 +698,3 @@ Also: password login, LAN scan, Bonjour advertising, wfolio link checks.
 a playing Music/Spotify track, and Capture One sessions (only catalogs are supported).
 
 License: MIT.
-
-### Support the developer
-
-TabDock is free and open source. If it is useful to you and you would like to say thanks, you can send any amount
-via YooMoney — scan the QR code or open the link; you choose the amount.
-
-[![Support via YooMoney](docs/img/donate.svg)](https://yoomoney.ru/to/4100115736818477)
-
-**[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — thank you! A star, a bug report or an idea
-in [Issues](https://github.com/jjustping/tabdock/issues) helps too.
