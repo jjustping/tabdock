@@ -146,7 +146,10 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         }
 
     // ---------------- images (covers, app icons) ----------------
-    private val images = LruCache<String, ImageBitmap>(80)
+    private val images = object : LruCache<String, ImageBitmap>(96 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
+    fun cached(path: String?): ImageBitmap? = path?.let { images.get(it) }
     suspend fun image(path: String): ImageBitmap? {
         images.get(path)?.let { return it }
         val a = api ?: return null

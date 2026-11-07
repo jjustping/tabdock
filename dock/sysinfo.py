@@ -151,6 +151,7 @@ def disk_info(mount):
             "ssd": d.get("SolidState"),
             "ejectable": bool(d.get("Ejectable")),
             "device": d.get("DeviceIdentifier") or "",
+            "readonly": d.get("WritableVolume") is False,
         }
     except Exception:
         pass

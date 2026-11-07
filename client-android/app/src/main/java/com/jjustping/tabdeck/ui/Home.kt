@@ -56,7 +56,7 @@ private val TEMPLATES = linkedMapOf(
 )
 
 private fun rid() = (1..8).map { "abcdefghijklmnopqrstuvwxyz0123456789"[Random.nextInt(36)] }.joinToString("")
-private fun fromTemplate(k: String): JSONObject {
+fun fromTemplate(k: String): JSONObject {
     val (n, ic, ws) = TEMPLATES.getValue(k)
     return JSONObject().put("id", k + rid().take(4)).put("name", n).put("icon", ic)
         .put("widgets", JSONArray(ws.map { (t, w, h) -> JSONObject().put("id", rid()).put("type", t).put("w", w).put("h", h).put("opts", JSONObject()) }))

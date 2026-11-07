@@ -518,7 +518,7 @@ function renderMacView() {
     const img = d.bus === "Disk Image";
     const isCat = catVols.some((v) => v.mount === d.mount);
     const meta = [img ? "образ диска" : d.model, img ? "" : d.bus, d.fs, d.smart && !/not supported/i.test(d.smart) ? "SMART: " + (d.smart === "Verified" ? "в порядке" : d.smart) : ""].filter(Boolean).join(" · ");
-    const full = !img && d.pct > 90;
+    const full = !img && !d.readonly && d.pct > 90;
     return `<div class="disk"><div class="nm">${ic(img ? "disc" : d.external ? "drive" : "computer")} ${esc(d.name)}
         ${isCat ? '<span class="tag cat">каталог C1</span>' : ""}<small class="dim">${esc(d.external ? meta : "системный")}</small></div>
       <div class="bar ${full ? "" : "done"}"><i style="width:${d.pct}%;${full ? "background:var(--red)" : ""}"></i></div>

@@ -64,7 +64,11 @@ fun TabDeckApp(deck: Deck) {
     var tab by remember { mutableStateOf(deck.store.string("tab") ?: "home") }
     var web by remember { mutableStateOf<String?>(null) }
     var forceConnect by remember { mutableStateOf(false) }
+    var cull by remember { mutableStateOf<JSONObject?>(null) }
+    var wizard by remember { mutableStateOf(false) }
+    var setupSeen by remember { mutableStateOf(false) }
     val dialogs = remember { Dialogs(deck) }
+    dialogs.onCull = { cull = it }
     var toast by remember { mutableStateOf<String?>(null) }
     var banner by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(Unit) { deck.toasts.collect { toast = it; delay(2400); if (toast == it) toast = null } }
@@ -76,6 +80,8 @@ fun TabDeckApp(deck: Deck) {
                 conn == Conn.STARTING -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { T("TabDeck · ищу компьютер…", 18.sp, s.muted) }
                 conn == Conn.NEED_PAIRING || forceConnect -> ConnectScreen(deck) { forceConnect = false }
                 web != null -> WebScreen(deck, web!!) { web = null }
+                all != null && (wizard || (!setupSeen && !all.o("config").b("setup_done"))) -> SetupWizard(deck, all) { wizard = false; setupSeen = true; tab = "home" }
+                cull != null -> Box(Modifier.fillMaxSize().padding(20.dp)) { CullScreen(deck, cull!!) { cull = null } }
                 else -> {
                     val tabsShown = all.o("config").a("tabs")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
                     val c = Ctx(deck, all, state, openShoot = { dialogs.shoot(it) }, openNote = { dialogs.note(it) },
@@ -88,7 +94,7 @@ fun TabDeckApp(deck: Deck) {
                                 "shoots" -> ShootsScreen(c)
                                 "notes" -> NotesScreen(c)
                                 "mac" -> ComputerScreen(c)
-                                "settings" -> SettingsScreen(c, openWeb = { web = it }, onConnect = { forceConnect = true })
+                                "settings" -> SettingsScreen(c, openWeb = { web = it }, onConnect = { forceConnect = true }, onWizard = { wizard = true })
                                 else -> HomeScreen(c, dialogs)
                             }
                         }

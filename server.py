@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from dock import actions as act_mod          # noqa: E402
-from dock import auth, bonjour, captureone, demo, folders, netcheck, sysinfo, weather, wfolio  # noqa: E402
+from dock import auth, bonjour, captureone, culling, demo, folders, netcheck, sysinfo, weather, wfolio  # noqa: E402
 from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
@@ -55,6 +55,7 @@ class App:
         self.sys = sysinfo.Sampler()
         self.media = Media(self.cache_dir)
         self.net = netcheck.NetCheck()
+        self.cull = culling.Culling(self.cache_dir)
         self.actions = act_mod.Actions()
         self.c1 = captureone.CaptureOne()
         self.weather = weather.Weather()
@@ -171,6 +172,17 @@ class App:
             if v:
                 vols.append({"catalog": c, "mount": v, "name": v.split("/")[-1], "connected": os.path.isdir(v)})
         return {"items": out, "errors": errors, "catalogs": cats, "backups": backups, "volumes": vols}
+
+    def c1_shoot(self, key):
+        """(catalog, album uuid) for a Capture One shoot key, only for catalogs we serve."""
+        if not key.startswith("c1:") or self.demo:
+            return None, None
+        uuid = key[3:]
+        items, _ = self.c1.shoots(self.catalogs())
+        for s in items:
+            if s["key"] == key:
+                return s["catalog"], uuid
+        return None, None
 
     def cover_file(self, key):
         if self.demo:
@@ -656,6 +668,19 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/app_icon":
             f = act_mod.app_icon(qs.get("name", [""])[0], app.cache_dir)
             return self._file(f, "image/png", cache=True) if f else self._send(404, {})
+        if p == "/api/cull/images":
+            cat, uuid = app.c1_shoot(qs.get("key", [""])[0])
+            if not cat:
+                return self._send(404, {"error": "Отбор пока работает только для съёмок из Capture One"})
+            return self._send(200, {"images": app.cull.images(cat, uuid)})
+        if p in ("/api/cull/thumb", "/api/cull/preview"):
+            cat, uuid = app.c1_shoot(qs.get("key", [""])[0])
+            try:
+                pk = int(qs.get("img", ["0"])[0])
+            except ValueError:
+                pk = 0
+            f = (app.cull.thumb if p.endswith("thumb") else app.cull.preview)(cat, uuid, pk) if cat else None
+            return self._file(f, "image/jpeg", cache=True) if f else self._send(404, {})
         if p == "/api/pin":   # native client: identity to pin after sign-in (never the access key itself)
             return self._send(200, {"id": app.server_id(), "key": app.proof_key(), "name": app.sysdata().get("hostname")})
         if p == "/api/catalogs":
@@ -725,6 +750,12 @@ class Handler(BaseHTTPRequestHandler):
                 h = auth.hash_password(pw)
                 app.store.update("config", default_config, lambda c: c.__setitem__("password_hash", h))
                 return self._send(200, {"ok": True, "message": "Пароль сохранён"})
+            if p == "/api/cull/tag":
+                cat, uuid = app.c1_shoot(str(body.get("key", "")))
+                if not cat:
+                    return self._send(200, {"ok": False, "message": "Съёмка не найдена"})
+                ok, msg = app.cull.tag(cat, uuid, body.get("changes") or [])
+                return self._send(200, {"ok": ok, "message": msg})
             if p == "/api/wfolio":
                 return self._send(200, {"ok": op_wfolio(app, body), "wfolio": app.galleries()})
             if p == "/api/action":

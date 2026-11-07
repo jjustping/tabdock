@@ -27,8 +27,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -130,10 +133,13 @@ private fun headerAction(type: String, c: Ctx, w: JSONObject): (@Composable andr
     }
 }
 
-@Composable fun RemoteImage(deck: Deck, path: String?, modifier: Modifier, crop: Boolean = true) {
+@Composable fun RemoteImage(deck: Deck, path: String?, modifier: Modifier, crop: Boolean = true, transparentBg: Boolean = false) {
     val s = LocalSkin.current
-    val img by produceState<ImageBitmap?>(null, path) { value = path?.let { deck.image(it) } }
-    Box(modifier.background(s.inner)) {
+    val img by produceState<ImageBitmap?>(deck.cached(path), path) {
+        if (value != null || path == null) return@produceState
+        for (attempt in 0 until 3) { value = deck.image(path); if (value != null) break; delay(1500L * (attempt + 1)) }
+    }
+    Box(if (transparentBg) modifier else modifier.background(s.inner)) {
         img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = if (crop) ContentScale.Crop else ContentScale.Fit) }
     }
 }
@@ -204,8 +210,8 @@ fun statusColor(st: String, s: Skin): Color = when (st) {
     val todo = items.filter { it.s("status") !in setOf("done", "delivered") }
     val left = todo.sumOf { (it.i("target") - it.i("done")).coerceAtLeast(0) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for ((n, l) in listOf(todo.size to "в работе / ждут", left to "кадров осталось", (items.size - todo.size) to "готово"))
-            Inner(Modifier.weight(1f)) { T("$n", 22.sp, weight = FontWeight.Bold); T(l, 12.sp, s.muted, maxLines = 1) }
+        for ((n, l) in listOf(todo.size to "в работе", left to "кадров ждут", (items.size - todo.size) to "готово"))
+            Inner(Modifier.weight(1f)) { T("$n", 22.sp, weight = FontWeight.Bold); T(l, 13.sp, s.muted, maxLines = 2) }
     }
     Spacer(Modifier.height(6.dp))
     LazyColumn {
@@ -346,9 +352,8 @@ fun deadlines(all: JSONObject?): List<Triple<String, String, String>> {
         var dragging by remember { mutableStateOf(false) }
         LaunchedEffect(vol) { if (!dragging) local = vol.toFloat() }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Slider(local, { local = it; dragging = true }, valueRange = 0f..100f, modifier = Modifier.weight(1f),
-                onValueChangeFinished = { dragging = false; c.deck.media("volume", local.toInt()) },
-                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = s.accent, inactiveTrackColor = s.inner))
+            VolumeBar(local / 100f, Modifier.weight(1f), onDrag = { local = it * 100f; dragging = true },
+                onDone = { dragging = false; c.deck.media("volume", local.toInt()) })
             T("${local.toInt()}", 14.sp, s.muted, modifier = Modifier.width(36.dp))
         }
     }
@@ -358,15 +363,31 @@ fun deadlines(all: JSONObject?): List<Triple<String, String, String>> {
 val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screenshot", "frame", "Скриншот"),
     Triple("display_sleep", "display", "Экран выкл."), Triple("sleep", "moon", "Сон"))
 
+/** Volume bar drawn in the skin's colours (the stock Material slider looks foreign here). */
+@Composable fun VolumeBar(value: Float, modifier: Modifier, onDrag: (Float) -> Unit, onDone: () -> Unit) {
+    val s = LocalSkin.current
+    var w by remember { mutableStateOf(1f) }
+    fun at(x: Float) = (x / w).coerceIn(0f, 1f)
+    Box(modifier.height(40.dp).onSizeChanged { w = it.width.toFloat().coerceAtLeast(1f) }
+        .pointerInput(Unit) { detectTapGestures { onDrag(at(it.x)); onDone() } }
+        .pointerInput(Unit) { detectHorizontalDragGestures(onDragEnd = onDone, onDragCancel = onDone) { ch, _ -> onDrag(at(ch.position.x)) } },
+        contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(s.inner).border(1.dp, s.innerBorder.copy(.6f), RoundedCornerShape(5.dp)))
+        Box(Modifier.fillMaxWidth(value.coerceIn(0.02f, 1f)).height(10.dp).clip(RoundedCornerShape(5.dp)).background(s.accent))
+        Box(Modifier.fillMaxWidth(value.coerceIn(0f, 1f)), contentAlignment = Alignment.CenterEnd) {
+            Box(Modifier.size(26.dp).clip(CircleShape).background(Color.White).border(2.dp, s.accent, CircleShape)) }
+    }
+}
+
 @Composable fun Tile(icon: String?, label: String, modifier: Modifier = Modifier, on: Boolean = false, armed: Boolean = false,
                      image: @Composable (() -> Unit)? = null, onClick: () -> Unit) {
     val s = LocalSkin.current
     Column(modifier.clip(RoundedCornerShape(14.dp)).background(when { armed -> s.red.copy(.25f); on -> s.amber.copy(.2f); else -> s.inner })
-        .border(1.dp, if (armed) s.red else s.innerBorder.copy(.5f), RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(6.dp),
+        .border(1.dp, if (armed) s.red else s.innerBorder.copy(.5f), RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         if (image != null) image() else if (icon != null) Ic(icon, 28.dp, if (on) s.amber else s.text)
         Spacer(Modifier.height(4.dp))
-        T(label, 11.sp, if (armed) s.red else s.muted, maxLines = 2, align = androidx.compose.ui.text.style.TextAlign.Center)
+        T(label, 12.sp, if (armed) s.red else s.muted, maxLines = 2, align = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -375,7 +396,7 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
     LaunchedEffect(armed) { if (armed != null) { delay(3000); armed = null } }
     val awake = c.state.b("awake")
     Grid(SYS_TILES, cols) { (a, ic, t) ->
-        Tile(ic, if (armed == a) "Ещё раз" else t, Modifier.fillMaxWidth().height(72.dp), on = a == "awake" && awake, armed = armed == a) {
+        Tile(ic, if (armed == a) "Ещё раз" else t, Modifier.fillMaxWidth().heightIn(min = 80.dp), on = a == "awake" && awake, armed = armed == a) {
             if (a == "sleep" && armed != a) { armed = a; c.deck.toast("Нажмите ещё раз для подтверждения") }
             else { armed = null; c.deck.action(a) }
         }
@@ -386,7 +407,7 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
     val apps = c.all.a("apps").objs().filter { it.b("installed") }.take(max)
     Grid(apps, cols) { app ->
         val name = app.s("name")
-        Tile(null, name, Modifier.fillMaxWidth().height(72.dp), image = {
+        Tile(null, name, Modifier.fillMaxWidth().heightIn(min = 80.dp), image = {
             RemoteImage(c.deck, "/api/app_icon?name=" + java.net.URLEncoder.encode(name, "UTF-8").replace("+", "%20"),
                 Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)), crop = false)
         }) { c.deck.action("open_app", name) }
@@ -421,9 +442,11 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
 @Composable fun DisksW(c: Ctx) {
     val s = LocalSkin.current
     for (d in c.state.o("sys").a("disks").objs().filter { it.s("bus") != "Disk Image" }) Column(Modifier.padding(vertical = 5.dp)) {
-        Row { T(d.s("name"), 15.sp, weight = FontWeight.SemiBold, modifier = Modifier.weight(1f)); T("${Fmt.bytes(d.d("free"))} свободно", 14.sp, s.muted) }
+        val ro = d.b("readonly")
+        Row { T(d.s("name"), 15.sp, weight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
+            T(if (ro) "только чтение" else "${Fmt.bytes(d.d("free"))} свободно", 14.sp, s.muted) }
         Spacer(Modifier.height(5.dp))
-        Bar(((d.d("pct") ?: 0.0) / 100).toFloat(), if ((d.d("pct") ?: 0.0) > 90) s.red else s.green)
+        Bar(((d.d("pct") ?: 0.0) / 100).toFloat(), when { ro -> s.dim; (d.d("pct") ?: 0.0) > 90 -> s.red; else -> s.green })
     }
 }
 
@@ -521,7 +544,7 @@ private const val REST = 5 * 60L
 @Composable fun ShortcutsW(c: Ctx, w: JSONObject) {
     val names = w.o("opts").a("names").strs()
     if (names.isEmpty()) { Empty("Выберите команды Apple Shortcuts — значок ⚙ выше"); return }
-    Grid(names, 3) { n -> Tile("frame", n, Modifier.fillMaxWidth().height(72.dp)) { c.deck.action("shortcut", n) } }
+    Grid(names, 3) { n -> Tile("frame", n, Modifier.fillMaxWidth().heightIn(min = 80.dp)) { c.deck.action("shortcut", n) } }
 }
 
 @Composable fun WfolioW(c: Ctx) {

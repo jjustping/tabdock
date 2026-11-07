@@ -68,6 +68,7 @@ import org.json.JSONObject
 // ---------------- dialogs ----------------
 class Dialogs(val deck: Deck) {
     var current by mutableStateOf<(@Composable () -> Unit)?>(null)
+    var onCull: (JSONObject) -> Unit = {}
     fun close() { current = null }
 
     fun catalog(sp: JSONObject, add: (String, WidgetDef) -> Unit) { current = {
@@ -131,6 +132,7 @@ class Dialogs(val deck: Deck) {
             Spacer(Modifier.height(8.dp))
             T("${sh.i("total")} кадров · ${sh.i("picked")} отобрано · ${sh.i("done")} ${sh.s("done_label")} · ${sh.s("catalog_name")}", 13.sp, s.muted)
             Actions {
+                if (sh.s("source") != "folder") Btn("Отбор и метки", "star", primary = false) { close(); onCull(sh) }
                 Btn(if (sh.s("source") == "folder") "Открыть папку" else "Открыть в Capture One") {
                     if (sh.s("source") == "folder") deck.post("/api/action", JSONObject().put("action", "open_folder").put("key", sh.s("key")), false)
                     else deck.post("/api/action", JSONObject().put("action", "open_shoot").put("catalog", sh.s("catalog")), false)
@@ -294,39 +296,6 @@ class Dialogs(val deck: Deck) {
 }
 
 // ---------------- settings & connection ----------------
-@Composable fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit) {
-    val s = LocalSkin.current
-    val skin by c.deck.skin.collectAsState()
-    val cur = skinById(skin ?: c.all.o("config").s("skin").ifBlank { null })
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        DeckCard("Оформление") {
-            Grid(SKINS, 4) { k ->
-                Column(Modifier.clip(RoundedCornerShape(14.dp)).border(2.dp, if (k.id == cur.id) s.accent else Color.Transparent, RoundedCornerShape(14.dp))
-                    .background(s.inner).clickable { c.deck.setSkin(k.id) }) {
-                    Box(Modifier.fillMaxWidth().height(70.dp).background(k.bg)) {
-                        Box(Modifier.padding(10.dp).size(70.dp, 44.dp).clip(RoundedCornerShape(8.dp)).background(k.card))
-                        Box(Modifier.align(Alignment.BottomEnd).padding(10.dp).size(40.dp, 14.dp).clip(RoundedCornerShape(7.dp)).background(k.primary))
-                    }
-                    Column(Modifier.padding(10.dp)) { T(k.name, 15.sp, weight = FontWeight.SemiBold); T(k.desc, 12.sp, s.muted) }
-                }
-            }
-            T("Скин запоминается на этом устройстве.", 13.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
-        }
-        DeckCard("Компьютер") {
-            val name by c.deck.serverName.collectAsState()
-            T("$name · ${c.deck.api?.base ?: ""}", 16.sp)
-            T("Версия сервера ${c.state.s("version")} · TabDeck ${com.jjustping.tabdeck.BuildConfigShim.VERSION}", 13.sp, s.muted)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 12.dp)) {
-                Btn("Первая настройка", "star") { openWeb("/?wz=0") }
-                Btn("Все настройки сервера", "gear") { openWeb("/?tab=settings") }
-                Btn("Подключение", "link") { openWeb("/?tab=connect") }
-                Btn("Сменить компьютер", "computer") { onConnect() }
-            }
-            T("Погода, календарь, приложения в быстрых действиях, каталоги, папки, пароль и ключ доступа пока настраиваются на веб-экране сервера.", 13.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
-        }
-    }
-}
-
 @Composable fun ConnectScreen(deck: Deck, onDone: () -> Unit) {
     val s = LocalSkin.current
     val servers by deck.discovery.servers.collectAsState()
