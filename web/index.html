@@ -12,7 +12,8 @@
 <link rel="stylesheet" id="skinCss" href="data:text/css,">
 <script>(function () { var q = location.search.match(/[?&]skin=([a-z0-9-]+)/);
   var s = (q && q[1]) || localStorage.getItem("dock_skin") || window.__SKIN__ || "";
-  if (s && s !== "classic") document.getElementById("skinCss").href = "/static/skins/" + s + ".css"; })();</script>
+  if (s && s !== "classic") document.getElementById("skinCss").href = "/static/skins/" + s + ".css";
+  document.documentElement.dataset.skin = s || "classic"; })();</script>
 </head>
 <body>
 <header class="top">
@@ -27,19 +28,7 @@
 
 <main id="views">
   <section class="view active" data-view="home">
-    <div class="home-grid">
-      <div class="col">
-        <div class="card grow" id="remindersCard"></div>
-      </div>
-      <div class="col">
-        <div class="card" id="shootsCard"></div>
-        <div class="card grow" id="calendarCard"></div>
-      </div>
-      <div class="col">
-        <div class="card" id="playerCard"></div>
-        <div class="card" id="quickCard"></div>
-      </div>
-    </div>
+    <div class="spacehome"><div id="spacebar" class="spacebar"></div><div id="spaceGrid" class="space-grid"></div></div>
   </section>
   <section class="view" data-view="shoots"><div id="shootsView" class="scroll"></div></section>
   <section class="view" data-view="notes"><div id="notesView" class="scroll"></div></section>
@@ -52,7 +41,7 @@
   <button data-tab="home" class="active"><span data-ic="home"></span>Главная</button>
   <button data-tab="shoots"><span data-ic="aperture"></span>Съёмки</button>
   <button data-tab="notes"><span data-ic="book"></span>Справка</button>
-  <button data-tab="mac"><span data-ic="computer"></span>Mac</button>
+  <button data-tab="mac"><span data-ic="computer"></span>Компьютер</button>
   <button data-tab="connect"><span data-ic="link"></span>Подключение</button>
   <button data-tab="settings"><span data-ic="gear"></span>Настройки</button>
 </nav>
@@ -62,6 +51,8 @@
 <div id="offline" class="offline hidden">Нет связи с Mac — переподключаюсь…</div>
 <script src="/static/icons.js"></script>
 <script src="/static/connect.js"></script>
+<script src="/static/spaces.js"></script>
+<script src="/static/wizard.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

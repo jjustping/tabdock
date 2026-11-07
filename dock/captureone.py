@@ -40,6 +40,31 @@ LEFT JOIN (SELECT v2.ZIMAGE AS img, MAX(h.ZDATE) AS last
 GROUP BY ic.ZCOLLECTION
 """
 
+COLOR_SQL = """
+SELECT ic.ZCOLLECTION, m.ZCOLOR_TAG_INDEX, COUNT(DISTINCT ic.ZIMAGE)
+FROM ZIMAGEINCOLLECTION ic
+JOIN ZIMAGE i ON i.Z_PK = ic.ZIMAGE AND COALESCE(i.ZISTRASHED, 0) = 0
+JOIN ZVARIANT v ON v.ZIMAGE = i.Z_PK
+JOIN ZVARIANTLAYER l ON l.ZVARIANT = v.Z_PK
+JOIN ZVARIANTMETADATA m ON m.ZLAYER = l.Z_PK
+WHERE COALESCE(m.ZCOLOR_TAG_INDEX, 0) > 0
+GROUP BY 1, 2
+"""
+
+RATING_SQL = """
+SELECT cid, r, COUNT(*) FROM (
+  SELECT ic.ZCOLLECTION AS cid, ic.ZIMAGE AS img, MAX(COALESCE(m.ZBASIC_RATING, 0)) AS r
+  FROM ZIMAGEINCOLLECTION ic
+  JOIN ZIMAGE i ON i.Z_PK = ic.ZIMAGE AND COALESCE(i.ZISTRASHED, 0) = 0
+  JOIN ZVARIANT v ON v.ZIMAGE = i.Z_PK
+  JOIN ZVARIANTLAYER l ON l.ZVARIANT = v.Z_PK
+  JOIN ZVARIANTMETADATA m ON m.ZLAYER = l.Z_PK
+  GROUP BY 1, 2) WHERE r > 0 GROUP BY 1, 2
+"""
+
+# Capture One colour tags: 1 red, 2 orange, 3 yellow, 4 green, 5 blue, 6 pink, 7 purple
+COLOR_NAMES = {1: "красная", 2: "оранжевая", 3: "жёлтая", 4: "зелёная", 5: "синяя", 6: "розовая", 7: "фиолетовая"}
+
 CAMERA_SQL = """
 SELECT ic.ZCOLLECTION, i.ZCAMERA_MODEL, COUNT(*) FROM ZIMAGEINCOLLECTION ic
 JOIN ZIMAGE i ON i.Z_PK = ic.ZIMAGE GROUP BY 1, 2
@@ -171,6 +196,11 @@ def read_catalog(catalog):
     try:
         rows = con.execute(ALBUM_SQL).fetchall()
         stats = {r["cid"]: r for r in con.execute(STATS_SQL)}
+        colors, ratings = {}, {}
+        for cid, color, n in con.execute(COLOR_SQL):
+            colors.setdefault(cid, {})[str(color)] = n
+        for cid, rating, n in con.execute(RATING_SQL):
+            ratings.setdefault(cid, {})[str(rating)] = n
         cams = {}
         for cid, model, n in con.execute(CAMERA_SQL):
             if model and n > cams.get(cid, ("", 0))[1]:
@@ -231,6 +261,8 @@ def read_catalog(catalog):
             "created": _ts(r["ZDATECREATED"]),
             "last_export": _ts(s["last_export"]),
             "camera": cams.get(r["Z_PK"], (None,))[0],
+            "colors": colors.get(r["Z_PK"], {}),
+            "ratings": ratings.get(r["Z_PK"], {}),
             "cover_file": cover,
         })
     # Fallback: catalog without albums -> use import batches as shoots
@@ -301,7 +333,33 @@ def catalog_volume(catalog):
     return None
 
 
-def derive(shoot, manual):
+def done_count(shoot, rule):
+    """How many frames count as delivered, by the user's rule:
+    export (has process history) | color (that colour tag) | rating (>= N stars)."""
+    rule = rule or {}
+    kind = rule.get("type", "export")
+    if shoot.get("source") == "c1" and kind in ("color", "color_or_export"):
+        tagged = int(shoot.get("colors", {}).get(str(rule.get("color", 4)), 0))
+        return max(tagged, shoot.get("exported", 0)) if kind == "color_or_export" else tagged
+    if shoot.get("source") == "c1" and kind == "rating":
+        need = int(rule.get("rating", 5))
+        return sum(int(n) for r, n in shoot.get("ratings", {}).items() if int(r) >= need)
+    return shoot.get("exported", 0)
+
+
+def rule_label(rule):
+    """Short wording for the progress line; the full rule is shown in Settings."""
+    rule = rule or {}
+    if rule.get("type") == "color":
+        return "с меткой"
+    if rule.get("type") == "color_or_export":
+        return "отдано"
+    if rule.get("type") == "rating":
+        return "с ★%s+" % int(rule.get("rating", 5))
+    return "экспортировано"
+
+
+def derive(shoot, manual, rule=None):
     """Merge catalog stats with manual overrides -> progress + status."""
     m = manual or {}
     total, picked, exported = shoot.get("total", 0), shoot.get("picked", 0), shoot.get("exported", 0)
@@ -310,7 +368,7 @@ def derive(shoot, manual):
         done = m.get("done", 0)
         target = m.get("target") or 0
     else:
-        done = exported
+        done = done_count(shoot, rule)
     progress = min(1.0, done / target) if target else 0.0
     auto = "new" if done == 0 and not picked else ("selecting" if done == 0 else ("done" if progress >= 1 else "editing"))
     status = m.get("status") or auto
@@ -319,7 +377,9 @@ def derive(shoot, manual):
     shoot.update({"target": target, "done": done, "progress": round(progress, 3),
                   "status": status, "status_auto": auto, "status_manual": bool(m.get("status")),
                   "deadline": m.get("deadline"), "note": m.get("note", ""), "client": m.get("client", ""),
-                  "hidden": bool(m.get("hidden")), "target_manual": bool(m.get("target"))})
+                  "hidden": bool(m.get("hidden")), "target_manual": bool(m.get("target")),
+                  "done_label": "готово" if shoot.get("source") == "manual" else
+                  (rule_label(rule) if shoot.get("source") == "c1" else "в папке экспорта")})
     return shoot
 
 

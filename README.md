@@ -1,6 +1,9 @@
 # TabDock
 
-**Док для фотографа из планшета, который лежит без дела** · *A photographer's work dock made from an idle tablet*
+**Док из планшета, который лежит без дела: для работы, учёбы и отдыха — с прицелом на фотографов**
+· *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
+
+> **0.7.0-beta**: пространства и виджеты, первая настройка по сценариям, «что считать отданным» (метка / экспорт / рейтинг).
 
 [Русский](#русский) · [English](#english)
 
@@ -12,19 +15,44 @@
 
 ## Русский
 
-**TabDock превращает планшет, который давно лежит без дела, в полезный док для работы на Mac — и сделан
-в первую очередь для фотографов.** Сейчас он читает каталоги Capture One (какие съёмки обработаны, какие ждут,
-сроки сдачи, галереи клиентов в wfolio); поддержка Lightroom Classic и редакторов вроде Photoshop и Photon Studio
-запланирована.
-Поставьте старый Android-планшет (или iPad) рядом с компьютером, и он станет вторым сенсорным экраном с тем,
-что обычно приходится искать по окнам: напоминания, прогресс обработки съёмок в Capture One, шпаргалки,
-состояние Mac, музыка и быстрые действия. Панель открывается и в браузере на самом Mac.
+**TabDock превращает планшет (или телефон), который лежит без дела, в док для работы на компьютере.**
+Это не только для фотографов: при первом запуске вы выбираете сценарии — **Фото**, **Работа**, **Отдых**,
+**Система и сеть** — и для каждого получаете своё пространство с виджетами, которые можно переставлять и менять.
+Фотографам — больше всего: прогресс обработки съёмок в Capture One (и по папкам для Photon Studio, Photoshop),
+отбор, сроки сдачи, галереи клиентов в wfolio, диски и бэкапы каталога.
 
 Всё работает локально в домашней сети: без облака, аккаунтов и подписок (интернет нужен только для погоды
-и проверки ссылок wfolio). Сделано под Mac mini M4 + Honor Pad 9, но подойдёт любой Mac с macOS 13+ и любой
-планшет с современным браузером.
+и проверки ссылок wfolio). Сервер — компьютер с macOS 13+ (Linux — в планах), клиент — Android-приложение TabDock
+или любой современный браузер на планшете, телефоне или самом компьютере.
 
-### Что умеет (v0.6)
+### Пространства и виджеты (v0.7)
+
+| | |
+|---|---|
+| ![Фото](docs/img/spaces/photo.png) | ![Работа](docs/img/spaces/work.png) |
+| *Фото: напоминания, съёмки, музыка, быстрые действия, сроки* | *Работа: задачи, заметка-чек-лист, часы, сроки, календарь, фокус-таймер* |
+| ![Отдых](docs/img/spaces/fun.png) | ![Система](docs/img/spaces/admin.png) |
+| *Отдых: часы, погода, плеер, быстрые действия* | *Система: нагрузка и температура, сеть (роутер, DNS, интернет), диски, кнопки Apple Shortcuts* |
+
+* Пространства переключаются вкладками над виджетами или **свайпом**. Кнопка карандаша — **режим редактирования**:
+  переставить виджет, изменить ширину/высоту (сетка 12×6), удалить, «+ Виджет» из каталога, переименовать
+  пространство, сменить значок, добавить новое из шаблона.
+* **16 виджетов**: напоминания, съёмки, погода+сроки+календарь, музыка, быстрые действия, часы, погода, ближайшие
+  сроки, календарь, компьютер, диски, заметка (с чек-листами), фокус-таймер, **сеть**, **команды Apple Shortcuts**,
+  галереи wfolio.
+* Виджет перерисовывается, только когда изменились его данные (быстрее на планшете), стекло на сенсорных экранах
+  размывается легче.
+
+### Первая настройка (v0.7)
+
+| | | |
+|---|---|---|
+| ![Привет](docs/img/spaces/setup-0.png) | ![Сценарии](docs/img/spaces/setup-1.png) | ![Съёмки](docs/img/spaces/setup-2.png) |
+
+Сценарии → (для фото) где вы обрабатываете и **что считать отданным** → город для погоды → скин → подключение
+планшета (QR, пароль). Пройти заново: «Настройки → Пройти первую настройку заново».
+
+### Что ещё умеет
 
 | Блок | Что делает |
 |---|---|
@@ -106,7 +134,7 @@ Aero, а на Mac — «Бумага». Кнопка «Сделать скино
 Свой скин — это один CSS-файл в `web/skins/`: он переопределяет переменные (`--bg`, `--card-bg`, `--accent`, `--r`, …)
 и при желании добавляет детали. Добавьте его в список `SKINS` в `web/app.js`.
 
-### Установка на Mac mini
+### Установка на компьютер (Mac)
 
 ```bash
 git clone … ~/tabdock     # или скопируйте папку; не кладите её в Документы/Рабочий стол/Загрузки
@@ -128,6 +156,10 @@ cd ~/tabdock
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
 
 ### Приложение для Android (v0.3)
+
+> Честно: сейчас это **нативная оболочка** вокруг веб-интерфейса (WebView) с нативными частями — поиск компьютера
+> по Bonjour, привязка к своему серверу, экран без сна, полный экран. **Полностью нативный клиент TabDeck**
+> (Kotlin + Jetpack Compose) — в дорожной карте.
 
 Лучше, чем вкладка Chrome: `android/` — маленькое приложение (28 КБ) с WebView, которое
 * **само находит Mac** через Bonjour (`_tabdock._tcp`) и опросом сети — браузер так не умеет;
@@ -303,48 +335,38 @@ v0.1:
 * обложка и управление при реально играющей Music/Spotify; Spotify не установлен;
 * сеансы Capture One (`.cosessiondb`) — сейчас поддерживаются только каталоги.
 
-### Дальше (идеи)
+### Дорожная карта
 
-**Редакторы и каталоги**
-1. Lightroom Classic — каталог `.lrcat` это SQLite: папки и коллекции как съёмки, флажки и рейтинги как отбор,
-   «есть правки» по настройкам проявки, экспорт — по опубликованным коллекциям и папке экспорта.
-2. Photon Studio и Photoshop — у них нет каталога, поэтому «съёмка = папка»: RAW в папке против готовых
-   JPEG/TIFF в подпапке экспорта; последние открытые файлы; быстрый запуск с нужным файлом.
-3. Сеансы Capture One (`.cosessiondb`), несколько каталогов, выбор «рабочего» каталога.
-4. «Tether viewer»: свежие кадры с X-T4 на планшете во время съёмки.
+| Версия | Что будет |
+|---|---|
+| **0.7 beta** (сейчас) | пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды», ускорение |
+| 0.8 | **отбор с планшета**: сетка миниатюр съёмки, ★ и метки прямо с планшета (запись в Capture One через его AppleScript), **значок в строке меню** на сервере (статус, перезапуск службы) |
+| 0.9 | раскладка для **телефона** и режим «подставки»; **конструктор тем** в приложении (свои цвета, стекло, фон из обложки съёмки), импорт/экспорт тем |
+| 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее; `install-linux.sh` |
+| **TabDeck** | **нативный клиент** для Android (Kotlin + Jetpack Compose) вместо веб-страницы в оболочке: плавнее, меньше батареи, офлайн-кэш, уведомления, виджеты на экране Android; тот же API сервера |
+| дальше | Lightroom Classic, сеансы Capture One, tether viewer для X-T4, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
 
-**Для работы фотографа**
-* Очередь экспорта/процессинга Capture One и уведомление «экспорт закончился».
-* Импорт с карты: прогресс копирования, место на дисках, напоминание о бэкапе (дата последней копии каталога).
-* Сроки сдачи: календарь дедлайнов из съёмок и wfolio, напоминания за N дней.
-* Чек-листы перед съёмкой (аккумуляторы, карты, свет) — из справки в один тап.
-* Таймер «Помодоро» и фокус-режим macOS.
-* Сборка контакт-листа / отбор на планшете с превью (★ и метки уходят обратно в каталог).
-
-**Windows** — план и оценка (≈ 6–8 дней): [docs/WINDOWS.md](docs/WINDOWS.md).
+Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
 
 **Безопасность (рекомендации)**
-* HTTPS с самоподписанным сертификатом, отпечаток которого приложение запоминает при подключении (пароль не идёт
-  по сети открытым текстом).
-* Отдельный ключ на каждое устройство со списком и отзывом, срок жизни сессии.
-* Подтверждение нового устройства на самом Mac («Разрешить планшету подключиться?»).
-* Bonjour и доступ только в домашних сетях (для MacBook, который носят в кафе).
+* HTTPS с самоподписанным сертификатом, отпечаток которого приложение запоминает при подключении.
+* Отдельный ключ на каждое устройство со списком и отзывом; подтверждение нового устройства на компьютере.
+* Bonjour и доступ только в домашних сетях (для ноутбука, который носят с собой).
 
 ## English
 
-**TabDock turns a tablet that is gathering dust into a useful work dock for your Mac — built first of all for
-photographers.** Today it reads Capture One catalogs (which shoots are edited and which are waiting, delivery
-deadlines, client galleries on wfolio); Lightroom Classic and editors such as Photoshop and Photon Studio are
-planned.
-Put an old Android tablet (or iPad) next to your computer and it becomes a second touch screen for the things
-you usually dig through windows for: reminders, Capture One editing progress, cheat sheets, Mac status, music and
-quick actions. The same panel also opens in a browser on the Mac.
+**TabDock turns an idle tablet (or phone) into a work dock for your computer** — for everyday work, study and
+fun, built with photographers in mind. On first launch you pick usage scenarios (**Photo**, **Work**, **Fun**,
+**System & network**); each becomes a space of widgets you can rearrange. Photographers get the most: Capture One
+(and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
+backups. Local network only, no cloud. Server: macOS 13+ (Linux planned); client: the Android app or any browser.
 
-Everything runs locally on the home network: no cloud, no accounts, no subscriptions (internet is only used
-for the weather and for checking wfolio links). Built for a Mac mini M4 + Honor Pad 9, but any Mac on macOS 13+
-and any tablet with a modern browser will do.
+**0.7 beta**: spaces & widgets (12×6 grid, edit mode, 16 widgets incl. network health and Apple Shortcuts buttons),
+first-run setup by scenario, configurable "delivered" rule (colour tag / export / rating), faster redraws.
 
-### Features (v0.6)
+![Spaces](docs/img/spaces/work.png)
+
+### Features
 
 * **Reminders**: its own list. Quick add, tap to complete, due dates, ★ important, tags.
 * **Shoots · Capture One**: reads Capture One catalogs **read-only**. Each user album is a shoot,
@@ -451,9 +473,11 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 ### Roadmap
 
-Lightroom Classic (`.lrcat` is SQLite), Photon Studio / Photoshop via folders (RAW vs exported files), Capture One
-sessions, a tether viewer for the X-T4, export-queue notifications, card import and backup reminders, deadline
-calendar, shoot checklists. Windows support: plan and estimate in [docs/WINDOWS.md](docs/WINDOWS.md).
+0.8 culling from the tablet (thumbnail grid, stars/labels written back via Capture One AppleScript) + menu-bar status
+icon on the server · 0.9 phone layout & "stand" mode, in-app theme builder · 1.0 Linux server (systemd, MPRIS, sensors,
+darktable/digiKam, tray icon) · **TabDeck**: a fully native Android client (Kotlin + Jetpack Compose) instead of the
+WebView shell · later: Lightroom Classic, Capture One sessions, X-T4 tether viewer, multiple computers, HTTPS.
+Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ### macOS permissions
 

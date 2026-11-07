@@ -44,7 +44,7 @@ def calendar():
 
 def sysinfo(real):
     d = dict(real)
-    d.update({"hostname": "Mac-mini", "chip": "Apple M4", "model": "Mac16,10", "cores": 10, "ip": "192.168.1.20"})
+    d.update({"hostname": "Мой компьютер", "chip": "Apple silicon", "model": "server", "cores": 10, "ip": "192.168.1.20"})
     g = 1000 ** 3
     d["disks"] = [
         {"name": "Macintosh HD", "mount": "/", "total": 512 * g, "used": 301 * g, "free": 211 * g, "pct": 58.8, "external": False},

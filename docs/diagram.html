@@ -23,30 +23,30 @@
  .foot b { color: #e9edf2; }
 </style></head>
 <body>
-<h1>TabDock — как это работает<small>Планшет рядом с Mac mini показывает панель; всё работает в домашней сети без облака</small></h1>
+<h1>TabDock — как это работает<small>Клиент (планшет или телефон) рядом с компьютером показывает панель; всё работает в домашней сети без облака</small></h1>
 
 <div class="zone" style="left:40px;top:150px;width:1080px;height:740px"><span class="lbl">Домашняя сеть (Wi-Fi / Ethernet)</span></div>
 <div class="zone" style="left:1160px;top:150px;width:400px;height:740px"><span class="lbl">Интернет</span></div>
 
 <!-- tablet -->
 <div class="box teal" style="left:80px;top:200px;width:330px;height:640px">
-  <h2><span class="e">📱</span>Honor Pad 9</h2>
-  <p>Chrome, ярлык на главном экране — открывается на весь экран, как приложение.</p>
+  <h2><span class="e">📱</span>Клиент: планшет / телефон</h2>
+  <p>Приложение TabDock для Android или браузер — на весь экран, экран не гаснет.</p>
   <p style="margin-top:14px"><b style="color:#e9edf2">Первый вход — один из трёх:</b></p>
   <ul style="margin-top:6px">
-    <li><b>QR-код</b> с экрана Mac (пароль не нужен)</li>
-    <li><b>Пароль</b>, который вы задали на Mac</li>
+    <li><b>QR-код</b> с экрана компьютера (пароль не нужен)</li>
+    <li><b>Пароль</b>, который вы задали на компьютере</li>
     <li><b>Поиск</b>: планшет сам опрашивает сеть и показывает список найденных TabDock</li>
   </ul>
-  <p style="margin-top:14px">Дальше планшет помнит Mac (cookie на год) и сразу открывает панель.</p>
-  <p style="margin-top:14px"><b style="color:#e9edf2">Автоподключение:</b> если Mac пропал из сети > 15 с, планшет переходит на другой найденный TabDock.</p>
+  <p style="margin-top:14px">Дальше планшет помнит компьютер (cookie на год) и сразу открывает панель.</p>
+  <p style="margin-top:14px"><b style="color:#e9edf2">Автоподключение:</b> если компьютер пропал из сети > 15 с, планшет переходит на другой найденный TabDock.</p>
   <div style="margin-top:14px"><span class="tag">Главная</span><span class="tag">Съёмки</span><span class="tag">Справка</span><span class="tag">Mac</span><span class="tag">Подключение</span><span class="tag">Настройки</span></div>
 </div>
 
 <!-- mac -->
 <div class="box amber" style="left:560px;top:200px;width:520px;height:640px">
-  <h2><span class="e">🖥️</span>Mac mini M4 — сервер TabDock</h2>
-  <p>Стартует сам при входе в macOS (LaunchAgent), порт 8787. Объявляет себя в сети по Bonjour <code>_tabdock._tcp</code> и отвечает на <code>/api/hello</code> — так его находит планшет.</p>
+  <h2><span class="e">🖥️</span>Компьютер — сервер TabDock</h2>
+  <p>Mac (Linux — в планах). Стартует сам при входе в систему, порт 8787. Объявляет себя в сети по Bonjour <code>_tabdock._tcp</code> и отвечает на <code>/api/hello</code> — так его находит планшет.</p>
   <div class="mod">
     <div><b>✓ Напоминания</b>свой список, data/reminders.json</div>
     <div><b>☰ Справка</b>шпаргалки и ссылки, data/notes.json</div>
@@ -57,7 +57,7 @@
     <div><b>📅 Календарь</b>события macOS (EventKit)</div>
     <div><b>🔒 Доступ</b>ключ из QR или пароль (хэш PBKDF2), 5 попыток / 5 мин</div>
   </div>
-  <p style="margin-top:12px">Данные хранятся только на Mac, в папке <code>data/</code>.</p>
+  <p style="margin-top:12px">Данные хранятся только на компьютере, в папке <code>data/</code>.</p>
 </div>
 
 <!-- internet -->
@@ -67,7 +67,7 @@
 </div>
 <div class="box violet" style="left:1200px;top:430px;width:320px">
   <h2><span class="e">🖼️</span>wfolio</h2>
-  <p>Открытого API у wfolio нет. Вы добавляете ссылку на галерею и срок хранения, а Mac раз в 6 часов открывает ссылку и проверяет:</p>
+  <p>Открытого API у wfolio нет. Вы добавляете ссылку на галерею и срок хранения, а сервер раз в 6 часов открывает ссылку и проверяет:</p>
   <ul style="margin-top:6px"><li><span style="color:#68d391">●</span> галерея открывается</li><li><span style="color:#fc8181">●</span> «срок действия ссылки истёк»</li></ul>
   <p style="margin-top:8px">Предупреждение за 14 дней. Логин и пароль wfolio не нужны.</p>
 </div>
@@ -88,5 +88,5 @@
 <div class="step" style="left:1088px;top:262px;width:100px">погода</div>
 <div class="step" style="left:1088px;top:492px;width:100px">проверка<br>ссылок</div>
 
-<div class="foot"><span><b>Без облака:</b> в интернет уходят только погода и проверка ссылок wfolio.</span><span><b>Без аккаунтов:</b> всё хранится на Mac.</span></div>
+<div class="foot"><span><b>Без облака:</b> в интернет уходят только погода и проверка ссылок wfolio.</span><span><b>Без аккаунтов:</b> всё хранится на компьютере.</span></div>
 </body></html>

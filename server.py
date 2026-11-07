@@ -27,12 +27,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from dock import actions as act_mod          # noqa: E402
-from dock import auth, bonjour, captureone, demo, folders, sysinfo, weather, wfolio  # noqa: E402
+from dock import auth, bonjour, captureone, demo, folders, netcheck, sysinfo, weather, wfolio  # noqa: E402
 from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.6.1"
+VERSION = "0.7.0-beta"
 WEB = os.path.join(HERE, "web")
 
 
@@ -54,6 +54,7 @@ class App:
                      self.config().get("export_dirs") or folders.DEFAULT_EXPORT_DIRS), self.cache_dir)
         self.sys = sysinfo.Sampler()
         self.media = Media(self.cache_dir)
+        self.net = netcheck.NetCheck()
         self.actions = act_mod.Actions()
         self.c1 = captureone.CaptureOne()
         self.weather = weather.Weather()
@@ -154,7 +155,7 @@ class App:
         out = []
         for s in items:
             s.setdefault("source", "c1")
-            s = captureone.derive(s, data["manual"].get(s["key"]))
+            s = captureone.derive(s, data["manual"].get(s["key"]), self.config().get("done_rule"))
             s["cover"] = s.pop("demo_cover", None) or (
                 ("/api/shoots/cover?key=" + urllib.parse.quote(s["key"])) if s.get("cover_file") else None)
             s.pop("cover_file", None)
@@ -183,7 +184,7 @@ class App:
         return None
 
     def state(self):
-        return {"events": self.events, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake,
+        return {"events": self.events, "net": self.net.data, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake,
                 "now": time.time(), "version": VERSION}
 
     def everything(self):
@@ -379,6 +380,34 @@ def op_wfolio(app, body):
     return r
 
 
+WIDGET_TYPES = {"reminders", "shoots", "calendar", "player", "quick", "clock", "weather", "deadlines", "events",
+                "macstat", "disks", "note", "focus", "network", "shortcuts", "wfolio"}
+USAGES = {"photo", "work", "fun", "admin"}
+TABS = {"shoots", "notes", "mac", "connect", "settings"}
+
+
+def clean_spaces(spaces):
+    """Validate the space/widget layout sent by the client (it is user data, keep it bounded)."""
+    out = []
+    for sp in spaces[:8]:
+        if not isinstance(sp, dict):
+            continue
+        widgets = []
+        for w in (sp.get("widgets") or [])[:40]:
+            if not isinstance(w, dict) or w.get("type") not in WIDGET_TYPES:
+                continue
+            opts = w.get("opts") if isinstance(w.get("opts"), dict) else {}
+            opts = {str(k)[:30]: (v if isinstance(v, (int, float, bool)) else str(v)[:200] if not isinstance(v, list)
+                                  else [str(x)[:120] for x in v[:20]]) for k, v in list(opts.items())[:10]}
+            widgets.append({"id": re.sub(r"[^a-z0-9]", "", str(w.get("id", "")))[:16] or new_id(), "type": w["type"],
+                            "w": max(2, min(12, int(w.get("w") or 4))), "h": max(1, min(8, int(w.get("h") or 2))),
+                            "opts": opts})
+        out.append({"id": re.sub(r"[^a-z0-9]", "", str(sp.get("id", "")))[:16] or new_id(),
+                    "name": str(sp.get("name") or "Пространство")[:40], "icon": str(sp.get("icon") or "home")[:20],
+                    "widgets": widgets})
+    return out
+
+
 def op_config(app, body):
     def fn(cfg):
         if "place" in body:
@@ -389,6 +418,19 @@ def op_config(app, body):
             cfg["folders"] = body["folders"][:12]
         if "calendar" in body:
             cfg["calendar"] = bool(body["calendar"])
+        if isinstance(body.get("spaces"), list):
+            cfg["spaces"] = clean_spaces(body["spaces"])
+        if "setup_done" in body:
+            cfg["setup_done"] = bool(body["setup_done"])
+        if isinstance(body.get("usage"), list):
+            cfg["usage"] = [u for u in body["usage"] if u in USAGES]
+        if isinstance(body.get("tabs"), list):
+            cfg["tabs"] = [t for t in body["tabs"] if t in TABS]
+        if isinstance(body.get("done_rule"), dict):
+            r = body["done_rule"]
+            kind = r.get("type") if r.get("type") in ("export", "color", "color_or_export", "rating") else "export"
+            cfg["done_rule"] = {"type": kind, "color": max(1, min(7, int(r.get("color") or 4))),
+                                "rating": max(1, min(5, int(r.get("rating") or 5)))}
         if "skin" in body:
             cfg["skin"] = re.sub(r"[^a-z0-9-]", "", str(body["skin"]))[:30]
         if "folder_roots" in body and isinstance(body["folder_roots"], list):
@@ -437,6 +479,8 @@ def op_action(app, body):
             return False, "Каталог не найден"
         captureone.open_in_c1(cat)
         return True, "Открываю Capture One"
+    if a == "shortcut":
+        return netcheck.run_shortcut(str(arg or ""))
     if a == "calendar_access":
         app.calendar.refresh_soon()
         return True, "Запрос доступа отправлен — подтвердите на Mac"
@@ -616,6 +660,8 @@ class Handler(BaseHTTPRequestHandler):
             app._discover_kick.set()
             return self._send(200, {"found": app.discovered,
                                     "active": app.catalogs(), "manual": app.config().get("c1_catalogs", [])})
+        if p == "/api/shortcuts":
+            return self._send(200, netcheck.shortcuts_list() if sys.platform == "darwin" else [])
         if p == "/api/apps_installed":
             return self._send(200, act_mod.installed_apps())
         if p == "/api/weather":

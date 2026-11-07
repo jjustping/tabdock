@@ -198,6 +198,7 @@ function remRow(r) {
   </div>`;
 }
 function renderReminders() {
+  if (!document.getElementById("remindersCard")) return;
   const { open, done } = remindersSorted();
   const el = $("#remindersCard");
   const keep = document.activeElement && document.activeElement.id === "remInput" ? $("#remInput").value : null;
@@ -267,12 +268,13 @@ function shootSub(s) {
   if (s.shot_from) parts.push(fmtDate(s.shot_from));
   if (s.source === "manual") parts.push("вручную");
   else if (s.source === "folder") parts.push(s.done + " из " + s.target + " готово · " + s.catalog_name);
-  else parts.push(s.done + " из " + s.target + (s.target_manual ? " (цель)" : s.picked ? " отобранных" : " кадров") + " экспортировано");
+  else parts.push(s.done + " из " + s.target + (s.target_manual ? " (цель)" : s.picked ? " отобранных" : " кадров") + " " + (s.done_label || "экспортировано"));
   if (s.deadline) parts.push("срок " + s.deadline.slice(8) + "." + s.deadline.slice(5, 7));
   return parts.join(" · ");
 }
 function barCls(s) { return s.status === "done" || s.status === "delivered" ? "done" : s.status === "selecting" ? "sel" : ""; }
 function renderShootsCard() {
+  if (!document.getElementById("shootsCard")) return;
   const items = (S.shoots.items || []).filter((s) => !s.hidden);
   const todo = items.filter((s) => s.status !== "done" && s.status !== "delivered");
   const frames = todo.reduce((a, s) => a + Math.max(0, s.target - s.done), 0);
@@ -406,6 +408,7 @@ function deadlinesHtml() {
 
 // ---------------- render: calendar + weather ----------------
 function renderCalendar() {
+  if (!document.getElementById("calendarCard")) return;
   const c = S.calendar || {}, w = S.weather || {};
   const fc = (w.days || []).slice(0, 4).map((d, i) => {
     const dt = new Date(d.date + "T12:00");
@@ -438,6 +441,7 @@ function renderCalendar() {
 // ---------------- render: player ----------------
 let volDragging = false;
 function renderPlayer() {
+  if (!document.getElementById("playerCard")) return;
   const m = S.state.media || {}, p = m.player;
   const el = $("#playerCard");
   if (volDragging) return;
@@ -479,6 +483,7 @@ function appTile(a) {
   return `<button class="tile" data-app="${esc(a.name)}" ${a.installed ? "" : 'style="opacity:.35"'}><img src="/api/app_icon?name=${encodeURIComponent(a.name)}" onerror="this.outerHTML=ic('app','ic')" alt="">${esc(a.name)}</button>`;
 }
 function renderQuick() {
+  if (!document.getElementById("quickCard")) return;
   const apps = (S.apps || []).filter((a) => a.installed).slice(0, 8);
   $("#quickCard").innerHTML = `<h2>Быстрые действия <button class="act" data-tab="settings">Изменить</button></h2>
     <div class="tiles">${apps.map(appTile).join("")}
@@ -499,6 +504,7 @@ function spark(vals, w = 300, h = 60) {
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="0,${h} ${pts} ${w},${h}" fill="rgba(79,209,197,.15)" stroke="none"/><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
 }
 function renderMacMini() {
+  if (!document.getElementById("macMiniCard")) return;
   const s = S.state.sys || {};
   $("#macMiniCard").innerHTML = `<h2>${esc(s.hostname || "Mac")} <button class="act" data-tab="mac">Подробно ${ic("chevron")}</button></h2>
     <div class="mini-rows"><div><span>CPU</span>${s.cpu != null ? Math.round(s.cpu) + "%" : "—"}</div><div><span>Температура</span>${s.temp && s.temp.cpu != null ? Math.round(s.temp.cpu) + "°C" : "—"}</div>
@@ -643,7 +649,7 @@ function currentSkin() { const q = location.search.match(/[?&]skin=([a-z0-9-]+)/
 function applySkin(id) {
   localStorage.setItem("dock_skin", id);
   $("#skinCss").href = id === "classic" ? "data:text/css," : "/static/skins/" + id + ".css";
-  document.body.dataset.skin = id;
+  document.body.dataset.skin = id; document.documentElement.dataset.skin = id;
 }
 function skinsHtml() {
   const cur = currentSkin();
@@ -656,7 +662,17 @@ function skinsHtml() {
 // ---------------- render: settings ----------------
 function renderSettings() {
   const c = S.config || {}, w = S.weather || {};
-  $("#settingsView").innerHTML = `<div class="card" style="margin-bottom:16px"><h2>Оформление</h2>${skinsHtml()}
+  const rule = c.done_rule || { type: "export", color: 4, rating: 5 };
+  $("#settingsView").innerHTML = `<div class="card" style="margin-bottom:16px"><h2>Пространства и сценарии</h2>
+    <div class="row"><div class="hint" style="margin:0">Пространства: ${esc(spaces().map((x) => x.name).join(", "))}. Раскладку меняет кнопка ${ic("pencil")} на главной.</div>
+      <button class="btn" id="rerunSetup" style="flex:none">Пройти первую настройку заново</button></div></div>
+  <div class="card" style="margin-bottom:16px"><h2>Что считать отданными кадрами (Capture One)</h2>
+    <div class="seg" id="ruleSeg">${[["export", "Экспортированные"], ["color", "С цветной меткой"], ["color_or_export", "Метка или экспорт"], ["rating", "По рейтингу"]]
+      .map(([k, t]) => `<button data-rule="${k}" class="${rule.type === k ? "on" : ""}">${t}</button>`).join("")}</div>
+    ${rule.type === "color" || rule.type === "color_or_export" ? `<div class="wz-colors">${Object.entries(COLOR_DOTS).map(([k, col]) => `<button data-rcol="${k}" class="${+k === +rule.color ? "on" : ""}" style="background:${col}"></button>`).join("")}</div>` : ""}
+    ${rule.type === "rating" ? `<div class="seg" style="margin-top:8px">${[1, 2, 3, 4, 5].map((n) => `<button data-rrt="${n}" class="${+rule.rating === n ? "on" : ""}">${"★".repeat(n)}+</button>`).join("")}</div>` : ""}
+    <div class="hint">Прогресс съёмки = отданные / отобранные (или все кадры). У кого-то это экспорт, у кого-то зелёная метка.</div></div>
+  <div class="card" style="margin-bottom:16px"><h2>Оформление</h2>${skinsHtml()}
     <div class="row" style="margin-top:12px"><div class="hint" style="margin:0">Скин запоминается на этом устройстве. ${S.is_local ? "" : ""}</div>
       <button class="btn" id="skinDefault" style="flex:none">Сделать скином по умолчанию для всех</button></div></div>
   <div class="grid-2">
@@ -713,6 +729,11 @@ function renderSettings() {
     S = await api("/api/config", { c1_catalogs: [...new Set([...(c.c1_catalogs || []), v])] }); renderAll();
     const err = (S.shoots.errors || []).find((x) => x.catalog === v.replace(/\/$/, "")); toast(err ? err.error : "Каталог добавлен");
   };
+  $("#rerunSetup").onclick = () => showWizard(true);
+  const setRule = async (patch) => { S = await api("/api/config", { done_rule: { ...rule, ...patch } }); renderAll(); };
+  $$("[data-rule]").forEach((b) => b.onclick = () => setRule({ type: b.dataset.rule }));
+  $$("[data-rcol]").forEach((b) => b.onclick = () => setRule({ color: +b.dataset.rcol }));
+  $$("[data-rrt]").forEach((b) => b.onclick = () => setRule({ rating: +b.dataset.rrt }));
   $$("[data-skin]").forEach((b) => b.onclick = () => { applySkin(b.dataset.skin); renderSettings(); });
   $("#skinDefault").onclick = async () => { S = await api("/api/config", { skin: currentSkin() }); renderAll(); toast("Новые устройства откроются в этом скине"); };
   $("#calOn").onclick = async () => { S = await api("/api/config", { calendar: true }); renderAll(); };
@@ -883,18 +904,25 @@ async function tryFailover() {
   }
 }
 
+// tabs the user's scenarios need (set by the first-run setup); home and settings always stay
+function applyTabs() {
+  const t = (S.config || {}).tabs;
+  $$(".tabs button").forEach((b) => b.classList.toggle("hidden", !!t && !["home", "settings"].includes(b.dataset.tab) && !t.includes(b.dataset.tab)));
+}
+
 // ---------------- main ----------------
 function activeTab() { return ($(".tabs button.active") || {}).dataset ? $(".tabs button.active").dataset.tab : "home"; }
 function renderLive() {
   renderTop();
   const tab = activeTab();
-  if (tab === "home") { renderPlayer(); if (S.state.awake !== renderQuick._aw) { renderQuick._aw = S.state.awake; renderQuick(); } }
+  if (tab === "home") { renderSpaceLive(); if (S.state.awake !== renderQuick._aw) { renderQuick._aw = S.state.awake; renderQuick(); } }
   if (tab === "mac" && !$("#macView .armed")) renderMacView();
 }
 function renderAll() {
   renderTop();
   const tab = activeTab();
-  if (tab === "home") { renderReminders(); renderShootsCard(); renderCalendar(); renderPlayer(); renderQuick(); }
+  applyTabs();
+  if (tab === "home") renderHome();
   if (tab === "shoots") renderShootsView();
   if (tab === "notes") renderNotesView();
   if (tab === "mac") renderMacView();
@@ -934,4 +962,4 @@ DockConnect.saved();
 if (window.__INIT__ && window.__INIT__.pin && window.TabDockNative && TabDockNative.pin) {
   try { TabDockNative.pin(location.origin, __INIT__.pin.id, __INIT__.pin.key, (__INIT__.state.sys || {}).hostname || ""); } catch (e) { /* old app */ }
 }
-if (window.__INIT__) { S = window.__INIT__; renderAll(); rememberHere(); } else loadAll().then(rememberHere);
+if (window.__INIT__) { S = window.__INIT__; renderAll(); rememberHere(); showWizard(); } else loadAll().then(() => { rememberHere(); showWizard(); });
