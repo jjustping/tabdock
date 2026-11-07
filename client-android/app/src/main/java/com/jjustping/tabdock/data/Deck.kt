@@ -74,12 +74,17 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         startPolling()
     }
 
+    /** Bumped by every pairing: a slower reconnect that started earlier must not switch back to the old computer. */
+    @Volatile private var pairGen = 0
+
     private suspend fun reconnect(): Boolean {
+        val gen = pairGen
         val pins = store.pins()
         val order = listOfNotNull(store.current) + pins.keys().asSequence().filter { it != store.current }.toList()
         for (id in order) {
             val e = pins.optJSONObject(id) ?: continue
             val s = discovery.verify(e.optString("base")) ?: continue
+            if (gen != pairGen) return true   // a QR code / link paired a computer meanwhile — it wins
             if (s.state == "pinned" && s.id == id) { useServer(e.optString("base"), e.optString("token"), e.optString("name")); store.current = id; return true }
         }
         return false
@@ -94,11 +99,33 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
 
     /** Pair with a key (QR link or adb), then pin the server's identity. */
     fun pairWithKey(base: String, key: String) = scope.launch {
+        pairGen++
         val a = Api(base, key)
         val pin = runCatching { a.obj("/api/pin") }.getOrElse { toast(Lan.explain(it)); return@launch }
         store.pin(pin.getString("id"), base, pin.optString("name"), pin.getString("key"), key)
         useServer(base, key, pin.optString("name"))
         toast("Подключено: ${pin.optString("name")}")
+    }
+
+    /** QR code / link "http://<ip>:<port>/?k=<key>" → pair. False if the text is not a TabDock link. */
+    fun pairFromLink(text: String): Boolean {
+        val u = runCatching { android.net.Uri.parse(text.trim()) }.getOrNull() ?: return false
+        val k = u.getQueryParameter("k") ?: return false
+        if (u.scheme != "http" || u.host.isNullOrBlank() || k.length < 8) return false
+        pairWithKey("http://${u.host}:${if (u.port > 0) u.port else 8787}", k)
+        return true
+    }
+
+    // ---------------- updates: the computer checks GitHub, the app asks the computer ----------------
+    val update = MutableStateFlow<AppUpdate?>(null)
+    private var updateAt = 0L
+    fun checkUpdate(force: Boolean = false) = scope.launch {
+        val a = api ?: return@launch
+        if (!force && System.currentTimeMillis() - updateAt < 6 * 3600_000L) return@launch
+        updateAt = System.currentTimeMillis()
+        val u = Updater.fromServer(runCatching { a.obj("/api/update", 6000) }.getOrNull())
+        if (u == null) { if (force) toast("У вас последняя версия"); return@launch }
+        if (force || store.string("update_skip") != u.version) update.value = u
     }
 
     fun login(server: FoundServer, password: String, done: (String) -> Unit) = scope.launch {
@@ -115,7 +142,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         val a = api ?: return
         runCatching { a.obj("/api/all", 15000) }.onSuccess {
             all.value = it; it.optJSONObject("state")?.let { s -> state.value = s }
-            saveCache(it); Notify.deadlines(ctx, store, it)
+            saveCache(it); Notify.deadlines(ctx, store, it); checkUpdate()
         }
     }
 

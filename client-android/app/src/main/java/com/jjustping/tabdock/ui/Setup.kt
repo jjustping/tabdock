@@ -55,7 +55,7 @@ private fun cfgPost(c: Ctx, body: JSONObject) = c.deck.post("/api/config", body)
 
 // ===================== native settings =====================
 @Composable
-fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onWizard: () -> Unit) {
+fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onWizard: () -> Unit, onScan: () -> Unit = {}) {
     val s = LocalSkin.current
     val cfg = c.all.o("config")
     val skin by c.deck.skin.collectAsState()
@@ -107,6 +107,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
                 T(if (c.all.o("calendar").b("ok")) "Доступ к календарю есть." else "Доступа пока нет — на компьютере появится запрос разрешения.", 13.sp, s.dim, modifier = Modifier.padding(top = 8.dp))
             }
         }
+        BottomBarSettings(c)
         DeckCard("Это устройство") {
             var notify by remember { mutableStateOf(c.deck.store.string("notify") != "0") }
             var standAuto by remember { mutableStateOf(c.deck.store.string("stand_auto") != "0") }
@@ -122,9 +123,11 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             }
             T("Уведомления приходят, пока приложение открыто или свёрнуто; если его закрыть совсем — не проверяется ничего.", 12.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
         }
-        DeliveredRule(c)
+        // Capture One exists only on the Mac: a Linux computer shows folder-based shoots only
+        val mac = c.all.s("platform", "darwin") == "darwin"
+        if (mac) DeliveredRule(c)
         AppsSettings(c)
-        CatalogSettings(c)
+        if (mac) CatalogSettings(c)
         FolderSettings(c)
         DeckCard("Компьютер") {
             val name by c.deck.serverName.collectAsState()
@@ -132,9 +135,11 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             T("Сервер ${c.state.s("version")} · TabDock ${com.jjustping.tabdock.BuildConfigShim.VERSION}", 13.sp, s.muted)
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Btn("Сменить компьютер", "computer") { onConnect() }
+                Btn("Сканировать QR-код", "qr") { onScan() }
+                Btn("Проверить обновления", "reset") { c.deck.checkUpdate(force = true) }
                 Btn("Веб-версия", "link") { openWeb("/?tab=settings") }
             }
-            T("Пароль для входа и новый ключ доступа задаются на самом компьютере (вкладка «Подключение» в TabDock на Mac) — так их нельзя сменить с чужого устройства.", 13.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
+            T("Пароль для входа и новый ключ доступа задаются на самом компьютере (панель TabDock в браузере на компьютере или меню значка TabDock) — так их нельзя сменить с чужого устройства.", 13.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
         }
         Spacer(Modifier.height(10.dp))
     }
@@ -261,7 +266,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             Btn(icon = "plus", danger = true) { cfgPost(c, JSONObject().put("folder_roots", JSONArray(roots.filterIndexed { j, _ -> j != i }))) }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextInput(path, { path = it }, "/Volumes/SSD/Съёмки", Modifier.fillMaxWidth())
+            TextInput(path, { path = it }, if (c.all.s("platform", "darwin") == "darwin") "/Volumes/SSD/Съёмки" else "/home/имя/Изображения/Съёмки", Modifier.fillMaxWidth())
             TextInput(app, { app = it }, "Программа", Modifier.fillMaxWidth())
             Btn("Добавить", primary = true) { if (path.isNotBlank()) { cfgPost(c, JSONObject().put("folder_roots", JSONArray(roots + JSONObject().put("path", path.trim()).put("app", app.ifBlank { "Папки" })))); path = "" } }
         }
@@ -374,5 +379,27 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+
+/** Which tabs the bottom bar shows (for all devices of this computer). «Главная» and «Настройки» always stay. */
+@Composable private fun BottomBarSettings(c: Ctx) {
+    val s = LocalSkin.current
+    val all = listOf("shoots" to "Съёмки", "notes" to "Справка", "mac" to "Компьютер")
+    val cur = c.all.o("config").a("tabs")?.strs() ?: listOf("shoots", "notes", "mac", "connect", "settings")
+    DeckCard("Нижняя панель") {
+        T("Какие кнопки показывать внизу. «Главная» и «Настройки» есть всегда.", 14.sp, s.muted)
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((id, name) in all) {
+                val on = id in cur
+                Seg((if (on) "✓ " else "") + name, on) {
+                    val next = if (on) cur - id else cur + id
+                    cfgPost(c, JSONObject().put("tabs", JSONArray(next.distinct())))
+                }
+            }
+        }
+        T("Например, если вы не фотограф, уберите «Съёмки». Действует на всех планшетах и телефонах этого компьютера.", 12.sp, s.dim,
+            modifier = Modifier.padding(top = 8.dp))
     }
 }

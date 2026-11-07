@@ -26,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from dock import auth, captureone, culling, demo, folders, lanbind, netcheck, notesets, weather, wfolio  # noqa: E402
+from dock import auth, captureone, culling, demo, folders, lanbind, netcheck, notesets, updates, weather, wfolio  # noqa: E402
 if sys.platform == "darwin":
     from dock import actions as act_mod, bonjour, sysinfo   # noqa: E402
     from dock.calendar_mac import CalendarFeed               # noqa: E402
@@ -37,7 +37,7 @@ else:   # Linux: same interfaces, see dock/linux/
     from dock.linux.media import Media                             # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.10.0-beta"
+VERSION = "0.11.0-beta"
 WEB = os.path.join(HERE, "web")
 
 
@@ -65,6 +65,7 @@ class App:
         self.actions = act_mod.Actions()
         self.c1 = captureone.CaptureOne()
         self.weather = weather.Weather()
+        self.updates = updates.Updates(VERSION)
         self.calendar = CalendarFeed(lambda: not self.demo and self.config().get("calendar", True))
         self._catalogs = None
         self._catalogs_at = 0
@@ -221,6 +222,7 @@ class App:
             "wfolio": self.galleries(),
             "export_dirs_default": folders.DEFAULT_EXPORT_DIRS,
             "auth": {"password": bool(cfg.get("password_hash"))},
+            "platform": sys.platform,
         }
 
     def galleries(self):
@@ -278,8 +280,10 @@ class App:
 
     def tray(self):
         """Everything the menu-bar icon / tray shows (localhost only)."""
+        u = self.updates.info()
         return {"ok": True, "version": VERSION, "url": self.url(), "port": self.port, "clients": self.clients(),
-                "vpn": lanbind.VPN, "name": socket.gethostname().split(".")[0]}
+                "vpn": lanbind.VPN, "name": socket.gethostname().split(".")[0],
+                "update": (u["latest"] or {}).get("version") if u["newer"] else None, "can_self_update": u["can_self_update"]}
 
     def hello(self, nonce=None):
         s = self.sysdata()
@@ -606,6 +610,10 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _panel(self):
+        """On the computer itself: a control panel (connect devices, password, updates) instead of a copy of the dock."""
+        return self._file(os.path.join(WEB, "panel.html"))
+
     def _index(self, qs):
         """index.html with the initial state inlined -> instant first paint."""
         with open(os.path.join(WEB, "index.html"), encoding="utf-8") as f:
@@ -679,6 +687,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(302, "", "text/plain", {
                     "Location": "/",
                     "Set-Cookie": "dock_k=%s; Max-Age=31536000; Path=/; HttpOnly; SameSite=Lax" % qs["k"][0]})
+            if self._is_local() and "dock" not in qs and "tab" not in qs and "space" not in qs and "wz" not in qs:
+                return self._panel()
             return self._index(qs)
         if p.startswith("/static/"):
             f = os.path.normpath(os.path.join(WEB, p[len("/static/"):]))
@@ -727,6 +737,8 @@ class Handler(BaseHTTPRequestHandler):
             app._discover_kick.set()
             return self._send(200, {"found": app.discovered,
                                     "active": app.catalogs(), "manual": app.config().get("c1_catalogs", [])})
+        if p == "/api/update":
+            return self._send(200, app.updates.info())
         if p == "/api/tray":   # menu-bar icon / tray on this computer only
             if not self._is_local():
                 return self._send(403, {"error": "local only"})
@@ -784,6 +796,16 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/media":
                 ok = app.media.command(body.get("cmd"), body.get("value"))
                 return self._send(200, {"ok": ok, "media": app.media.data})
+            if p == "/api/update":     # check now / update the server (on the computer itself only)
+                if not self._is_local():
+                    return self._send(403, {"ok": False, "message": "Обновление запускается только на самом компьютере"})
+                if body.get("op") == "apply":
+                    ok, msg = updates.apply()
+                    if ok and "перезапускается" in msg:
+                        updates.restart_later()
+                    return self._send(200, {"ok": ok, "message": msg})
+                app.updates.check()
+                return self._send(200, dict(app.updates.info(), ok=True))
             if p == "/api/password":
                 if not self._is_local():
                     return self._send(403, {"ok": False, "message": "Пароль меняется только на самом компьютере"})

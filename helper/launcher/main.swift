@@ -150,6 +150,7 @@ final class Tray: NSObject, NSMenuDelegate {
             _ = add("TabDock \(t["version"] as? String ?? "") — работает")
             _ = add("Адрес: \(url)  (скопировать)", #selector(copyAddress))
             if t["vpn"] as? Bool == true { _ = add("VPN включён — устройства дома подключаются напрямую") }
+            if let v = t["update"] as? String { _ = add("Доступна версия \(v) — обновить…", #selector(openDock)) }
             menu.addItem(.separator())
             let clients = t["clients"] as? [[String: Any]] ?? []
             _ = add(clients.isEmpty ? "Подключённых устройств нет" : "Подключено устройств: \(clients.count)")
@@ -162,7 +163,7 @@ final class Tray: NSObject, NSMenuDelegate {
         }
         menu.addItem(.separator())
         _ = add("Показать QR-код для подключения…", #selector(showQR))
-        _ = add("Открыть TabDock", #selector(openDock))
+        _ = add("Открыть панель TabDock", #selector(openDock))
         menu.addItem(.separator())
         let auto = add("Запускать при входе", #selector(toggleAutostart))
         auto.state = autostartOn() ? .on : .off
@@ -175,7 +176,8 @@ final class Tray: NSObject, NSMenuDelegate {
     @objc func copyAddress() {
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(url, forType: .string)
     }
-    @objc func showQR() { NSWorkspace.shared.open(URL(string: "http://localhost:\(port)/?tab=connect")!) }
+    // the control panel on this computer: QR code, devices, password, updates
+    @objc func showQR() { NSWorkspace.shared.open(URL(string: "http://localhost:\(port)/")!) }
     @objc func openDock() { NSWorkspace.shared.open(URL(string: "http://localhost:\(port)/")!) }
     @objc func openLog() {
         let err = logDir.appendingPathComponent("tabdock.err.log")

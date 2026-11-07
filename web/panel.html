@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TabDock — панель управления</title>
+<link rel="icon" href="/static/icon.svg">
+<style>
+  :root { --bg:#0a0c0f; --card:#14171c; --inner:#1b1f26; --border:#262b34; --text:#e9edf2; --muted:#8b94a3; --dim:#5d6573;
+          --accent:#4fd1c5; --on-accent:#06201d; --green:#68d391; --amber:#f6c453; --red:#fc8181; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f3ef; --card:#fff; --inner:#f4f3ef; --border:#e4e2db; --text:#17171a; --muted:#6d6b66; --dim:#a5a29b;
+            --accent:#0f9488; --on-accent:#fff; --green:#2e8b57; --amber:#b7791f; --red:#c8372d; }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  a { color: var(--accent); }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; }
+  main { max-width: 1060px; margin: 0 auto; padding: 28px 20px 48px; }
+  header { display:flex; align-items:center; gap:14px; margin-bottom: 22px; }
+  header img { width:44px; height:44px; }
+  h1 { font-size: 24px; margin: 0; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:18px 20px; }
+  .card h2 { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 12px; }
+  .qr { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+  .qr .code { background:#fff; border-radius:14px; padding:10px; width:190px; height:190px; flex:none; }
+  .qr .code svg { width:100%; height:100%; display:block; }
+  ol { margin:0; padding-left: 20px; } ol li { margin: 4px 0; }
+  .btn { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); background:var(--inner); color:var(--text);
+         border-radius:12px; padding:9px 14px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; }
+  .btn.primary { background:var(--accent); color:var(--on-accent); border-color:transparent; }
+  .btn.danger { color: var(--red); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  input { background:var(--inner); color:var(--text); border:1px solid var(--border); border-radius:12px; padding:9px 12px; font:inherit; flex:1; min-width:160px; }
+  .dev { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .dev:last-child { border-bottom:0; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--green); flex:none; }
+  .dev .n { font-weight:600; } .dev .m { color:var(--muted); font-size:13px; margin-left:auto; }
+  .muted { color:var(--muted); } .small { font-size:13px; }
+  .tag { display:inline-block; font-size:12px; font-weight:700; border-radius:8px; padding:2px 8px; background:var(--inner); }
+  .tag.new { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+  .notes { background:var(--inner); border-radius:12px; padding:10px 12px; max-height:260px; overflow:auto; font-size:13px; margin-top:10px; }
+  .msg { min-height: 20px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+  code { background:var(--inner); border-radius:6px; padding:1px 6px; font-size:13px; }
+  footer { margin-top:20px; color:var(--dim); font-size:13px; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="/static/icon.svg" alt="">
+    <div><h1>TabDock</h1><div class="sub" id="host">Панель управления</div></div>
+  </header>
+
+  <div class="grid">
+    <section class="card" style="grid-column: 1 / -1">
+      <h2>Подключить планшет или телефон</h2>
+      <div class="qr">
+        <div class="code" id="qr"></div>
+        <div>
+          <ol>
+            <li>Установите на Android приложение <b>TabDock</b> (<a href="https://github.com/jjustping/tabdock/releases" target="_blank" rel="noopener">APK</a>).</li>
+            <li>В приложении нажмите <b>«Сканировать QR-код»</b> и наведите камеру на этот код.</li>
+            <li>Или выберите этот компьютер в списке найденных и введите пароль (ниже).</li>
+          </ol>
+          <p class="small muted" style="margin:10px 0 0">Устройство и компьютер должны быть в одной домашней сети. Ключ из QR-кода — как пароль: не показывайте его посторонним.</p>
+          <div class="row"><button class="btn" id="copy">Скопировать ссылку</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Подключённые устройства</h2>
+      <div id="devices"><div class="muted">Пока никого</div></div>
+      <p class="small muted" style="margin:10px 0 0">Устройство считается подключённым, если обращалось к компьютеру в последние полторы минуты.</p>
+    </section>
+
+    <section class="card">
+      <h2>Обновления</h2>
+      <div id="upd" class="muted">Проверяю…</div>
+      <div class="row">
+        <button class="btn" id="check">Проверить сейчас</button>
+        <button class="btn primary" id="apply" hidden>Обновить сервер</button>
+        <a class="btn" id="rel" target="_blank" rel="noopener" hidden>Страница релиза</a>
+      </div>
+      <div class="msg" id="updmsg"></div>
+      <div class="notes" id="notes" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>Пароль для входа</h2>
+      <div id="pwstate" class="small muted"></div>
+      <div class="row"><input id="pw" type="password" placeholder="Новый пароль (от 4 символов)" autocomplete="new-password">
+        <button class="btn primary" id="pwset">Сохранить</button></div>
+      <div class="row"><button class="btn danger" id="pwdel" hidden>Убрать пароль</button></div>
+      <div class="msg" id="pwmsg"></div>
+      <p class="small muted" style="margin:6px 0 0">Пароль нужен, чтобы подключиться без QR-кода. Меняется только здесь, на самом компьютере.</p>
+    </section>
+
+    <section class="card">
+      <h2>Ключ доступа</h2>
+      <p class="small muted" style="margin:0 0 6px">Новый ключ отключит <b>все</b> подключённые устройства — их нужно будет подключить заново (QR-код или пароль). Пригодится, если ключ мог попасть к посторонним.</p>
+      <div class="row"><button class="btn danger" id="newkey">Новый ключ — отключить все устройства</button></div>
+      <div class="msg" id="keymsg"></div>
+    </section>
+  </div>
+
+  <footer>
+    <span id="ver"></span> ·
+    <a href="/?dock=1">Открыть док в браузере</a> (как на планшете — удобно для iPhone/iPad) ·
+    <a href="https://github.com/jjustping/tabdock" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let url = "";
+const post = (path, body) => fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+// release notes: "## title", "* item", **bold**, `code` -> simple HTML
+const md = (t) => esc(t).split("\n").filter((l) => l.trim()).map((l) => {
+  l = l.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  if (/^#{1,3} /.test(l)) return "<div style='font-weight:700;margin-top:8px'>" + l.replace(/^#+ /, "") + "</div>";
+  if (/^\s*\* /.test(l)) return "<div style='padding-left:" + (/^\s{2,}/.test(l) ? 32 : 14) + "px'>• " + l.replace(/^\s*\* /, "") + "</div>";
+  return "<div>" + l + "</div>";
+}).join("");
+const ago = (s) => (s < 10 ? "сейчас" : s < 60 ? s + " с назад" : Math.floor(s / 60) + " мин назад");
+
+async function loadAll() {
+  const d = await fetch("/api/all").then((r) => r.json());
+  url = d.url;
+  $("qr").innerHTML = d.qr;
+  $("host").textContent = (d.state?.sys?.hostname || "Компьютер") + " · " + (d.state?.sys?.ip || "");
+  $("ver").textContent = "TabDock " + (d.state?.version || "");
+  const has = d.auth?.password;
+  $("pwstate").textContent = has ? "Пароль задан." : "Пароль не задан — подключение только по QR-коду.";
+  $("pwdel").hidden = !has;
+}
+
+async function loadDevices() {
+  const t = await fetch("/api/tray").then((r) => r.json()).catch(() => null);
+  const list = t?.clients || [];
+  $("devices").innerHTML = list.length
+    ? list.map((c) => `<div class="dev"><span class="dot"></span><span class="n">${esc(c.name)}</span>` +
+        `<span class="muted small">${c.kind === "app" ? "приложение" : "браузер"}</span><span class="m">${esc(c.ip)} · ${ago(c.ago)}</span></div>`).join("")
+    : '<div class="muted">Сейчас никто не подключён</div>';
+}
+
+function showUpdate(u) {
+  const l = u.latest;
+  if (!l) { $("upd").textContent = u.error ? "Не удалось проверить: " + u.error : "Ещё не проверялось"; return; }
+  if (u.newer) {
+    $("upd").innerHTML = `<span class="tag new">Доступна ${esc(l.version)}</span> &nbsp;у вас ${esc(u.current)}`;
+    $("apply").hidden = !u.can_self_update;
+    $("notes").hidden = !l.notes; $("notes").innerHTML = md(l.notes || "");
+    if (!u.can_self_update) $("updmsg").textContent = "Сервер установлен не через git: скачайте новую версию со страницы релиза и запустите установщик ещё раз.";
+  } else {
+    $("upd").innerHTML = `<span class="tag">У вас последняя версия — ${esc(u.current)}</span>`;
+    $("apply").hidden = true; $("notes").hidden = true;
+  }
+  $("rel").hidden = !l.url; if (l.url) $("rel").href = l.url;
+}
+
+$("check").onclick = async () => { $("updmsg").textContent = "Проверяю…"; const u = await post("/api/update", { op: "check" }); $("updmsg").textContent = ""; showUpdate(u); };
+$("apply").onclick = async () => {
+  if (!confirm("Обновить сервер TabDock? Он перезапустится, устройства переподключатся сами.")) return;
+  $("apply").disabled = true; $("updmsg").textContent = "Обновляю…";
+  const r = await post("/api/update", { op: "apply" }).catch(() => ({ ok: false, message: "Нет ответа" }));
+  $("updmsg").textContent = r.message || "";
+  if (r.ok) setTimeout(() => location.reload(), 6000); else $("apply").disabled = false;
+};
+$("copy").onclick = async () => { try { await navigator.clipboard.writeText(url); $("copy").textContent = "Скопировано"; } catch (e) { prompt("Ссылка для подключения:", url); } };
+$("pwset").onclick = async () => { const r = await post("/api/password", { password: $("pw").value }); $("pwmsg").textContent = r.message; if (r.ok) { $("pw").value = ""; loadAll(); } };
+$("pwdel").onclick = async () => { if (!confirm("Убрать пароль? Подключиться можно будет только по QR-коду.")) return; const r = await post("/api/password", { remove: true }); $("pwmsg").textContent = r.message; loadAll(); };
+$("newkey").onclick = async () => {
+  if (!confirm("Создать новый ключ? Все планшеты и телефоны отключатся, их нужно будет подключить заново.")) return;
+  await post("/api/config", { new_token: true }); $("keymsg").textContent = "Новый ключ создан — QR-код обновлён."; loadAll();
+};
+
+loadAll(); loadDevices(); fetch("/api/update").then((r) => r.json()).then(showUpdate);
+setInterval(loadDevices, 5000);
+</script>
+</body>
+</html>

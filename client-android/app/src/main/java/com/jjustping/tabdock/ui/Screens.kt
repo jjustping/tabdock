@@ -320,7 +320,7 @@ class Dialogs(val deck: Deck) {
 }
 
 // ---------------- settings & connection ----------------
-@Composable fun ConnectScreen(deck: Deck, onDone: () -> Unit) {
+@Composable fun ConnectScreen(deck: Deck, onScan: () -> Unit = {}, onDone: () -> Unit) {
     val s = LocalSkin.current
     val servers by deck.discovery.servers.collectAsState()
     val progress by deck.discovery.scanning.collectAsState()
@@ -334,6 +334,11 @@ class Dialogs(val deck: Deck) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Ic("computer", 48.dp, s.accent); Spacer(Modifier.width(14.dp))
             Column { T("TabDock", 30.sp, weight = FontWeight.Bold); T("Подключитесь к компьютеру с TabDock", 16.sp, s.muted) }
+        }
+        DeckCard("Быстрее всего — QR-код") {
+            T("Откройте TabDock на компьютере: панель в браузере, меню значка TabDock («Показать QR-код») или конец установки — и отсканируйте код отсюда. Камера телефона для этого не подойдёт.",
+                14.sp, s.muted)
+            Btn("Сканировать QR-код", "qr", primary = true, modifier = Modifier.padding(top = 12.dp)) { onScan() }
         }
         DeckCard("Компьютеры в этой сети", action = { if (progress > 0f) T("${(progress * 100).toInt()}%", 13.sp, s.muted) else Link("Искать") { scope.launch { deck.discovery.scan() } } }) {
             if (servers.isEmpty()) Empty(if (progress > 0f) "Ищу…" else "Никого не нашли — проверьте, что компьютер включён и в той же сети")

@@ -72,6 +72,8 @@ fun TabDockApp(deck: Deck) {
     var wizard by remember { mutableStateOf(false) }
     var setupSeen by remember { mutableStateOf(false) }
     var stand by remember { mutableStateOf(false) }
+    var scanning by remember { mutableStateOf(false) }
+    val update by deck.update.collectAsState()
     var standDismissed by remember { mutableStateOf(false) }
     val synced by deck.syncedAt.collectAsState()
     val dialogs = remember { Dialogs(deck) }
@@ -92,7 +94,12 @@ fun TabDockApp(deck: Deck) {
         Box(Modifier.fillMaxSize().background(s.bg)) {
             if (s.bgImage != null) SkinBackground(deck, s)
             when {
-                conn == Conn.NEED_PAIRING || forceConnect -> ConnectScreen(deck) { forceConnect = false }
+                scanning -> QrScanner(onResult = { text ->
+                    scanning = false
+                    if (deck.pairFromLink(text)) forceConnect = false
+                    else deck.toast("Это не QR-код TabDock. Он показан на компьютере: в панели TabDock в браузере или в меню значка")
+                }, onClose = { scanning = false })
+                conn == Conn.NEED_PAIRING || forceConnect -> ConnectScreen(deck, onScan = { scanning = true }) { forceConnect = false }
                 all == null -> WaitScreen(deck, conn) { forceConnect = true }
                 web != null -> WebScreen(deck, web!!) { web = null }
                 all != null && (wizard || (!setupSeen && !all.o("config").b("setup_done"))) -> SetupWizard(deck, all) { wizard = false; setupSeen = true; tab = "home" }
@@ -111,7 +118,7 @@ fun TabDockApp(deck: Deck) {
                                 "shoots" -> ShootsScreen(c)
                                 "notes" -> NotesScreen(c)
                                 "mac" -> ComputerScreen(c)
-                                "settings" -> SettingsScreen(c, openWeb = { web = it }, onConnect = { forceConnect = true }, onWizard = { wizard = true })
+                                "settings" -> SettingsScreen(c, openWeb = { web = it }, onConnect = { forceConnect = true }, onWizard = { wizard = true }, onScan = { scanning = true })
                                 else -> HomeScreen(c, dialogs)
                             }
                         }
@@ -125,6 +132,7 @@ fun TabDockApp(deck: Deck) {
                           14.sp, if (conn == Conn.LOST) Color.White else s.muted, FontWeight.SemiBold, maxLines = 2, align = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                     dialogs.Host()
+                    update?.let { u -> UpdateDialog(deck, u) { deck.update.value = null } }
                 }
             }
             AnimatedVisibility(banner != null, Modifier.align(Alignment.TopCenter).padding(top = 16.dp), enter = slideInVertically { -it }, exit = slideOutVertically { -it }) {

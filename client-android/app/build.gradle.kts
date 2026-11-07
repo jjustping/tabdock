@@ -23,8 +23,8 @@ android {
         applicationId = "com.jjustping.tabdock"
         minSdk = 26
         targetSdk = 37
-        versionCode = 103
-        versionName = "0.10.0-beta"
+        versionCode = 104
+        versionName = "0.11.0-beta"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) {
@@ -57,4 +57,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    // QR scanner for pairing: CameraX + ZXing (no Google Play services needed — fine for RuStore)
+    implementation("androidx.camera:camera-camera2:1.4.2")
+    implementation("androidx.camera:camera-lifecycle:1.4.2")
+    implementation("androidx.camera:camera-view:1.4.2")
+    implementation("com.google.zxing:core:3.5.3")
 }

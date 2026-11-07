@@ -69,7 +69,7 @@ class Tray:
 
     def rebuild(self):
         t = fetch()
-        sig = json.dumps(t and {k: t[k] for k in ("version", "url", "vpn")}) + json.dumps(
+        sig = json.dumps(t and {k: t.get(k) for k in ("version", "url", "vpn", "update")}) + json.dumps(
             [(c["name"], c["ip"], c["ago"] // 30) for c in (t or {}).get("clients", [])]) + str(autostart_on())
         self.ind.set_icon_full(ICON_OK if t else ICON_BAD, "TabDock")
         if sig == self._sig:
@@ -80,6 +80,8 @@ class Tray:
             self.url = (t.get("url") or self.url).split("/?")[0]
             self._item(m, "TabDock %s — работает" % t.get("version", ""))
             self._item(m, "Адрес: %s  (скопировать)" % self.url, self.copy)
+            if t.get("update"):
+                self._item(m, "Доступна версия %s — обновить…" % t["update"], lambda: self.open("/"))
             m.append(Gtk.SeparatorMenuItem())
             cl = t.get("clients", [])
             self._item(m, "Подключено устройств: %d" % len(cl) if cl else "Подключённых устройств нет")
@@ -89,8 +91,8 @@ class Tray:
         else:
             self._item(m, "TabDock не отвечает — перезапустите службу")
         m.append(Gtk.SeparatorMenuItem())
-        self._item(m, "Показать QR-код для подключения…", lambda: self.open("/?tab=connect"))
-        self._item(m, "Открыть TabDock", lambda: self.open("/"))
+        self._item(m, "Показать QR-код для подключения…", lambda: self.open("/"))
+        self._item(m, "Открыть панель TabDock", lambda: self.open("/"))
         m.append(Gtk.SeparatorMenuItem())
         auto = Gtk.CheckMenuItem(label="Запускать при входе")
         auto.set_active(autostart_on())
