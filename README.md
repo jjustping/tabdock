@@ -490,10 +490,14 @@ v0.1:
 | ~~0.7 beta~~ | ✅ пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды» |
 | ~~0.8 beta~~ | ✅ нативное Android-приложение, ✅ отбор с метками, ✅ раскладка для телефона, ✅ бета-релиз с APK |
 | ~~0.9 beta~~ | ✅ подставка, ✅ конструктор скинов, ✅ офлайн-кэш, ✅ уведомления, ✅ VPN |
-| **0.10** (сейчас) | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям; осталось: подтвердить запись меток в Capture One и обход VPN на компьютере |
-| 1.0 | **мастер установки** (что и откуда поставить, по шагам, для Mac и Linux); **кнопка «Сканировать QR-код»** в приложении; **проверка обновлений** со списком изменений (приложение предлагает обновиться); **настраиваемая нижняя панель** (убрать «Съёмки», если вы не фотограф); на компьютере вместо копии дока — **панель управления** (подключение устройств, пароль, обновления); проверка, что приложение не мешает глубокому сну телефона; darktable/digiKam на Linux; первый стабильный релиз; **публикация в RuStore** (и, возможно, Google Play) |
-| дальше | Lightroom Classic, сеансы Capture One, виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
-| обсуждается | **удалённый доступ** — смотреть состояние компьютера и съёмок не из дома (безопасно, без открытых портов в интернет) |
+| **0.10** (сейчас) | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям |
+| 0.11 · удобство и обновления | **кнопка «Сканировать QR-код»** в приложении; **проверка обновлений** со списком изменений (приложение и значок в меню предлагают обновиться, сервер — `git pull` по кнопке); **настраиваемая нижняя панель** (скрыть «Съёмки» и др.); на компьютере вместо копии дока — **панель управления** (подключение устройств, пароль, устройства, обновления, журнал); проверка глубокого сна телефона; подтвердить запись меток в Capture One и обход VPN на компьютере |
+| 0.12 · пульт | **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка, скрипт, вставить текст); **с телефона на компьютер**: фото, файлы, ссылки, текст в буфер обмена; **пульт презентаций и созвонов** (слайды, микрофон и камера в Zoom/Meet) |
+| 0.13 · админам и программистам | **мониторинг хостов** (ping/HTTP с уведомлениями), **Wake-on-LAN**, **бэкапы** (Time Machine / rsync — когда был последний), **SMART дисков**; **Docker** (запуск, остановка, журнал), **GitHub Actions** (статус сборок), **git-репозитории** |
+| 0.14 · творчество и дом | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров; **Home Assistant** (свет, датчики); кухонные **таймеры**; **учёт времени** по проектам |
+| 0.15 · безопасность и доступ не из дома | **HTTPS** и **отдельный ключ на каждое устройство** (список, отзыв, подтверждение на компьютере); **Telegram-бот** — сводка и уведомления, только чтение; второй адрес компьютера для **Tailscale/ZeroTier** |
+| 1.0 · стабильный релиз | **мастер установки** «что и откуда поставить» по шагам для Mac и Linux; новый ключ подписи, политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
+| после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One, свой сервер-посредник для доступа из любой точки (если будет нужен) |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
 Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
@@ -674,9 +678,13 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 ### Roadmap
 
 ~~0.9~~ stand mode, skin builder, offline cache, notifications · **0.10 (now)**: ✅ Linux server + installer, ✅ menu-bar /
-tray icon, ✅ cheat sheets · 1.0 setup guide for the computer, in-app QR scanner, update check with changelog,
-customizable bottom bar, a control panel instead of the dock in the computer's own browser, darktable/digiKam, first stable release,
-**the TabDock app on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, multiple computers, HTTPS · under discussion: remote access from outside the home network.
+tray icon, ✅ cheat sheets · **0.11** in-app QR scanner, update check with changelog, customizable bottom bar, a control
+panel instead of the dock in the computer's own browser, deep-sleep check · **0.12** Stream-Deck-like custom buttons,
+send photos/files/links/text from the phone, presentation & call remote · **0.13** host monitoring, Wake-on-LAN, backups,
+SMART, Docker, GitHub Actions, git repos · **0.14** darktable/digiKam, OBS + soundboard, Home Assistant, timers, time
+tracking · **0.15** HTTPS + per-device keys, read-only Telegram bot, Tailscale/ZeroTier address · **1.0** setup guide for
+the computer, store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
+app closed, multiple computers, Lightroom Classic, Capture One sessions, an optional relay for access from anywhere.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ### macOS permissions
