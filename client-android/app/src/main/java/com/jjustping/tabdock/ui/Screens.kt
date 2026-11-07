@@ -250,8 +250,25 @@ class Dialogs(val deck: Deck) {
 @Composable fun NotesScreen(c: Ctx) {
     val notes = c.all.a("notes").objs().sortedWith(compareBy({ !it.b("pinned") }, { -(it.d("updated") ?: 0.0) }))
     Column(Modifier.fillMaxSize()) {
+        var showSets by remember { mutableStateOf(false) }
+        var sets by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+        LaunchedEffect(showSets, notes.size) { if (showSets) sets = runCatching { c.deck.api!!.arr("/api/notesets", 6000).objs() }.getOrDefault(emptyList()) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-            T("Справка", 24.sp, weight = FontWeight.Bold, modifier = Modifier.weight(1f)); Btn("Заметка", "plus", primary = true) { c.openNote(null) }
+            T("Справка", 24.sp, weight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Btn(if (LocalCompact.current) null else "Шпаргалки", "book") { showSets = !showSets }; Spacer(Modifier.width(10.dp))
+            Btn(if (LocalCompact.current) null else "Заметка", "plus", primary = true) { c.openNote(null) }
+        }
+        if (showSets) DeckCard("Готовые шпаргалки", Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+            T("Горячие клавиши и команды для разных программ и задач. Добавляются в «Справку», их можно менять и удалять.", 13.sp, LocalSkin.current.muted)
+            if (sets.isEmpty()) T("Загружаю…", 14.sp, LocalSkin.current.dim, modifier = Modifier.padding(top = 8.dp))
+            for (st in sets) Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    T(st.s("name"), 16.sp, weight = FontWeight.SemiBold, maxLines = 1)
+                    T(st.a("titles").strs().joinToString(" · "), 12.sp, LocalSkin.current.muted, maxLines = 1)
+                }
+                if (st.b("added")) T("✓ добавлено", 13.sp, LocalSkin.current.green)
+                else Btn("Добавить") { c.deck.post("/api/notes", JSONObject().put("op", "add_sets").put("sets", org.json.JSONArray().put(st.s("id")))) }
+            }
         }
         LazyVerticalStaggeredGrid(StaggeredGridCells.Adaptive(320.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalItemSpacing = 14.dp) {
             items(notes, key = { it.s("id") }) { n ->

@@ -33,6 +33,11 @@ import javax.crypto.spec.SecretKeySpec
 object Lan {
     @Volatile var wifi: android.net.Network? = null
     @Volatile var vpn = false
+    /** "Honor HEY2-W09", "Google Pixel 8" … (ASCII only: it goes into an HTTP header) */
+    val deviceName: String by lazy {
+        val m = android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }; val model = android.os.Build.MODEL
+        (if (model.startsWith(m, ignoreCase = true)) model else "$m $model").filter { it.code in 32..126 }.take(60)
+    }
     fun init(ctx: Context) {
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         val req = android.net.NetworkRequest.Builder().addTransportType(android.net.NetworkCapabilities.TRANSPORT_WIFI).build()
@@ -69,6 +74,7 @@ class Api(val base: String, @Volatile var key: String?) {
         c.connectTimeout = timeoutMs
         c.readTimeout = timeoutMs * 3
         key?.let { c.setRequestProperty("X-Dock-Key", it) }
+        c.setRequestProperty("X-Dock-Device", Lan.deviceName)   // shown in the computer's menu-bar icon
         return c
     }
 

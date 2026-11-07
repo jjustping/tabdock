@@ -10,7 +10,7 @@ DAY = 86400
 
 def shoots():
     now = time.time()
-    base = {"catalog": "~/Pictures/Demo.cocatalog", "catalog_name": "Demo", "camera": "X-T4", "picked": 0,
+    base = {"catalog": "~/Pictures/Demo.cocatalog", "catalog_name": "Demo", "camera": "", "picked": 0,
             "group": None, "source": "c1"}
     items = [
         dict(base, uuid="demo-1", name="Improv", total=77, picked=40, exported=12, shot_from=now - 6 * DAY,

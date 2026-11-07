@@ -1,9 +1,15 @@
 """Home-network health for the "Сеть" widget: gateway, DNS, internet. Refreshed in the background."""
+import os
 import re
 import socket
 import subprocess
+import sys
 import threading
 import time
+
+MAC = sys.platform == "darwin"
+# Linux: the «Команды» widget runs your own scripts from this folder (Mac: Apple Shortcuts)
+COMMANDS_DIR = os.path.expanduser("~/.config/tabdock/commands")
 
 
 def _run(cmd, timeout=6):
@@ -14,6 +20,12 @@ def _run(cmd, timeout=6):
 
 
 def _gateway():
+    if not MAC:   # "default via 192.168.1.1 dev wlp2s0 …" — skip VPN default routes, prefer the real one
+        for line in _run(["ip", "-4", "route", "show", "default"]).splitlines():
+            m = re.search(r"via (\S+) dev (\S+)", line)
+            if m and not re.match(r"(tun|wg|tailscale|ppp)", m.group(2)):
+                return m.group(1), m.group(2)
+        return None, None
     out = _run(["/sbin/route", "-n", "get", "default"])
     gw = re.search(r"gateway:\s*(\S+)", out)
     iface = re.search(r"interface:\s*(\S+)", out)
@@ -21,7 +33,7 @@ def _gateway():
 
 
 def _ping(host):
-    out = _run(["/sbin/ping", "-c", "2", "-t", "3", host], timeout=6)
+    out = _run(["/sbin/ping", "-c", "2", "-t", "3", host] if MAC else ["ping", "-c", "2", "-W", "3", host], timeout=6)
     m = re.search(r"= [\d.]+/([\d.]+)/", out)
     loss = re.search(r"([\d.]+)% packet loss", out)
     return (float(m.group(1)) if m else None), (float(loss.group(1)) if loss else 100.0)
@@ -75,7 +87,13 @@ _sc_cache = {"at": 0, "list": []}
 
 
 def shortcuts_list():
-    """Apple Shortcuts available on this Mac (cached for 5 minutes)."""
+    """Apple Shortcuts available on this Mac (cached for 5 minutes); on Linux — executable scripts in COMMANDS_DIR."""
+    if not MAC:
+        try:
+            return sorted(f for f in os.listdir(COMMANDS_DIR)
+                          if not f.startswith(".") and os.access(os.path.join(COMMANDS_DIR, f), os.X_OK))[:200]
+        except OSError:
+            return []
     if time.time() - _sc_cache["at"] > 300:
         out = _run(["/usr/bin/shortcuts", "list"], timeout=10)
         _sc_cache.update(at=time.time(), list=[l.strip() for l in out.splitlines() if l.strip()][:200])
@@ -84,6 +102,10 @@ def shortcuts_list():
 
 def run_shortcut(name):
     if name not in shortcuts_list():
-        return False, "Такой команды нет в «Командах» на Mac"
+        return False, "Такой команды нет в «Командах» на Mac" if MAC else "Нет такого скрипта в ~/.config/tabdock/commands"
+    if not MAC:
+        subprocess.Popen([os.path.join(COMMANDS_DIR, name)], cwd=os.path.expanduser("~"),
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return True, "Запускаю «%s»" % name
     subprocess.Popen(["/usr/bin/shortcuts", "run", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return True, "Запускаю «%s»" % name

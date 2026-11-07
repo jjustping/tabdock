@@ -637,7 +637,7 @@ async function loadCatalogs(c) {
 
 // ---------------- skins ----------------
 const SKINS = [
-  { id: "classic", name: "Классика", desc: "Тёмная, как было", pv: ["#0a0c0f", "#14171c", "#4fd1c5"] },
+  { id: "classic", name: "Классика", desc: "Стандартная тема", pv: ["#0a0c0f", "#14171c", "#4fd1c5"] },
   { id: "glass", name: "Liquid Glass", desc: "Стекло и мягкий свет", pv: ["linear-gradient(135deg,#3b2c8f,#0a3d8f 50%,#7a4b12)", "rgba(255,255,255,.22)", "#0a84ff"] },
   { id: "aero-vista", name: "Aero · Vista", desc: "Чёрное стекло, сияние", pv: ["linear-gradient(180deg,#000,#02303a 60%,#04402a)", "linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.05) 50%,rgba(0,0,0,.4) 51%)", "#3cd6ff"] },
   { id: "aero-seven", name: "Aero · Seven", desc: "Небо, трава, пузыри", pv: ["linear-gradient(180deg,#2f8fe8,#9fd9ff 70%,#57c22c 71%)", "linear-gradient(180deg,#fff,rgba(255,255,255,.6) 50%,rgba(215,240,255,.7) 51%)", "#0a8fdc"] },

@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import secrets
+import sys
 import threading
 import time
 import uuid
@@ -60,6 +61,10 @@ class Store:
 
 DEFAULT_APPS = ["Capture One", "Serato DJ Pro", "Finder", "Safari", "Music", "Telegram",
                 "Photos", "System Settings", "Activity Monitor", "Terminal"]
+if sys.platform != "darwin":   # Linux: names as the .desktop files show them (only installed ones appear)
+    DEFAULT_APPS = ["Files", "Firefox", "Terminal", "Settings", "Text Editor", "Resources", "darktable", "GIMP",
+                    "digiKam", "Visual Studio Code", "Telegram", "Spotify",
+                    "Файлы", "Терминал", "Параметры", "Текстовый редактор"]
 
 
 def default_config():
@@ -79,21 +84,6 @@ def default_config():
 
 
 def default_notes():
-    now = time.time()
-    return [
-        {"id": new_id(), "title": "Горячие клавиши macOS", "tag": "Mac", "color": "blue", "pinned": True,
-         "body": "- **⇧⌘3** — снимок всего экрана\n- **⇧⌘4** — снимок области\n- **⇧⌘5** — панель снимков и записи экрана\n"
-                 "- **⌥⌘Esc** — принудительно завершить программу\n- **⌃⌘Q** — заблокировать экран\n"
-                 "- **⌘Пробел** — Spotlight\n- **⌘⌥D** — показать/скрыть Dock",
-         "links": [], "updated": now},
-        {"id": new_id(), "title": "Полезные ссылки", "tag": "Ссылки", "color": "green", "pinned": False,
-         "body": "Свои ссылки добавляются кнопкой ✎ → «Ссылка».",
-         "links": [{"title": "Capture One — поддержка", "url": "https://support.captureone.com"},
-                   {"title": "Fujifilm X-T4 — инструкция", "url": "https://fujifilm-dsc.com/en/manual/x-t4/"},
-                   {"title": "Serato DJ Pro — поддержка", "url": "https://support.serato.com"}],
-         "updated": now},
-        {"id": new_id(), "title": "Пример заметки", "tag": "Фото", "color": "amber", "pinned": False,
-         "body": "Здесь можно хранить свои шпаргалки: настройки X-T4 для разных съёмок, рецепты экспорта, "
-                 "чек-лист перед съёмкой.\n\nФормат: `- пункт`, **жирный**, `код`.",
-         "links": [], "updated": now},
-    ]
+    # ready-made cheat sheets live in notesets.py (by scenario); a fresh install gets the system's shortcuts
+    from .notesets import default_notes as _d
+    return _d()

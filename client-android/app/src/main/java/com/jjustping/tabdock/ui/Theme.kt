@@ -69,7 +69,7 @@ private fun c(hex: Long) = Color(hex)
 private fun lin(a: Color, b: Color, c3: Color? = null, d: Color? = null) = Brush.verticalGradient(listOfNotNull(a, b, c3, d))
 
 val SKINS: List<Skin> = listOf(
-    Skin("classic", "Классика", "Тёмная, как было", SolidColor(c(0xFF0A0C0F)), SolidColor(c(0xFF14171C)), c(0xFF262B34),
+    Skin("classic", "Классика", "Стандартная тема", SolidColor(c(0xFF0A0C0F)), SolidColor(c(0xFF14171C)), c(0xFF262B34),
         c(0xFF1B1F26), c(0xFF262B34), c(0xFFE9EDF2), c(0xFF8B94A3), c(0xFF5D6573), c(0xFF4FD1C5), c(0xFF06201D),
         SolidColor(c(0xFF4FD1C5)), c(0xFF68D391), c(0xFFF6C453), c(0xFFFC8181), c(0xFF63B3ED), 18.dp, CardStyle.FLAT, true,
         c(0xFF8B94A3), SolidColor(c(0xFF0C0E12)), false),

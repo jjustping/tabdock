@@ -26,13 +26,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from dock import actions as act_mod          # noqa: E402
-from dock import auth, bonjour, captureone, culling, demo, folders, lanbind, netcheck, sysinfo, weather, wfolio  # noqa: E402
-from dock.calendar_mac import CalendarFeed    # noqa: E402
-from dock.media import Media                  # noqa: E402
+from dock import auth, captureone, culling, demo, folders, lanbind, netcheck, notesets, weather, wfolio  # noqa: E402
+if sys.platform == "darwin":
+    from dock import actions as act_mod, bonjour, sysinfo   # noqa: E402
+    from dock.calendar_mac import CalendarFeed               # noqa: E402
+    from dock.media import Media                             # noqa: E402
+else:   # Linux: same interfaces, see dock/linux/
+    from dock.linux import actions as act_mod, bonjour, sysinfo   # noqa: E402
+    from dock.linux.calendar import CalendarFeed                   # noqa: E402
+    from dock.linux.media import Media                             # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.9.0-beta"
+VERSION = "0.10.0-beta"
 WEB = os.path.join(HERE, "web")
 
 
@@ -40,6 +45,7 @@ class App:
     def __init__(self, data_dir, port, demo_mode=False):
         self.port = port
         self.demo = demo_mode
+        self._clients, self._clients_lock = {}, threading.Lock()
         self.store = Store(data_dir)
         self.cache_dir = os.path.join(data_dir, "cache")
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -249,9 +255,35 @@ class App:
         msg = ("%s|%s" % (nonce, self.server_id())).encode()
         return hmac.new(self.proof_key().encode(), msg, hashlib.sha256).hexdigest()
 
+    # ---------------- connected devices (for the menu-bar icon) ----------------
+    def seen(self, ip, device, ua):
+        name = (device or "").strip()[:60]
+        kind = "app" if name else "browser"
+        if not name:
+            ua = ua or ""
+            m = re.search(r"Android [\d.]+; ([^;)]+?)(?: Build|\))", ua)
+            name = ("Браузер · " + m.group(1)) if m else "Браузер · " + (
+                "iPhone" if "iPhone" in ua else "iPad" if "iPad" in ua else "Mac" if "Macintosh" in ua else
+                "Linux" if "Linux" in ua else "Windows" if "Windows" in ua else "устройство")
+        with self._clients_lock:
+            self._clients[(ip, name)] = {"ip": ip, "name": name, "kind": kind, "at": time.time()}
+
+    def clients(self, window=90):
+        now = time.time()
+        with self._clients_lock:
+            for k in [k for k, v in self._clients.items() if now - v["at"] > 3600]:
+                del self._clients[k]
+            out = [dict(v, ago=int(now - v["at"])) for v in self._clients.values() if now - v["at"] <= window]
+        return sorted(out, key=lambda c: c["ago"])
+
+    def tray(self):
+        """Everything the menu-bar icon / tray shows (localhost only)."""
+        return {"ok": True, "version": VERSION, "url": self.url(), "port": self.port, "clients": self.clients(),
+                "vpn": lanbind.VPN, "name": socket.gethostname().split(".")[0]}
+
     def hello(self, nonce=None):
         s = self.sysdata()
-        return {"app": "tabdock", "version": VERSION, "name": s.get("hostname") or "Mac",
+        return {"app": "tabdock", "version": VERSION, "name": s.get("hostname") or "Компьютер",
                 "model": s.get("chip") or s.get("model"), "ip": s.get("ip"), "port": self.port,
                 "password": bool(self.config().get("password_hash")), "id": self.server_id(),
                 **({"nonce": nonce, "proof": self.proof(nonce)} if nonce else {})}
@@ -300,6 +332,8 @@ def op_notes(app, body):
                          for l in body["links"] if isinstance(l, dict) and SAFE_LINK.match(str(l.get("url", "")))]
 
     def fn(notes):
+        if op == "add_sets":   # ready-made cheat sheets (dock/notesets.py)
+            return notesets.add_sets(notes, [str(i) for i in body.get("sets", [])][:20])
         if op == "add":
             n = {"id": new_id(), "title": (body.get("title") or "Новая заметка")[:200], "tag": body.get("tag", ""),
                  "color": body.get("color", "blue"), "pinned": False, "body": body.get("body", ""),
@@ -458,6 +492,9 @@ def op_config(app, body):
             cfg["token"] = secrets.token_urlsafe(12)
         return True
     r = app.store.update("config", default_config, fn)
+    # first-run setup picked scenarios → add the matching cheat sheets once
+    if isinstance(body.get("usage"), list) and body.get("setup_done"):
+        app.store.update("notes", default_notes, lambda notes: notesets.add_sets(notes, notesets.for_usage(body["usage"])))
     if "c1_catalogs" in body:
         app._discover_kick.set()
     if "folder_roots" in body or "export_dirs" in body:
@@ -495,7 +532,7 @@ def op_action(app, body):
         return netcheck.run_shortcut(str(arg or ""))
     if a == "calendar_access":
         app.calendar.refresh_soon()
-        return True, "Запрос доступа отправлен — подтвердите на Mac"
+        return True, "Запрос доступа отправлен — подтвердите на компьютере"
     return app.actions.run(a, arg)
 
 
@@ -514,10 +551,13 @@ class Handler(BaseHTTPRequestHandler):
         if self.client_address[0] in ("127.0.0.1", "::1"):
             return True
         tok = self.app.config()["token"]
-        if qs.get("k", [""])[0] == tok or self.headers.get("X-Dock-Key") == tok:
-            return True
-        c = cookies.SimpleCookie(self.headers.get("Cookie", ""))
-        return "dock_k" in c and c["dock_k"].value == tok
+        ok = qs.get("k", [""])[0] == tok or self.headers.get("X-Dock-Key") == tok
+        if not ok:
+            c = cookies.SimpleCookie(self.headers.get("Cookie", ""))
+            ok = "dock_k" in c and c["dock_k"].value == tok
+        if ok:   # remember who is connected (shown in the menu-bar icon / tray)
+            self.app.seen(self.client_address[0], self.headers.get("X-Dock-Device"), self.headers.get("User-Agent"))
+        return ok
 
     def _is_local(self):
         return self.client_address[0] in ("127.0.0.1", "::1")
@@ -526,7 +566,7 @@ class Handler(BaseHTTPRequestHandler):
         ip = self.client_address[0]
         cfg = self.app.config()
         if not cfg.get("password_hash"):
-            return self._send(200, {"ok": False, "message": "Пароль не задан — подключитесь по QR-коду с Mac"})
+            return self._send(200, {"ok": False, "message": "Пароль не задан — подключитесь по QR-коду с компьютера"})
         if not auth.allowed(ip):
             return self._send(429, {"ok": False, "message": "Слишком много попыток, подождите 5 минут"})
         if not auth.check_password(body.get("password") or "", cfg["password_hash"]):
@@ -687,8 +727,14 @@ class Handler(BaseHTTPRequestHandler):
             app._discover_kick.set()
             return self._send(200, {"found": app.discovered,
                                     "active": app.catalogs(), "manual": app.config().get("c1_catalogs", [])})
+        if p == "/api/tray":   # menu-bar icon / tray on this computer only
+            if not self._is_local():
+                return self._send(403, {"error": "local only"})
+            return self._send(200, app.tray())
+        if p == "/api/notesets":
+            return self._send(200, notesets.listing(app.store.load("notes", default_notes)))
         if p == "/api/shortcuts":
-            return self._send(200, netcheck.shortcuts_list() if sys.platform == "darwin" else [])
+            return self._send(200, netcheck.shortcuts_list())
         if p == "/api/apps_installed":
             return self._send(200, act_mod.installed_apps())
         if p == "/api/weather":
@@ -740,7 +786,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": ok, "media": app.media.data})
             if p == "/api/password":
                 if not self._is_local():
-                    return self._send(403, {"ok": False, "message": "Пароль меняется только на самом Mac"})
+                    return self._send(403, {"ok": False, "message": "Пароль меняется только на самом компьютере"})
                 pw = body.get("password") or ""
                 if body.get("remove"):
                     app.store.update("config", default_config, lambda c: c.pop("password_hash", None))

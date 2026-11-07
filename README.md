@@ -4,10 +4,10 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.9.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.10.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android app TabDock 0.9.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.10.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
@@ -32,7 +32,7 @@
 отбор, сроки сдачи, галереи клиентов в wfolio, диски и бэкапы каталога.
 
 Всё работает локально в домашней сети: без облака, аккаунтов и подписок (интернет нужен только для погоды
-и проверки ссылок wfolio). Сервер — компьютер с macOS 13+ (Linux — в планах), клиент — Android-приложение TabDock
+и проверки ссылок wfolio). Сервер — компьютер с macOS 13+ или **Linux** (Ubuntu, Debian, Fedora, Arch), клиент — Android-приложение TabDock
 или любой современный браузер на планшете, телефоне или самом компьютере.
 
 ### Пространства и виджеты (v0.7)
@@ -115,7 +115,7 @@ Aero, а на Mac — «Бумага». Кнопка «Сделать скино
 
 | Скин | Настроение |
 |---|---|
-| **Классика** | тёмная, спокойная — оформление первых версий |
+| **Классика** | стандартная тема: тёмная и спокойная |
 | **Liquid Glass** | полупрозрачное стекло с бликом по краю, мягкий цветной свет, плавающая «капсула» вкладок |
 | **Aero · Vista** | Frutiger Aero в духе Windows Vista: чёрное глянцевое стекло, «северное сияние», голубые глянцевые кнопки |
 | **Aero · Seven** | Frutiger Aero в духе Windows 7: небо, зелёный холм, пузыри, белое глянцевое стекло, «травяные» индикаторы |
@@ -165,6 +165,48 @@ cd ~/tabdock
 
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
 
+**Значок в строке меню.** TabDock живёт в строке меню Mac (значок планшета): видно, работает ли служба, адрес для
+подключения (клик — скопировать), **какие устройства подключены сейчас**, галочка **«Запускать при входе»**,
+QR-код для нового устройства, «Открыть TabDock», «Перезапустить службу», журнал и «Остановить». Если сервер не
+отвечает, значок меняется на предупреждение. После обновления `TabDock.app` macOS может один раз заново спросить
+доступ к диску / календарю / автоматизации.
+
+### Установка на компьютер (Linux)
+
+Ubuntu/Debian, Fedora, Arch — с рабочим столом (GNOME, KDE, XFCE…). Проверено на **Ubuntu 26.04** (ARM64, Parallels).
+
+```bash
+git clone https://github.com/jjustping/tabdock.git ~/tabdock
+cd ~/tabdock
+./install-linux.sh
+```
+
+`install-linux.sh` ставит пакеты через `apt` / `dnf` / `pacman` (спросит пароль `sudo`): Python, Avahi (чтобы
+приложение само нашло компьютер), `playerctl` (музыка из любого плеера: Spotify, браузер, VLC, Rhythmbox…),
+WirePlumber (громкость), udisks2 (извлечение дисков), lm-sensors (температура), значок в трее. Дальше — venv,
+**пользовательская служба systemd** `tabdock.service` (старт при входе, перезапуск при сбое, без root), значок в трее
+`tabdock-tray.service`, при включённом `ufw` — порт 8787 только для домашних сетей, и в конце **QR-код прямо в
+терминале**.
+
+```bash
+./install-linux.sh --status       # работает ли и адрес для планшета
+./install-linux.sh --port 9000    # другой порт
+./install-linux.sh --no-packages  # без apt/dnf/pacman, если всё уже стоит
+./install-linux.sh --uninstall    # убрать службы (данные в data/ остаются)
+journalctl --user -u tabdock -f   # журнал
+```
+
+Что работает на Linux так же, как на Mac: пространства и виджеты, напоминания, заметки и шпаргалки, погода,
+состояние компьютера (процессор, память, диски, температура), музыка и громкость, быстрые действия (приложения из
+меню, сон, выключение экрана, скриншот, «не спать», извлечение дисков), сеть, съёмки по папкам, wfolio, приложение
+для Android. Отличия:
+* **«Команды»** — вместо Apple Shortcuts ваши скрипты: положите исполняемый файл в `~/.config/tabdock/commands/`,
+  и он появится кнопкой на планшете (бэкап, перезапуск контейнера, `git pull`…).
+* **Календарь** — из файлов `.ics`: локальные календари GNOME/Evolution и любые `.ics` в `~/.config/tabdock/calendars/`.
+* **Скриншот** под Wayland делается через системный портал: в первый раз рабочий стол спросит «Разрешить?».
+* **Значок в трее** — то же меню, что в строке меню Mac (в GNOME нужен AppIndicator, в Ubuntu он включён).
+* Capture One на Linux нет; съёмки — по папкам (darktable/digiKam — в планах).
+
 ### Приложение TabDock для Android (бета)
 
 `client-android/` — **полностью нативное приложение** (Kotlin + Jetpack Compose), а не страница в оболочке:
@@ -181,6 +223,10 @@ cd ~/tabdock
 * **Конструктор скинов** (Настройки → Оформление → «Свой скин»): основа из семи скинов, акцентный цвет (палитра или
   `#RRGGBB`), фон — цвет, градиент или **размытая обложка съёмки**, карточки (плоские, стекло, глянец, окна Mac OS X),
   скругление углов. Живое превью. Скин передаётся на другое устройство через буфер обмена («Скопировать» → «Вставить скин»).
+* **Шпаргалки** («Справка» → «Шпаргалки»): готовые наборы — горячие клавиши macOS, Ubuntu/GNOME и терминала,
+  Photoshop, Capture One, Lightroom Classic, команды для сисадминов (сеть, службы, логи, диски, ssh/rsync/tmux),
+  git и VS Code для программистов и «рофлы для терминала» (`sl`, `cowsay`, `cmatrix`, попугай `curl parrot.live`…).
+  Первая настройка сама добавляет наборы под выбранные сценарии; их можно править и удалять как обычные заметки.
 * **Подставка**: спокойный экран — большие часы, погода, что играет (с кнопками), ближайший срок сдачи. На телефоне
   включается сама, когда он лежит боком на зарядке (можно выключить), на любом устройстве — кнопкой со значком
   экрана в шапке. Содержимое слегка смещается раз в минуту, чтобы не выгорал OLED.
@@ -395,6 +441,9 @@ v0.1:
 | Часть | Статус |
 |---|---|
 | Сервер на macOS: автозапуск, поиск в сети (Bonjour), ключ + пароль, защита от чужих сетей | ✅ |
+| **Сервер на Linux**: `install-linux.sh`, служба systemd, Avahi, показатели, музыка (MPRIS), громкость, быстрые действия, «Команды»-скрипты, календарь `.ics` | ✅ Ubuntu 26.04 (Parallels); Fedora/Arch — 🧪 по коду |
+| **Значок в строке меню (Mac) и в трее (Linux)**: статус, подключённые устройства, автозапуск, перезапуск, журнал | 🧪 Mac: запущен на Mac mini, данные для меню (устройства, адрес) проверены; Linux: трей запущен на Ubuntu |
+| **Шпаргалки** по сценариям (8 наборов) | ✅ |
 | Пространства и 16 виджетов, режим редактирования, 7 скинов | ✅ |
 | Съёмки Capture One: прогресс, статусы, сроки, правило «что считать отданным» (метка / экспорт / рейтинг), каталоги на внешних дисках | ✅ |
 | Съёмки по папкам (Photon Studio, Photoshop и др.) | 🧪 на реальных съёмках ещё не проверено |
@@ -412,7 +461,7 @@ v0.1:
 | VPN на компьютере: ответы через сетевую карту мимо туннеля | 🧪 написано, с включённым VPN ещё не проверено |
 | VPN на телефоне/планшете | ✅ если VPN разрешает обход; AmneziaVPN не разрешает (проверено) — нужно исключить TabDock в самом VPN, приложение подсказывает |
 | Старое WebView-приложение (`android-webview/`) | заменено нативным приложением |
-| Значок в строке меню, Linux, публикация в магазинах, iPhone/iPad | ⏳ |
+| Мастер установки «что и откуда поставить», darktable/digiKam, публикация в магазинах, iPhone/iPad | ⏳ |
 
 ### Дорожная карта
 
@@ -420,8 +469,9 @@ v0.1:
 |---|---|
 | ~~0.7 beta~~ | ✅ пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды» |
 | ~~0.8 beta~~ | ✅ нативное Android-приложение, ✅ отбор с метками, ✅ раскладка для телефона, ✅ бета-релиз с APK |
-| **0.9** (сейчас) | ✅ подставка, ✅ конструктор скинов с импортом/экспортом, ✅ офлайн-кэш, ✅ уведомления, ✅ подсказка про VPN на устройстве, обход VPN на компьютере (проверить с включённым VPN); осталось: подтвердить запись меток в Capture One, **значок в строке меню** на сервере (статус, перезапуск службы), **мастер установки** на компьютер (что и откуда поставить, по шагам) |
-| 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее, `install-linux.sh`; первый стабильный релиз; **публикация приложения TabDock в RuStore** (и, возможно, Google Play) |
+| ~~0.9 beta~~ | ✅ подставка, ✅ конструктор скинов, ✅ офлайн-кэш, ✅ уведомления, ✅ VPN |
+| **0.10** (сейчас) | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям; осталось: подтвердить запись меток в Capture One и обход VPN на компьютере |
+| 1.0 | **мастер установки** (что и откуда поставить, по шагам, для Mac и Linux), darktable/digiKam на Linux; первый стабильный релиз; **публикация приложения TabDock в RuStore** (и, возможно, Google Play) |
 | дальше | Lightroom Classic, сеансы Capture One, виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
@@ -453,17 +503,21 @@ TabDock бесплатный и с открытым кодом. Если он в
 fun, built with photographers in mind. On first launch you pick usage scenarios (**Photo**, **Work**, **Fun**,
 **System & network**); each becomes a space of widgets you can rearrange. Photographers get the most: Capture One
 (and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
-backups. Local network only, no cloud. Server: macOS 13+ (Linux planned); client: the Android app or any browser.
+backups. Local network only, no cloud. Server: macOS 13+ or **Linux** (Ubuntu, Debian, Fedora, Arch); client: the Android app or any browser.
 
-**Status: beta.** Server and native Android app **TabDock 0.9.0-beta** ([download](https://github.com/jjustping/tabdock/releases)). Ready and tested on real devices:
+**Status: beta.** Server and native Android app **TabDock 0.10.0-beta** ([download](https://github.com/jjustping/tabdock/releases)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
 weather, player, next deadline; turns on by itself on a phone lying sideways on a charger), offline cache with
 auto-reconnect, notifications (export finished, shoot due today/tomorrow). Done but not fully verified: writing
 stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN bypass on the computer (a VPN on the phone/tablet that forbids bypass, e.g. AmneziaVPN, needs TabDock excluded via split tunneling — the app says so).
-Planned: menu-bar icon, setup guide for the computer, Linux server, store releases (RuStore) at 1.0; iPhone/iPad use
-the web UI in Safari for now.
+**0.10**: Linux server with `install-linux.sh` (systemd user service, Avahi, MPRIS media, PipeWire volume, quick
+actions, your own scripts as "Commands", `.ics` calendar), menu-bar icon on the Mac and tray icon on Linux (status,
+connected devices, start at login, restart, log), ready-made cheat sheets per scenario (macOS, Ubuntu/terminal,
+Photoshop, Capture One, Lightroom, sysadmin, git + VS Code, terminal fun).
+Planned: setup guide for the computer, darktable/digiKam, store releases (RuStore) at 1.0; iPhone/iPad use the web
+UI in Safari for now.
 
 ![Spaces](docs/img/spaces/work.png)
 
@@ -528,7 +582,7 @@ Pick a skin in **Settings → Appearance**; it is remembered per device (Aero on
 can be set as the default for new devices. Preview without switching: add `?skin=glass` (or `aero-vista`, `aero-seven`,
 `macosx`, `paper`, `oled`) to the address. All skins use drawn line icons, no emoji.
 
-* **Classic** — the original dark look.
+* **Classic** — the standard theme: dark and calm.
 * **Liquid Glass** — translucent glass with specular edges over soft colour, floating tab capsule.
 * **Aero · Vista** / **Aero · Seven** — Frutiger Aero: black glossy glass with aurora; sky, grass, bubbles and glossy white glass.
 * **Mac OS X** — 2000s Aqua: pinstripes, Lucida Grande, glossy blue buttons, every card is a window with traffic lights.
@@ -544,7 +598,18 @@ cd ~/tabdock && ./install.sh        # venv + calendar helper + LaunchAgent, open
 ```
 
 Keep the folder outside Desktop/Documents/Downloads: background agents can't read those.
-To run it by hand: `.venv/bin/python server.py` → http://localhost:8787
+To run it by hand: `.venv/bin/python server.py` → http://localhost:8787. The Mac gets a menu-bar icon.
+
+**Linux** (Ubuntu/Debian/Fedora/Arch with a desktop):
+
+```bash
+git clone https://github.com/jjustping/tabdock.git ~/tabdock && cd ~/tabdock && ./install-linux.sh
+./install-linux.sh --status | --uninstall | --port 9000 | --no-packages
+```
+
+Installs packages (asks for sudo), a venv, a systemd **user** service and a tray icon, opens port 8787 for home
+networks if `ufw` is on, and prints a QR code in the terminal. "Commands" on Linux are your executable scripts in
+`~/.config/tabdock/commands/`; the calendar reads `.ics` files (GNOME/Evolution or `~/.config/tabdock/calendars/`).
 
 ### Android app
 
@@ -579,9 +644,8 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 ### Roadmap
 
-~~0.8~~ native Android app, culling, phone layout · **0.9 (now)**: ✅ stand mode, ✅ skin builder, ✅ offline cache,
-✅ notifications, ✅ VPN bypass (to be checked with a VPN on); left: confirm tag writing in Capture One, menu-bar
-status icon, setup guide for the computer · 1.0 Linux server (systemd, MPRIS, sensors, darktable/digiKam, tray icon), first stable release,
+~~0.9~~ stand mode, skin builder, offline cache, notifications · **0.10 (now)**: ✅ Linux server + installer, ✅ menu-bar /
+tray icon, ✅ cheat sheets · 1.0 setup guide for the computer, darktable/digiKam, first stable release,
 **the TabDock app on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, multiple computers, HTTPS.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
