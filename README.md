@@ -3,13 +3,18 @@
 **Док из планшета, который лежит без дела: для работы, учёбы и отдыха — с прицелом на фотографов**
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
-> **0.7.0-beta**: пространства и виджеты, первая настройка по сценариям, «что считать отданным» (метка / экспорт / рейтинг).
+> [!WARNING]
+> **Проект в бете.** Сервер — **0.7.0-beta**, Android-клиент **TabDeck — 1.0.0-alpha1**. Всё работает в домашней
+> сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
+> TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
+> *Beta: server 0.7.0-beta, Android client TabDeck 1.0.0-alpha1 — things still change and may break.*
 
-[Русский](#русский) · [English](#english)
+[Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать APK для Android-планшета / Download the Android APK](https://github.com/jjustping/tabdock/releases/latest)** — `TabDock-0.4.1.apk`, 28 КБ.
+**⬇ [Релизы / Releases](https://github.com/jjustping/tabdock/releases)** — сервер и APK. Нативный клиент TabDeck пока
+собирается из `client-android/` (alpha-сборка в релизах появится после проверки записи меток в Capture One).
 
 ---
 
@@ -155,13 +160,27 @@ cd ~/tabdock
 
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
 
-### Приложение для Android (v0.3)
+### TabDeck — нативный клиент для Android (alpha)
 
-> Честно: сейчас это **нативная оболочка** вокруг веб-интерфейса (WebView) с нативными частями — поиск компьютера
-> по Bonjour, привязка к своему серверу, экран без сна, полный экран. **Полностью нативный клиент TabDeck**
-> (Kotlin + Jetpack Compose) — в дорожной карте.
+`client-android/` — **полностью нативное приложение** (Kotlin + Jetpack Compose), а не страница в оболочке:
+все экраны, виджеты, скины, настройки, первая настройка и отбор кадров нарисованы нативно, с сервером оно
+общается через тот же API. Работает на планшете (сетка 12×6, как в веб-версии) и на **телефоне** (одна колонка).
+Сам находит компьютер в сети (Bonjour + опрос сети), подключается только к компьютеру, который подтвердил ключ,
+не даёт экрану гаснуть, переподключается сам. На Android 17 один раз просит разрешение «Устройства в локальной сети»;
+если на телефоне включён VPN, старается достучаться до компьютера напрямую через Wi-Fi.
 
-Лучше, чем вкладка Chrome: `android/` — маленькое приложение (28 КБ) с WebView, которое
+```bash
+cd client-android && JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Подписывается тем же ключом, что и старое приложение, поэтому ставится поверх него. Привязать к компьютеру:
+открыть ссылку из QR на устройстве или `adb shell am start -d "<ссылка из QR>" com.jjustping.tabdock`.
+
+#### Старое приложение (WebView, `android-webview/`)
+
+Предыдущая версия — оболочка вокруг веб-интерфейса. Оставлена для истории, её заменяет TabDeck.
+`android-webview/` — маленькое приложение (28 КБ) с WebView, которое
 * **само находит Mac** через Bonjour (`_tabdock._tcp`) и опросом сети — браузер так не умеет;
 * открывается на весь экран, **не даёт экрану гаснуть**, держит альбомную ориентацию;
 * помнит последний Mac и вход; если Mac выключили или перезагрузили — показывает «Жду …» и **сам
@@ -174,8 +193,8 @@ cd ~/tabdock
 Сборка без Android Studio и Gradle (нужны Android SDK и JDK 17, `brew install openjdk@17`):
 
 ```bash
-./android/build.sh                       # → android/build/TabDock.apk
-adb install -r android/build/TabDock.apk
+./android-webview/build.sh               # → android-webview/build/TabDock.apk
+adb install -r android-webview/build/TabDock.apk
 ```
 
 Ключ подписи создаётся при первой сборке в `~/.android/tabdock-release.keystore` — сохраните его, иначе
@@ -341,16 +360,35 @@ v0.1:
 * обложка и управление при реально играющей Music/Spotify; Spotify не установлен;
 * сеансы Capture One (`.cosessiondb`) — сейчас поддерживаются только каталоги.
 
+### Что готово сейчас
+
+Состояние на 7 ноября 2026. ✅ — работает и проверено на настоящих устройствах (Mac mini M4, Honor Pad 9, Pixel 8);
+🧪 — сделано, но проверено не до конца; ⏳ — в планах.
+
+| Часть | Статус |
+|---|---|
+| Сервер на macOS: автозапуск, поиск в сети (Bonjour), ключ + пароль, защита от чужих сетей | ✅ |
+| Пространства и 16 виджетов, режим редактирования, 7 скинов | ✅ |
+| Съёмки Capture One: прогресс, статусы, сроки, правило «что считать отданным» (метка / экспорт / рейтинг), каталоги на внешних дисках | ✅ |
+| Съёмки по папкам (Photon Studio, Photoshop и др.) | 🧪 на реальных съёмках ещё не проверено |
+| Музыка, громкость, быстрые действия, Apple Shortcuts, погода, календарь, сеть, диски | ✅ |
+| **TabDeck** — нативный Android-клиент: все экраны, настройки и первая настройка нативные | ✅ alpha |
+| Раскладка для **телефона** | ✅ первая версия (Pixel 8) |
+| **Отбор с планшета/телефона**: миниатюры, просмотр на весь экран, фильтры | ✅ |
+| Запись ★ и цветных меток в Capture One (через его AppleScript) | 🧪 написано, запись ещё не подтверждена на живом каталоге |
+| Android 17: разрешение «локальная сеть», обход VPN для домашней сети | ✅ / 🧪 обход VPN |
+| Старое WebView-приложение (`android-webview/`) | заменяется TabDeck |
+| Значок в строке меню, конструктор тем, Linux, публикация в магазинах | ⏳ |
+
 ### Дорожная карта
 
-| Версия | Что будет |
+| Этап | Что будет |
 |---|---|
-| **0.7 beta** (сейчас) | пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды», ускорение |
-| 0.8 | ~~отбор с планшета~~ (готово в TabDeck alpha), **значок в строке меню** на сервере (статус, перезапуск службы) |
-| 0.9 | раскладка для **телефона** и режим «подставки»; **конструктор тем** в приложении (свои цвета, стекло, фон из обложки съёмки), импорт/экспорт тем |
-| 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее; `install-linux.sh` |
-| **TabDeck** (alpha) | **нативный клиент** для Android (Kotlin + Jetpack Compose): все экраны, настройки и первая настройка уже нативные, отбор с метками; дальше — офлайн-кэш, уведомления, виджеты на экране Android |
-| дальше | Lightroom Classic, сеансы Capture One, tether viewer для X-T4, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
+| ~~0.7 beta~~ | ✅ пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды» |
+| **0.8** (сейчас) | ✅ нативный клиент TabDeck, ✅ отбор с метками, ✅ раскладка для телефона; осталось: подтвердить запись меток в Capture One, **значок в строке меню** на сервере (статус, перезапуск службы), alpha-релиз TabDeck с APK |
+| 0.9 | режим «подставки» для телефона; **конструктор тем** в приложении (свои цвета, стекло, фон из обложки съёмки), импорт/экспорт тем; офлайн-кэш и уведомления в TabDeck (экспорт закончился, срок сдачи) |
+| 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее, `install-linux.sh`; первый стабильный релиз; **публикация TabDeck в RuStore** (и, возможно, Google Play) |
+| дальше | Lightroom Classic, сеансы Capture One, tether viewer для X-T4, виджеты на экране Android, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
 
 Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
 
@@ -367,8 +405,11 @@ fun, built with photographers in mind. On first launch you pick usage scenarios 
 (and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
 backups. Local network only, no cloud. Server: macOS 13+ (Linux planned); client: the Android app or any browser.
 
-**0.7 beta**: spaces & widgets (12×6 grid, edit mode, 16 widgets incl. network health and Apple Shortcuts buttons),
-first-run setup by scenario, configurable "delivered" rule (colour tag / export / rating), faster redraws.
+**Status: beta.** Server 0.7.0-beta, native Android client **TabDeck 1.0.0-alpha1**. Ready and tested on real devices:
+spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native TabDeck client
+(tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters). Done but not fully
+verified: writing stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN bypass.
+Planned: menu-bar icon, theme builder, Linux server, store releases (RuStore) at 1.0.
 
 ![Spaces](docs/img/spaces/work.png)
 
@@ -451,12 +492,17 @@ cd ~/tabdock && ./install.sh        # venv + calendar helper + LaunchAgent, open
 Keep the folder outside Desktop/Documents/Downloads: background agents can't read those.
 To run it by hand: `.venv/bin/python server.py` → http://localhost:8787
 
-### Android app (v0.3)
+### Android app
 
-`android/` is a tiny (28 KB) WebView app that finds the Mac by itself (Bonjour `_tabdock._tcp` + subnet probe),
+**TabDeck** (`client-android/`, alpha) is a fully native Kotlin + Jetpack Compose client: every screen, widget, skin,
+settings, first-run setup and culling are native; tablet and phone layouts; Bonjour + subnet discovery, key pinning,
+Android 17 local-network permission, Wi-Fi-bound connections when a VPN is on. Build with
+`cd client-android && ./gradlew assembleRelease` (JDK 17).
+
+The old WebView shell lives in `android-webview/`: a tiny (28 KB) WebView app that finds the Mac by itself (Bonjour `_tabdock._tcp` + subnet probe),
 runs fullscreen, keeps the screen on, remembers the last Mac and sign-in, reopens the dock by itself when the Mac
-comes back, and fails over to another TabDock. Build without Gradle: `./android/build.sh` (Android SDK + JDK 17),
-then `adb install -r android/build/TabDock.apk`. Ready-made APK: [latest release](https://github.com/jjustping/tabdock/releases/latest). Keep `~/.android/tabdock-release.keystore` to be able to update.
+comes back, and fails over to another TabDock. Build without Gradle: `./android-webview/build.sh` (Android SDK + JDK 17),
+then `adb install -r android-webview/build/TabDock.apk`. Ready-made APK: [latest release](https://github.com/jjustping/tabdock/releases/latest). Keep `~/.android/tabdock-release.keystore` to be able to update.
 
 ### Pair the tablet
 
@@ -479,10 +525,10 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 ### Roadmap
 
-0.8 culling from the tablet (done in TabDeck alpha: thumbnail grid, stars/colour tags written via Capture One AppleScript) + menu-bar status
-icon on the server · 0.9 phone layout & "stand" mode, in-app theme builder · 1.0 Linux server (systemd, MPRIS, sensors,
-darktable/digiKam, tray icon) · **TabDeck**: a fully native Android client (Kotlin + Jetpack Compose) instead of the
-WebView shell · later: Lightroom Classic, Capture One sessions, X-T4 tether viewer, multiple computers, HTTPS.
+**0.8 (now)**: ✅ native TabDeck client, ✅ culling with stars/tags, ✅ phone layout; left: confirm tag writing in
+Capture One, menu-bar status icon, TabDeck alpha release · 0.9 phone "stand" mode, in-app theme builder, offline cache
+and notifications · 1.0 Linux server (systemd, MPRIS, sensors, darktable/digiKam, tray icon), first stable release,
+**TabDeck on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, X-T4 tether viewer, multiple computers, HTTPS.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ### macOS permissions
