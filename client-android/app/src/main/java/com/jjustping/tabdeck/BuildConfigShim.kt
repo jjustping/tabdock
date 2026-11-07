@@ -1,3 +1,3 @@
 package com.jjustping.tabdeck
 
-object BuildConfigShim { const val VERSION = "1.0.0-alpha1" }
+object BuildConfigShim { const val VERSION = "0.8.0-beta" }

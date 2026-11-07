@@ -4,17 +4,17 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер — **0.7.0-beta**, Android-клиент **TabDeck — 1.0.0-alpha1**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-клиент **TabDeck** — **0.8.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server 0.7.0-beta, Android client TabDeck 1.0.0-alpha1 — things still change and may break.*
+> *Beta: server and Android client TabDeck 0.8.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Релизы / Releases](https://github.com/jjustping/tabdock/releases)** — сервер и APK. Нативный клиент TabDeck пока
-собирается из `client-android/` (alpha-сборка в релизах появится после проверки записи меток в Capture One).
+**⬇ [Скачать 0.8.0-beta / Download](https://github.com/jjustping/tabdock/releases/tag/v0.8.0-beta)** — `TabDeck-0.8.0-beta.apk`
+(Android 8+, планшет и телефон) и код сервера для Mac.
 
 ---
 
@@ -160,7 +160,7 @@ cd ~/tabdock
 
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
 
-### TabDeck — нативный клиент для Android (alpha)
+### TabDeck — нативный клиент для Android (бета)
 
 `client-android/` — **полностью нативное приложение** (Kotlin + Jetpack Compose), а не страница в оболочке:
 все экраны, виджеты, скины, настройки, первая настройка и отбор кадров нарисованы нативно, с сервером оно
@@ -372,7 +372,7 @@ v0.1:
 | Съёмки Capture One: прогресс, статусы, сроки, правило «что считать отданным» (метка / экспорт / рейтинг), каталоги на внешних дисках | ✅ |
 | Съёмки по папкам (Photon Studio, Photoshop и др.) | 🧪 на реальных съёмках ещё не проверено |
 | Музыка, громкость, быстрые действия, Apple Shortcuts, погода, календарь, сеть, диски | ✅ |
-| **TabDeck** — нативный Android-клиент: все экраны, настройки и первая настройка нативные | ✅ alpha |
+| **TabDeck** — нативный Android-клиент: все экраны, настройки и первая настройка нативные | ✅ бета |
 | Раскладка для **телефона** | ✅ первая версия (Pixel 8) |
 | **Отбор с планшета/телефона**: миниатюры, просмотр на весь экран, фильтры | ✅ |
 | Запись ★ и цветных меток в Capture One (через его AppleScript) | 🧪 написано, запись ещё не подтверждена на живом каталоге |
@@ -385,7 +385,7 @@ v0.1:
 | Этап | Что будет |
 |---|---|
 | ~~0.7 beta~~ | ✅ пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды» |
-| **0.8** (сейчас) | ✅ нативный клиент TabDeck, ✅ отбор с метками, ✅ раскладка для телефона; осталось: подтвердить запись меток в Capture One, **значок в строке меню** на сервере (статус, перезапуск службы), alpha-релиз TabDeck с APK |
+| **0.8** (сейчас) | ✅ нативный клиент TabDeck, ✅ отбор с метками, ✅ раскладка для телефона; осталось: подтвердить запись меток в Capture One, **значок в строке меню** на сервере (статус, перезапуск службы), ~~бета-релиз TabDeck с APK~~ ✅ |
 | 0.9 | режим «подставки» для телефона; **конструктор тем** в приложении (свои цвета, стекло, фон из обложки съёмки), импорт/экспорт тем; офлайн-кэш и уведомления в TabDeck (экспорт закончился, срок сдачи) |
 | 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее, `install-linux.sh`; первый стабильный релиз; **публикация TabDeck в RuStore** (и, возможно, Google Play) |
 | дальше | Lightroom Classic, сеансы Capture One, tether viewer для X-T4, виджеты на экране Android, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
@@ -405,7 +405,7 @@ fun, built with photographers in mind. On first launch you pick usage scenarios 
 (and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
 backups. Local network only, no cloud. Server: macOS 13+ (Linux planned); client: the Android app or any browser.
 
-**Status: beta.** Server 0.7.0-beta, native Android client **TabDeck 1.0.0-alpha1**. Ready and tested on real devices:
+**Status: beta.** Server and native Android client **TabDeck 0.8.0-beta** ([download](https://github.com/jjustping/tabdock/releases/tag/v0.8.0-beta)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native TabDeck client
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters). Done but not fully
 verified: writing stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN bypass.
@@ -494,7 +494,7 @@ To run it by hand: `.venv/bin/python server.py` → http://localhost:8787
 
 ### Android app
 
-**TabDeck** (`client-android/`, alpha) is a fully native Kotlin + Jetpack Compose client: every screen, widget, skin,
+**TabDeck** (`client-android/`, beta) is a fully native Kotlin + Jetpack Compose client: every screen, widget, skin,
 settings, first-run setup and culling are native; tablet and phone layouts; Bonjour + subnet discovery, key pinning,
 Android 17 local-network permission, Wi-Fi-bound connections when a VPN is on. Build with
 `cd client-android && ./gradlew assembleRelease` (JDK 17).
@@ -526,7 +526,7 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 ### Roadmap
 
 **0.8 (now)**: ✅ native TabDeck client, ✅ culling with stars/tags, ✅ phone layout; left: confirm tag writing in
-Capture One, menu-bar status icon, TabDeck alpha release · 0.9 phone "stand" mode, in-app theme builder, offline cache
+Capture One, menu-bar status icon (TabDeck beta APK is out) · 0.9 phone "stand" mode, in-app theme builder, offline cache
 and notifications · 1.0 Linux server (systemd, MPRIS, sensors, darktable/digiKam, tray icon), first stable release,
 **TabDeck on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, X-T4 tether viewer, multiple computers, HTTPS.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).

@@ -32,7 +32,7 @@ from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.7.0-beta"
+VERSION = "0.8.0-beta"
 WEB = os.path.join(HERE, "web")
 
 
