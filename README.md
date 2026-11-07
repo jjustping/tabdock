@@ -9,7 +9,7 @@
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
 > *Beta: server and Android client TabDeck 0.8.0-beta — things still change and may break.*
 
-[Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта)
+[Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
@@ -397,6 +397,16 @@ Windows пока не планируется (оценка — [docs/WINDOWS.md]
 * Отдельный ключ на каждое устройство со списком и отзывом; подтверждение нового устройства на компьютере.
 * Bonjour и доступ только в домашних сетях (для ноутбука, который носят с собой).
 
+### Поддержать разработчика
+
+TabDock бесплатный и с открытым кодом. Если он вам пригодился и хочется сказать спасибо — можно перевести
+любую сумму через ЮMoney: наведите камеру на QR-код или откройте ссылку, сумму вы выбираете сами.
+
+[![Поддержать через ЮMoney](docs/img/donate.svg)](https://yoomoney.ru/to/4100115736818477)
+
+**[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — спасибо! Поддержать можно и иначе:
+звёздочка репозиторию, сообщение об ошибке или идея в [Issues](https://github.com/jjustping/tabdock/issues).
+
 ## English
 
 **TabDock turns an idle tablet (or phone) into a work dock for your computer** — for everyday work, study and
@@ -548,3 +558,13 @@ Also: password login, LAN scan, Bonjour advertising, wfolio link checks.
 a playing Music/Spotify track, and Capture One sessions (only catalogs are supported).
 
 License: MIT.
+
+### Support the developer
+
+TabDock is free and open source. If it is useful to you and you would like to say thanks, you can send any amount
+via YooMoney — scan the QR code or open the link; you choose the amount.
+
+[![Support via YooMoney](docs/img/donate.svg)](https://yoomoney.ru/to/4100115736818477)
+
+**[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — thank you! A star, a bug report or an idea
+in [Issues](https://github.com/jjustping/tabdock/issues) helps too.
