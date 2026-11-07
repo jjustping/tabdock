@@ -26,6 +26,9 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -120,7 +123,7 @@ class Dialogs(val deck: Deck) {
         var note by remember { mutableStateOf(sh.s("note")) }
         Sheet(sh.s("name")) {
             T("Статус ${if (sh.b("status_manual")) "(вручную)" else "(авто: ${STATUS[sh.s("status_auto")]})"}", 13.sp, s.muted)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
                 (listOf("" to "Авто") + STATUS.toList()).forEach { (k, n) -> Seg(n, st == k) { st = k } }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -199,8 +202,11 @@ class Dialogs(val deck: Deck) {
 @Composable fun Sheet(title: String, content: @Composable () -> Unit) {
     DeckCard(title, Modifier.fillMaxWidth(), pad = 20.dp) { Column(Modifier.verticalScroll(rememberScrollState())) { content() } }
 }
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun Actions(content: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) { content() }
+    // wraps onto a second line on narrow screens instead of pushing buttons off the edge
+    FlowRow(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
 }
 @Composable fun Seg(text: String, on: Boolean, onClick: () -> Unit) {
     val s = LocalSkin.current

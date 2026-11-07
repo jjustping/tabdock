@@ -36,6 +36,8 @@ on run argv
   set collId to item 1 of argv
   set catName to item 2 of argv
   set changes to items 3 thru -1 of argv
+  -- never start Capture One ourselves: only talk to it when the user already has it open
+  if application "Capture One" is not running then return "nodoc"
   tell application "Capture One"
     if (count of documents) is 0 then return "nodoc"
     set doc to current document

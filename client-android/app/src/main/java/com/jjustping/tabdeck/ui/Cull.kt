@@ -97,13 +97,14 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 10.dp)) {
-            Btn("Назад", "prev") { if (viewer != null) viewer = null else onClose() }
-            Spacer(Modifier.width(14.dp))
+            val compact = LocalCompact.current
+            Btn(if (compact) null else "Назад", "prev") { if (viewer != null) viewer = null else onClose() }
+            Spacer(Modifier.width(if (compact) 10.dp else 14.dp))
             Column(Modifier.weight(1f)) {
-                T("Отбор · ${shoot.s("name")}", 22.sp, weight = FontWeight.Bold, maxLines = 1)
+                T(if (compact) shoot.s("name") else "Отбор · ${shoot.s("name")}", if (compact) 18.sp else 22.sp, weight = FontWeight.Bold, maxLines = 1)
                 T("${frames.size} кадров · ★ ${frames.count { it.rating > 0 }} · с меткой ${frames.count { it.color > 0 }} · экспорт ${frames.count { it.exported }}", 13.sp, s.muted)
             }
-            Seg("Автопереход", autoNext) { autoNext = !autoNext; deck.store.put("cull_next", if (autoNext) "1" else "0") }
+            Seg(if (compact) "Авто ▸" else "Автопереход", autoNext) { autoNext = !autoNext; deck.store.put("cull_next", if (autoNext) "1" else "0") }
         }
         if (viewer == null) {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -112,7 +113,7 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
                     .border(3.dp, if (filter == "c$ci") s.text else Color.Transparent, CircleShape).clickable { filter = if (filter == "c$ci") "all" else "c$ci" })
             }
             error?.let { T(it, 15.sp, s.red) }
-            LazyVerticalGrid(GridCells.Adaptive(180.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyVerticalGrid(GridCells.Adaptive(if (LocalCompact.current) 150.dp else 180.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(shown, key = { _, f -> f.img }) { i, f ->
                     Column(Modifier.clip(RoundedCornerShape(12.dp)).background(s.inner).clickable { viewIds = shown.map { it.img }; viewer = i }) {
                         Box(Modifier.fillMaxWidth().aspectRatio(1.5f)) {
@@ -122,7 +123,8 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
                         }
                         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             T(f.name.substringBeforeLast('.'), 12.sp, s.muted, modifier = Modifier.weight(1f), maxLines = 1)
-                            Stars(f.rating, 13) { r -> apply(f, rating = if (r == f.rating) 0 else r) }
+                            // on phones the grid stars are display-only: they are too small and too easy to hit while scrolling
+                            if (LocalCompact.current) Stars(f.rating, 12, null) else Stars(f.rating, 13) { r -> apply(f, rating = if (r == f.rating) 0 else r) }
                         }
                     }
                 }
@@ -134,22 +136,31 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
                 HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), key = { list[it].img }) { p ->
                     val f = list[p]
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(Color.Black)) {
-                        RemoteImage(deck, "/api/cull/thumb?key=$ek&img=${f.img}", Modifier.fillMaxSize(), crop = false)
+                        RemoteImage(deck, "/api/cull/thumb?key=$ek&img=${f.img}", Modifier.fillMaxSize(), crop = false, transparentBg = true)
                         RemoteImage(deck, "/api/cull/preview?key=$ek&img=${f.img}", Modifier.fillMaxSize(), crop = false, transparentBg = true)
                     }
                 }
                 val f = list.getOrNull(pager.currentPage)
                 if (f != null) {
                     val next: () -> Unit = { scope.launch { if (pager.currentPage < list.size - 1) pager.animateScrollToPage(pager.currentPage + 1) } }
-                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.width(220.dp)) {
-                            T(f.name, 16.sp, weight = FontWeight.SemiBold, maxLines = 1)
-                            T("${pager.currentPage + 1} из ${list.size}" + if (f.exported) " · экспортирован" else "", 13.sp, s.muted)
+                    val compact = LocalCompact.current
+                    val info: @Composable () -> Unit = {
+                        T(f.name, 16.sp, weight = FontWeight.SemiBold, maxLines = 1)
+                        T("${pager.currentPage + 1} из ${list.size}" + if (f.exported) " · экспортирован" else "", 13.sp, s.muted)
+                    }
+                    if (compact) Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) { info() }
+                        Stars(f.rating, 26) { r -> apply(f, rating = if (r == f.rating) 0 else r, advance = next) }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(top = if (compact) 8.dp else 10.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = if (compact) Arrangement.SpaceBetween else Arrangement.Start) {
+                        if (!compact) {
+                            Column(Modifier.width(220.dp)) { info() }
+                            Stars(f.rating, 34) { r -> apply(f, rating = if (r == f.rating) 0 else r, advance = next) }
+                            Spacer(Modifier.width(24.dp))
                         }
-                        Stars(f.rating, 34) { r -> apply(f, rating = if (r == f.rating) 0 else r, advance = next) }
-                        Spacer(Modifier.width(24.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (ci in 0..7) Box(Modifier.size(42.dp).clip(CircleShape).background(if (ci == 0) s.inner else TAG_COLORS[ci])
+                        Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp)) {
+                            for (ci in 0..7) Box(Modifier.size(if (compact) 38.dp else 42.dp).clip(CircleShape).background(if (ci == 0) s.inner else TAG_COLORS[ci])
                                 .border(3.dp, if (f.color == ci) s.text else Color.Transparent, CircleShape)
                                 .clickable { apply(f, color = if (f.color == ci) 0 else ci, advance = next) }, contentAlignment = Alignment.Center) {
                                 if (ci == 0) T("✕", 15.sp, s.muted)
@@ -162,10 +173,10 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
     }
 }
 
-@Composable fun Stars(rating: Int, size: Int, onSet: (Int) -> Unit) {
+@Composable fun Stars(rating: Int, size: Int, onSet: ((Int) -> Unit)?) {
     val s = LocalSkin.current
     Row {
-        for (r in 1..5) Box(Modifier.size((size + 8).dp).clickable { onSet(r) }, contentAlignment = Alignment.Center) {
+        for (r in 1..5) Box(Modifier.size((size + 8).dp).let { m -> if (onSet != null) m.clickable { onSet(r) } else m }, contentAlignment = Alignment.Center) {
             T("★", size.sp, if (r <= rating) s.amber else s.dim.copy(.5f))
         }
     }

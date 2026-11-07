@@ -2,6 +2,8 @@ package com.jjustping.tabdeck
 
 import android.content.Intent
 import android.net.Uri
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -15,6 +17,8 @@ import com.jjustping.tabdeck.data.Deck
 import com.jjustping.tabdeck.ui.TabDeckApp
 
 /** TabDeck — native client for a TabDock server (computer at home). */
+private const val LAN = "android.permission.ACCESS_LOCAL_NETWORK"
+
 class MainActivity : ComponentActivity() {
     private lateinit var deck: Deck
 
@@ -24,8 +28,16 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         deck = Deck(applicationContext, lifecycleScope)
         setContent { TabDeckApp(deck) }
-        deck.start()
+        // Android 17+: talking to computers on the home network is a runtime permission. Without it the system
+        // asks to pick a device on every launch; with it discovery and the connection just work.
+        if (Build.VERSION.SDK_INT >= 37 && checkSelfPermission(LAN) != PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(LAN), 7)
+        else deck.start()
         handle(intent)
+    }
+
+    override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, res: IntArray) {
+        super.onRequestPermissionsResult(code, perms, res)
+        if (code == 7) deck.start()
     }
 
     override fun onNewIntent(intent: Intent) {

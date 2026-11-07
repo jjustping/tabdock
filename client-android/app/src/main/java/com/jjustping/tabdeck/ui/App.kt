@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -74,6 +78,8 @@ fun TabDeckApp(deck: Deck) {
     LaunchedEffect(Unit) { deck.toasts.collect { toast = it; delay(2400); if (toast == it) toast = null } }
     LaunchedEffect(Unit) { deck.events.collect { banner = it; delay(12000); if (banner === it) banner = null } }
 
+    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
+    androidx.compose.runtime.CompositionLocalProvider(LocalCompact provides compact) {
     ProvideSkin(s) {
         Box(Modifier.fillMaxSize().background(s.bg)) {
             when {
@@ -81,7 +87,7 @@ fun TabDeckApp(deck: Deck) {
                 conn == Conn.NEED_PAIRING || forceConnect -> ConnectScreen(deck) { forceConnect = false }
                 web != null -> WebScreen(deck, web!!) { web = null }
                 all != null && (wizard || (!setupSeen && !all.o("config").b("setup_done"))) -> SetupWizard(deck, all) { wizard = false; setupSeen = true; tab = "home" }
-                cull != null -> Box(Modifier.fillMaxSize().padding(20.dp)) { CullScreen(deck, cull!!) { cull = null } }
+                cull != null -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(if (compact) 10.dp else 20.dp)) { CullScreen(deck, cull!!) { cull = null } }
                 else -> {
                     val tabsShown = all.o("config").a("tabs")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
                     val c = Ctx(deck, all, state, openShoot = { dialogs.shoot(it) }, openNote = { dialogs.note(it) },
@@ -89,7 +95,7 @@ fun TabDeckApp(deck: Deck) {
                         editWidget = { w -> dialogs.widgetOpts(w, all) { opts -> saveWidgetOpts(deck, all, w, opts) } })
                     Column(Modifier.fillMaxSize().imePadding()) {
                         TopBar(c)
-                        Box(Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 6.dp)) {
+                        Box(Modifier.weight(1f).padding(horizontal = if (compact) 12.dp else 20.dp, vertical = 6.dp)) {
                             when (tab) {
                                 "shoots" -> ShootsScreen(c)
                                 "notes" -> NotesScreen(c)
@@ -122,6 +128,7 @@ fun TabDeckApp(deck: Deck) {
             }
         }
     }
+    }
 }
 
 private fun saveWidgetOpts(deck: Deck, all: JSONObject?, w: JSONObject, opts: JSONObject) {
@@ -135,6 +142,29 @@ private fun saveWidgetOpts(deck: Deck, all: JSONObject?, w: JSONObject, opts: JS
     val now by produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); delay(5000) } }
     val cal = Calendar.getInstance().apply { timeInMillis = now }
     val sys = c.state.o("sys"); val w = c.all.o("weather")
+    if (LocalCompact.current) {
+        // phone: time + weather on one line, the computer's numbers in a scrollable strip below
+        Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                T("${Fmt.pad(cal.get(Calendar.HOUR_OF_DAY))}:${Fmt.pad(cal.get(Calendar.MINUTE))}", 30.sp, weight = FontWeight.Bold)
+                Spacer(Modifier.width(10.dp))
+                T(Fmt.DS[cal.get(Calendar.DAY_OF_WEEK) - 1] + ", ${cal.get(Calendar.DAY_OF_MONTH)} ${Fmt.MON[cal.get(Calendar.MONTH)]}", 14.sp, s.muted, modifier = Modifier.weight(1f), maxLines = 1)
+                if (w.d("temp") != null) { Ic(weatherIcon(w.i("code")), 20.dp); Spacer(Modifier.width(6.dp)); T("${w.d("temp")?.toInt()}°", 18.sp, weight = FontWeight.Bold) }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                val root = sys.a("disks").objs().firstOrNull { !it.b("external") }
+                Stat("CPU", "${sys.d("cpu")?.toInt() ?: "—"}%", (sys.d("cpu") ?: 0.0) > 85)
+                Stat("Темп.", "${sys.o("temp").d("cpu")?.toInt() ?: "—"}°", (sys.o("temp").d("cpu") ?: 0.0) > 85)
+                Stat("Память", "${sys.o("mem").d("pct")?.toInt() ?: "—"}%", (sys.o("mem").d("pct") ?: 0.0) > 90)
+                Stat("Диск", Fmt.bytes(root.d("free")), (root.d("pct") ?: 0.0) > 92)
+                c.all.o("shoots").a("volumes").objs().firstOrNull()?.let { v ->
+                    val d = sys.a("disks").objs().firstOrNull { it.s("mount") == v.s("mount") }
+                    Stat(v.s("name"), d?.let { Fmt.bytes(it.d("free")) } ?: "нет", d == null || (d.d("pct") ?: 0.0) > 92)
+                }
+            }
+        }
+        return
+    }
     Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column {
             T("${Fmt.pad(cal.get(Calendar.HOUR_OF_DAY))}:${Fmt.pad(cal.get(Calendar.MINUTE))}", 38.sp, weight = FontWeight.Bold)

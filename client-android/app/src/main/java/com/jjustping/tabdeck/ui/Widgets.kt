@@ -411,8 +411,8 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
     var armed by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(armed) { if (armed != null) { delay(3000); armed = null } }
     val awake = c.state.b("awake")
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for ((a, ic, t) in SYS_TILES) {
+    for (row in SYS_TILES.chunked(if (LocalCompact.current) 2 else 4)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+        for ((a, ic, t) in row) {
             val on = a == "awake" && awake; val arm = armed == a
             Row(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp))
                 .background(when { arm -> s.red.copy(.25f); on -> s.amber.copy(.2f); else -> s.inner })

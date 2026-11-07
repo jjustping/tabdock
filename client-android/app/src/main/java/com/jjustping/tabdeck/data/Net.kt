@@ -26,13 +26,44 @@ import java.util.Collections
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+/**
+ * The Wi-Fi network itself. A VPN on the phone (corporate, "unblock" apps…) often swallows LAN traffic too;
+ * opening connections on the Wi-Fi network directly reaches the computer anyway when the VPN allows bypass.
+ */
+object Lan {
+    @Volatile var wifi: android.net.Network? = null
+    @Volatile var vpn = false
+    fun init(ctx: Context) {
+        val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val req = android.net.NetworkRequest.Builder().addTransportType(android.net.NetworkCapabilities.TRANSPORT_WIFI).build()
+        runCatching { cm.registerNetworkCallback(req, object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(n: android.net.Network) { wifi = n }
+            override fun onLost(n: android.net.Network) { if (wifi == n) wifi = null }
+        }) }
+        runCatching { cm.registerDefaultNetworkCallback(object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onCapabilitiesChanged(n: android.net.Network, c: android.net.NetworkCapabilities) {
+                vpn = c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
+            }
+        }) }
+    }
+    private val private = Regex("""^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)""")
+    fun open(u: URL): java.net.URLConnection {
+        val w = wifi
+        if (w != null && private.containsMatchIn(u.host)) runCatching { return w.openConnection(u) }
+        return u.openConnection()
+    }
+    fun explain(e: Throwable): String =
+        if (vpn) "Не достучаться до компьютера: на устройстве включён VPN, и он не пускает в домашнюю сеть. Разрешите в VPN локальную сеть (LAN) или выключите его."
+        else "Не удалось подключиться: компьютер не отвечает (${e.message?.substringBefore(" from ") ?: "нет ответа"})"
+}
+
 /** HTTP client for one TabDock server. The access key goes in the X-Dock-Key header. */
 class Api(val base: String, @Volatile var key: String?) {
 
     class HttpError(val code: Int, msg: String) : Exception(msg)
 
     private fun open(path: String, timeoutMs: Int): HttpURLConnection {
-        val c = URL(base.trimEnd('/') + path).openConnection() as HttpURLConnection
+        val c = Lan.open(URL(base.trimEnd('/') + path)) as HttpURLConnection
         c.connectTimeout = timeoutMs
         c.readTimeout = timeoutMs * 3
         key?.let { c.setRequestProperty("X-Dock-Key", it) }

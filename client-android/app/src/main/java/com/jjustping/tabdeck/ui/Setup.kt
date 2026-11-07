@@ -3,6 +3,7 @@ package com.jjustping.tabdeck.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,13 +63,13 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         DeckCard("Пространства и сценарии") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                T("Пространства: " + spacesOf(c.all).joinToString(", ") { it.s("name") } + ". Раскладку меняет карандаш на главной.", 14.sp, s.muted, modifier = Modifier.weight(1f))
-                Btn("Первая настройка", "star") { onWizard() }
+            Column {
+                T("Пространства: " + spacesOf(c.all).joinToString(", ") { it.s("name") } + ". Раскладку меняет карандаш на главной.", 14.sp, s.muted)
+                Btn("Первая настройка", "star", modifier = Modifier.padding(top = 10.dp)) { onWizard() }
             }
         }
         DeckCard("Оформление") {
-            Grid(SKINS, 4) { k ->
+            Grid(SKINS, if (LocalCompact.current) 2 else 4) { k ->
                 Column(Modifier.clip(RoundedCornerShape(14.dp)).border(2.dp, if (k.id == cur.id) s.accent else Color.Transparent, RoundedCornerShape(14.dp))
                     .background(s.inner).clickable { c.deck.setSkin(k.id) }) {
                     Box(Modifier.fillMaxWidth().height(64.dp).background(k.bg)) {
@@ -75,15 +79,15 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
                     Column(Modifier.padding(10.dp)) { T(k.name, 15.sp, weight = FontWeight.SemiBold); T(k.desc, 12.sp, s.muted) }
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {
-                T("Скин запоминается на этом устройстве.", 13.sp, s.dim, modifier = Modifier.weight(1f))
+            Column(Modifier.padding(top = 10.dp)) {
+                T("Скин запоминается на этом устройстве.", 13.sp, s.dim, modifier = Modifier.padding(bottom = 8.dp))
                 Btn("Сделать скином для всех") { cfgPost(c, JSONObject().put("skin", cur.id)); c.deck.toast("Новые устройства откроются в «${cur.name}»") }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            WeatherSettings(c, Modifier.weight(1f))
-            DeckCard("Календарь компьютера", Modifier.weight(1f)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            WeatherSettings(c, Modifier.fillMaxWidth())
+            DeckCard("Календарь компьютера", Modifier.fillMaxWidth()) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Seg("Показывать события", (cfg?.optBoolean("calendar", true) ?: true)) { cfgPost(c, JSONObject().put("calendar", true)) }
                     Seg("Выключить", !(cfg?.optBoolean("calendar", true) ?: true)) { cfgPost(c, JSONObject().put("calendar", false)) }
                 }
@@ -98,7 +102,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             val name by c.deck.serverName.collectAsState()
             T("$name · ${c.deck.api?.base ?: ""}", 16.sp)
             T("Сервер ${c.state.s("version")} · TabDeck ${com.jjustping.tabdeck.BuildConfigShim.VERSION}", 13.sp, s.muted)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 12.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Btn("Сменить компьютер", "computer") { onConnect() }
                 Btn("Веб-версия", "link") { openWeb("/?tab=settings") }
             }
@@ -132,11 +136,11 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
 @Composable fun RulePicker(rule: JSONObject, onChange: (JSONObject) -> Unit) {
     val s = LocalSkin.current
     val type = rule.s("type", "export")
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for ((k, n) in listOf("export" to "Экспортированные", "color" to "С цветной меткой", "color_or_export" to "Метка или экспорт", "rating" to "По рейтингу"))
             Seg(n, type == k) { onChange(JSONObject(rule.toString()).put("type", k)) }
     }
-    if (type == "color" || type == "color_or_export") Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {
+    if (type == "color" || type == "color_or_export") Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 10.dp)) {
         for (ci in 1..7) Box(Modifier.size(38.dp).clip(CircleShape).background(TAG_COLORS[ci]).border(3.dp, if (rule.i("color", 4) == ci) s.text else Color.Transparent, CircleShape)
             .clickable { onChange(JSONObject(rule.toString()).put("color", ci)) })
         T("метка «${TAG_NAMES[rule.i("color", 4)]}»", 14.sp, s.muted)
@@ -164,7 +168,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
         Spacer(Modifier.height(10.dp))
         TextInput(q, { q = it }, "Добавить: начните вводить название", Modifier.fillMaxWidth())
         val sug = if (q.length < 2) emptyList() else installed.filter { it.contains(q, true) && it !in apps }.take(8)
-        if (sug.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+        if (sug.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp)) {
             for (a in sug) Seg(a, false) { cfgPost(c, JSONObject().put("apps", JSONArray(apps + a))); q = "" }
         }
         T("На главной показываются первые 8 установленных.", 13.sp, s.dim, modifier = Modifier.padding(top = 8.dp))
@@ -174,7 +178,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
 @Composable fun FlowChips(items: List<String>, onRemove: (String) -> Unit) {
     val s = LocalSkin.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (row in items.chunked(5)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (row in items.chunked(if (LocalCompact.current) 2 else 5)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (a in row) Row(Modifier.clip(RoundedCornerShape(10.dp)).border(1.dp, s.accent, RoundedCornerShape(10.dp)).clickable { onRemove(a) }
                 .padding(horizontal = 12.dp, vertical = 8.dp)) { T("$a  ✕", 14.sp, s.accent, maxLines = 1) }
         }
@@ -188,7 +192,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
     val manual = c.all.o("config").a("c1_catalogs").strs()
     LaunchedEffect(manual.joinToString()) { data = runCatching { c.deck.api!!.obj("/api/catalogs", 10000) }.getOrNull() }
     DeckCard("Каталоги Capture One") {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Seg("Автоматически (открытый в Capture One)", manual.isEmpty()) { cfgPost(c, JSONObject().put("c1_catalogs", JSONArray())) }
             Seg("Выбрать вручную", manual.isNotEmpty()) { c.deck.toast("Отметьте нужные каталоги ниже") }
         }
@@ -228,9 +232,9 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             Column(Modifier.weight(1f)) { T(r.s("app"), 15.sp, weight = FontWeight.SemiBold); T(r.s("path"), 12.sp, s.muted, mono = true) }
             Btn(icon = "plus", danger = true) { cfgPost(c, JSONObject().put("folder_roots", JSONArray(roots.filterIndexed { j, _ -> j != i }))) }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextInput(path, { path = it }, "/Volumes/SSD/Съёмки", Modifier.weight(2f)); Spacer(Modifier.width(8.dp))
-            TextInput(app, { app = it }, "Программа", Modifier.weight(1f)); Spacer(Modifier.width(8.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextInput(path, { path = it }, "/Volumes/SSD/Съёмки", Modifier.fillMaxWidth())
+            TextInput(app, { app = it }, "Программа", Modifier.fillMaxWidth())
             Btn("Добавить", primary = true) { if (path.isNotBlank()) { cfgPost(c, JSONObject().put("folder_roots", JSONArray(roots + JSONObject().put("path", path.trim()).put("app", app.ifBlank { "Папки" })))); path = "" } }
         }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {
@@ -275,8 +279,9 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
         deck.store.space = spaces.firstOrNull()?.s("id")
         onDone()
     }
-    Box(Modifier.fillMaxSize().background(s.bg), contentAlignment = Alignment.Center) {
-        DeckCard(null, Modifier.widthIn(max = 900.dp).fillMaxWidth(.92f), pad = 26.dp) {
+    Box(Modifier.fillMaxSize().background(s.bg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
+        val compact = LocalCompact.current
+        DeckCard(null, Modifier.widthIn(max = 900.dp).fillMaxWidth(if (compact) .96f else .92f).let { if (compact) it.fillMaxHeight(.94f) else it }, pad = if (compact) 18.dp else 26.dp) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     steps.indices.forEach { i -> Box(Modifier.size(28.dp, 6.dp).clip(RoundedCornerShape(3.dp)).background(if (i == step) s.accent else if (i < step) s.muted else s.border)) }
@@ -284,17 +289,17 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
                 Btn("Пропустить") { deck.post("/api/config", JSONObject().put("setup_done", true)); onDone() }
             }
             Spacer(Modifier.height(18.dp))
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f, fill = compact).verticalScroll(rememberScrollState())) {
                 when (name) {
                     "hello" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         Ic("computer", 64.dp, s.accent); Spacer(Modifier.height(10.dp))
                         T("Привет! Это TabDeck", 32.sp, weight = FontWeight.Bold)
-                        T("Планшет, который лежит без дела, становится доком для работы: задачи, съёмки, музыка, состояние компьютера. Настроим всё под вас — займёт минуту.", 17.sp, s.muted, align = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+                        T("Планшет или телефон, который лежит без дела, становится доком для работы: задачи, съёмки, музыка, состояние компьютера. Настроим всё под вас — займёт минуту.", 17.sp, s.muted, align = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
                     }
                     "usage" -> {
                         T("Для чего вам док?", 26.sp, weight = FontWeight.Bold); T("Можно выбрать несколько — для каждого будет своё пространство.", 15.sp, s.muted)
                         Spacer(Modifier.height(12.dp))
-                        Grid(USAGE, 2, 12) { (id, ic, t) ->
+                        Grid(USAGE, if (compact) 1 else 2, 12) { (id, ic, t) ->
                             val on = id in usage
                             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (on) s.accent.copy(.1f) else s.inner)
                                 .border(2.dp, if (on) s.accent else s.border, RoundedCornerShape(18.dp)).clickable { usage = if (on) usage - id else usage + id }.padding(18.dp)) {
@@ -304,7 +309,7 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
                     }
                     "photo" -> {
                         T("Съёмки", 26.sp, weight = FontWeight.Bold); T("Где вы обрабатываете фото?", 14.sp, s.muted, modifier = Modifier.padding(top = 6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
                             Seg("Capture One", editor == "c1") { editor = "c1" }; Seg("Photon Studio, Photoshop… (папки)", editor == "folders") { editor = "folders" }; Seg("Пока не нужно", editor == "none") { editor = "none" }
                         }
                         if (editor == "folders") TextInput(folder, { folder = it }, "/Volumes/SSD/Съёмки — папка, где каждая подпапка = съёмка", Modifier.fillMaxWidth())
@@ -321,7 +326,7 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
                     }
                     "look" -> {
                         T("Оформление", 26.sp, weight = FontWeight.Bold); Spacer(Modifier.height(10.dp))
-                        Grid(SKINS, 4) { k -> Column(Modifier.clip(RoundedCornerShape(14.dp)).border(2.dp, if (k.id == (deck.skin.value ?: "classic")) s.accent else Color.Transparent, RoundedCornerShape(14.dp))
+                        Grid(SKINS, if (compact) 2 else 4) { k -> Column(Modifier.clip(RoundedCornerShape(14.dp)).border(2.dp, if (k.id == (deck.skin.value ?: "classic")) s.accent else Color.Transparent, RoundedCornerShape(14.dp))
                             .background(s.inner).clickable { deck.setSkin(k.id) }) {
                             Box(Modifier.fillMaxWidth().height(56.dp).background(k.bg)) { Box(Modifier.padding(8.dp).size(60.dp, 34.dp).clip(RoundedCornerShape(8.dp)).background(k.card)) }
                             T(k.name, 14.sp, weight = FontWeight.SemiBold, modifier = Modifier.padding(8.dp)) } }

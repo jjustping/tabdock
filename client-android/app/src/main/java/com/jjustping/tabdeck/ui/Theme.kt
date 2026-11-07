@@ -107,6 +107,8 @@ val SKINS: List<Skin> = listOf(
 )
 fun skinById(id: String?) = SKINS.firstOrNull { it.id == id } ?: SKINS[0]
 val LocalSkin = staticCompositionLocalOf { SKINS[0] }
+/** true on phones (narrow screens): one-column layouts, smaller top bar. */
+val LocalCompact = androidx.compose.runtime.compositionLocalOf { false }
 
 @Composable fun ProvideSkin(s: Skin, content: @Composable () -> Unit) = CompositionLocalProvider(LocalSkin provides s, content = content)
 

@@ -24,6 +24,7 @@ enum class Conn { STARTING, NEED_PAIRING, CONNECTED, LOST }
 class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     val store = Store(ctx)
     val discovery = Discovery(ctx, store)
+    init { Lan.init(ctx) }
 
     @Volatile var api: Api? = null
         private set
@@ -70,7 +71,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     /** Pair with a key (QR link or adb), then pin the server's identity. */
     fun pairWithKey(base: String, key: String) = scope.launch {
         val a = Api(base, key)
-        val pin = runCatching { a.obj("/api/pin") }.getOrElse { toast("Не удалось подключиться: ${it.message}"); return@launch }
+        val pin = runCatching { a.obj("/api/pin") }.getOrElse { toast(Lan.explain(it)); return@launch }
         store.pin(pin.getString("id"), base, pin.optString("name"), pin.getString("key"), key)
         useServer(base, key, pin.optString("name"))
         toast("Подключено: ${pin.optString("name")}")

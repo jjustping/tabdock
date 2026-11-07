@@ -73,7 +73,7 @@ private fun place(ws: List<JSONObject>, cols: Int): List<IntArray> {
     }
     return ws.map { wj ->
         val w = if (cols == 12) wj.i("w", 4).coerceIn(2, 12) else (wj.i("w", 4) * cols / 12.0).toInt().coerceIn(2, cols)
-        val h = wj.i("h", 2).coerceIn(1, 8)
+        val h = if (cols == 2) wj.i("h", 2).coerceIn(2, 4) else wj.i("h", 2).coerceIn(1, 8)   // phone: one column, no giant cards
         var r = 0
         while (true) {
             var placed = -1
@@ -118,9 +118,9 @@ fun HomeScreen(c: Ctx, dialogs: Dialogs) {
                 }
             }
             if (edit) {
-                Btn("Виджет", "plus") { dialogs.catalog(sp) { type, def -> mutate { t, _ -> t.getJSONArray("widgets").put(JSONObject().put("id", rid()).put("type", type).put("w", def.w).put("h", def.h).put("opts", JSONObject())) } } }
+                Btn(if (LocalCompact.current) null else "Виджет", "plus") { dialogs.catalog(sp) { type, def -> mutate { t, _ -> t.getJSONArray("widgets").put(JSONObject().put("id", rid()).put("type", type).put("w", def.w).put("h", def.h).put("opts", JSONObject())) } } }
                 Spacer(Modifier.width(8.dp))
-                Btn("Пространство", "gear") { dialogs.space(sp, spaces, TEMPLATES.mapValues { it.value.first },
+                Btn(if (LocalCompact.current) null else "Пространство", "gear") { dialogs.space(sp, spaces, TEMPLATES.mapValues { it.value.first },
                     onSave = { name, icon -> mutate { t, _ -> t.put("name", name).put("icon", icon) } },
                     onAdd = { key -> val n = if (key == null) JSONObject().put("id", rid()).put("name", "Новое").put("icon", "home").put("widgets", JSONArray()) else fromTemplate(key)
                         save(spaces + n); select(n.s("id")) },
@@ -142,10 +142,10 @@ fun HomeScreen(c: Ctx, dialogs: Dialogs) {
                 if (abs(dx) > 160) { val i = spaces.indexOfFirst { it.s("id") == sp.s("id") }; select(spaces[(i + (if (dx < 0) 1 else -1) + spaces.size) % spaces.size].s("id")) }
             }) { _, d -> dx += d }
         }) {
-            val cols = if (maxWidth < 700.dp) 4 else 12
+            val cols = when { maxWidth < 600.dp -> 2; maxWidth < 700.dp -> 4; else -> 12 }
             val gap = 12.dp
             val cellW = (maxWidth - gap * (cols - 1)) / cols
-            val cellH = if (cols == 12) (maxHeight - gap * 5) / 6 else 130.dp
+            val cellH = when (cols) { 12 -> (maxHeight - gap * 5) / 6; 2 -> 96.dp; else -> 130.dp }
             val slots = place(widgets, cols)
             val rows = (slots.maxOfOrNull { it[0] + it[3] } ?: 0).coerceAtLeast(1)
             if (widgets.isEmpty()) Empty("Пространство пустое — нажмите карандаш и добавьте виджеты")
