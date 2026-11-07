@@ -491,8 +491,9 @@ v0.1:
 | ~~0.8 beta~~ | ✅ нативное Android-приложение, ✅ отбор с метками, ✅ раскладка для телефона, ✅ бета-релиз с APK |
 | ~~0.9 beta~~ | ✅ подставка, ✅ конструктор скинов, ✅ офлайн-кэш, ✅ уведомления, ✅ VPN |
 | **0.10** (сейчас) | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям; осталось: подтвердить запись меток в Capture One и обход VPN на компьютере |
-| 1.0 | **мастер установки** (что и откуда поставить, по шагам, для Mac и Linux), darktable/digiKam на Linux; первый стабильный релиз; **публикация приложения TabDock в RuStore** (и, возможно, Google Play) |
+| 1.0 | **мастер установки** (что и откуда поставить, по шагам, для Mac и Linux); **кнопка «Сканировать QR-код»** в приложении; **проверка обновлений** со списком изменений (приложение предлагает обновиться); **настраиваемая нижняя панель** (убрать «Съёмки», если вы не фотограф); на компьютере вместо копии дока — **панель управления** (подключение устройств, пароль, обновления); проверка, что приложение не мешает глубокому сну телефона; darktable/digiKam на Linux; первый стабильный релиз; **публикация в RuStore** (и, возможно, Google Play) |
 | дальше | Lightroom Classic, сеансы Capture One, виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
+| обсуждается | **удалённый доступ** — смотреть состояние компьютера и съёмок не из дома (безопасно, без открытых портов в интернет) |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
 Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
@@ -673,8 +674,9 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 ### Roadmap
 
 ~~0.9~~ stand mode, skin builder, offline cache, notifications · **0.10 (now)**: ✅ Linux server + installer, ✅ menu-bar /
-tray icon, ✅ cheat sheets · 1.0 setup guide for the computer, darktable/digiKam, first stable release,
-**the TabDock app on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, multiple computers, HTTPS.
+tray icon, ✅ cheat sheets · 1.0 setup guide for the computer, in-app QR scanner, update check with changelog,
+customizable bottom bar, a control panel instead of the dock in the computer's own browser, darktable/digiKam, first stable release,
+**the TabDock app on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, multiple computers, HTTPS · under discussion: remote access from outside the home network.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ### macOS permissions
