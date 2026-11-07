@@ -4,17 +4,22 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-клиент **TabDeck** — **0.8.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.9.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android client TabDeck 0.8.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.9.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать 0.8.0-beta / Download](https://github.com/jjustping/tabdock/releases/tag/v0.8.0-beta)** — `TabDeck-0.8.0-beta.apk`
+**⬇ [Скачать / Download](https://github.com/jjustping/tabdock/releases)** — APK для Android
 (Android 8+, планшет и телефон) и код сервера для Mac.
+
+| | |
+|---|---|
+| ![Приложение на планшете](docs/img/app/tablet-home.png) | ![Свой скин с обложкой съёмки](docs/img/app/tablet-custom-skin.png) |
+| *Приложение TabDock на планшете (демо-данные)* | *Свой скин: стекло, оранжевый акцент, размытая обложка съёмки* |
 
 ---
 
@@ -160,14 +165,36 @@ cd ~/tabdock
 
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
 
-### TabDeck — нативный клиент для Android (бета)
+### Приложение TabDock для Android (бета)
 
 `client-android/` — **полностью нативное приложение** (Kotlin + Jetpack Compose), а не страница в оболочке:
 все экраны, виджеты, скины, настройки, первая настройка и отбор кадров нарисованы нативно, с сервером оно
-общается через тот же API. Работает на планшете (сетка 12×6, как в веб-версии) и на **телефоне** (одна колонка).
-Сам находит компьютер в сети (Bonjour + опрос сети), подключается только к компьютеру, который подтвердил ключ,
-не даёт экрану гаснуть, переподключается сам. На Android 17 один раз просит разрешение «Устройства в локальной сети»;
-если на телефоне включён VPN, старается достучаться до компьютера напрямую через Wi-Fi.
+общается через тот же API. Работает на планшете (сетка 12×6, как в веб-версии) и на **телефоне** (одна колонка,
+боком — две). Сам находит компьютер в сети (Bonjour + опрос сети), подключается только к компьютеру, который
+подтвердил ключ, не даёт экрану гаснуть, переподключается сам.
+
+| | | |
+|---|---|---|
+| ![Телефон](docs/img/app/phone-home.png) | ![Подставка](docs/img/app/phone-stand.png) | ![Редактор скина](docs/img/app/tablet-theme-editor.png) |
+| *Телефон: одна колонка* | *Подставка: телефон боком на зарядке* | *Конструктор скинов с живым превью* |
+
+* **Конструктор скинов** (Настройки → Оформление → «Свой скин»): основа из семи скинов, акцентный цвет (палитра или
+  `#RRGGBB`), фон — цвет, градиент или **размытая обложка съёмки**, карточки (плоские, стекло, глянец, окна Mac OS X),
+  скругление углов. Живое превью. Скин передаётся на другое устройство через буфер обмена («Скопировать» → «Вставить скин»).
+* **Подставка**: спокойный экран — большие часы, погода, что играет (с кнопками), ближайший срок сдачи. На телефоне
+  включается сама, когда он лежит боком на зарядке (можно выключить), на любом устройстве — кнопкой со значком
+  экрана в шапке. Содержимое слегка смещается раз в минуту, чтобы не выгорал OLED.
+* **Без связи с компьютером** приложение показывает последние полученные данные и обложки (с пометкой «данные от
+  ЧЧ:ММ») и подключается само, когда компьютер вернётся.
+* **Уведомления**: «экспорт закончился» и «сегодня / завтра сдать съёмку» (раз в день на съёмку). Работают, пока
+  приложение открыто или свёрнуто; если его закрыть совсем — не проверяется ничего. Выключаются в настройках.
+* **VPN.** Если VPN включён **на компьютере**, сервер отвечает устройствам из домашней сети напрямую через Wi-Fi/Ethernet
+  (отдельный сокет, привязанный к сетевой карте), мимо туннеля. Если VPN включён **на телефоне или планшете**, приложение
+  ходит к компьютеру через Wi-Fi напрямую, если VPN это разрешает. Многие VPN (например, AmneziaVPN) обход запрещают
+  и забирают всю сеть — тогда в приложении VPN добавьте TabDock в исключения («Раздельное туннелирование» / split
+  tunneling) или разрешите локальную сеть; приложение само показывает эту подсказку и до тех пор показывает
+  последние сохранённые данные.
+* На Android 17 приложение один раз просит разрешение «Устройства в локальной сети», на Android 13+ — уведомления.
 
 ```bash
 cd client-android && JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew assembleRelease
@@ -179,7 +206,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 
 #### Старое приложение (WebView, `android-webview/`)
 
-Предыдущая версия — оболочка вокруг веб-интерфейса. Оставлена для истории, её заменяет TabDeck.
+Предыдущая версия — оболочка вокруг веб-интерфейса. Оставлена для истории, её заменяет нативное приложение из `client-android/`.
 `android-webview/` — маленькое приложение (28 КБ) с WebView, которое
 * **само находит Mac** через Bonjour (`_tabdock._tcp`) и опросом сети — браузер так не умеет;
 * открывается на весь экран, **не даёт экрану гаснуть**, держит альбомную ориентацию;
@@ -297,7 +324,7 @@ macOS спросит разрешения у `python3` при первом об�
 * Каталоги ищутся сами (Spotlight + `~/Pictures`). Свой список — поле `c1_catalogs` в `data/config.json`.
 * Сами правки (экспозиция и т.п.) в базе Capture One 16 надёжно не отмечаются, поэтому «обработано»
   определяется по экспорту.
-* **Отбор с планшета** (TabDeck → съёмка → «Отбор и метки»): сетка миниатюр с фильтрами (без оценки, ★1+, ★3+,
+* **Отбор с планшета** (приложение TabDock → съёмка → «Отбор и метки»): сетка миниатюр с фильтрами (без оценки, ★1+, ★3+,
   не экспортированы, по цвету) и просмотр на весь экран со свайпом. Звёзды и цветные метки записываются
   **через AppleScript самого Capture One** — база каталога не трогается. Нужно, чтобы каталог был открыт в
   Capture One, и один раз разрешить «TabDock → Capture One» в окне «Автоматизация».
@@ -372,25 +399,38 @@ v0.1:
 | Съёмки Capture One: прогресс, статусы, сроки, правило «что считать отданным» (метка / экспорт / рейтинг), каталоги на внешних дисках | ✅ |
 | Съёмки по папкам (Photon Studio, Photoshop и др.) | 🧪 на реальных съёмках ещё не проверено |
 | Музыка, громкость, быстрые действия, Apple Shortcuts, погода, календарь, сеть, диски | ✅ |
-| **TabDeck** — нативный Android-клиент: все экраны, настройки и первая настройка нативные | ✅ бета |
-| Раскладка для **телефона** | ✅ первая версия (Pixel 8) |
+| **Приложение TabDock для Android** (нативное): все экраны, настройки и первая настройка нативные | ✅ бета |
+| Раскладка для **телефона** (в том числе боком) | ✅ (Pixel 8, эмулятор) |
+| **Конструктор скинов** (цвета, фон из обложки, стекло/глянец, передача на другое устройство) | ✅ |
+| **Подставка** (часы, погода, плеер, срок; сама — на зарядке боком) | ✅ |
+| Офлайн-кэш данных и обложек, автопереподключение | ✅ |
+| Уведомления: экспорт закончился, срок сдачи сегодня/завтра | ✅ срок проверен, экспорт — нет (нужен реальный экспорт) |
+| Погода больше не задерживает ответы сервера (обновляется в фоне) | ✅ |
 | **Отбор с планшета/телефона**: миниатюры, просмотр на весь экран, фильтры | ✅ |
 | Запись ★ и цветных меток в Capture One (через его AppleScript) | 🧪 написано, запись ещё не подтверждена на живом каталоге |
-| Android 17: разрешение «локальная сеть», обход VPN для домашней сети | ✅ / 🧪 обход VPN |
-| Старое WebView-приложение (`android-webview/`) | заменяется TabDeck |
-| Значок в строке меню, конструктор тем, Linux, публикация в магазинах | ⏳ |
+| Android 17: разрешение «локальная сеть» | ✅ |
+| VPN на компьютере: ответы через сетевую карту мимо туннеля | 🧪 написано, с включённым VPN ещё не проверено |
+| VPN на телефоне/планшете | ✅ если VPN разрешает обход; AmneziaVPN не разрешает (проверено) — нужно исключить TabDock в самом VPN, приложение подсказывает |
+| Старое WebView-приложение (`android-webview/`) | заменено нативным приложением |
+| Значок в строке меню, Linux, публикация в магазинах, iPhone/iPad | ⏳ |
 
 ### Дорожная карта
 
 | Этап | Что будет |
 |---|---|
 | ~~0.7 beta~~ | ✅ пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды» |
-| **0.8** (сейчас) | ✅ нативный клиент TabDeck, ✅ отбор с метками, ✅ раскладка для телефона; осталось: подтвердить запись меток в Capture One, **значок в строке меню** на сервере (статус, перезапуск службы), ~~бета-релиз TabDeck с APK~~ ✅ |
-| 0.9 | режим «подставки» для телефона; **конструктор тем** в приложении (свои цвета, стекло, фон из обложки съёмки), импорт/экспорт тем; офлайн-кэш и уведомления в TabDeck (экспорт закончился, срок сдачи) |
-| 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее, `install-linux.sh`; первый стабильный релиз; **публикация TabDeck в RuStore** (и, возможно, Google Play) |
-| дальше | Lightroom Classic, сеансы Capture One, tether viewer для X-T4, виджеты на экране Android, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
+| ~~0.8 beta~~ | ✅ нативное Android-приложение, ✅ отбор с метками, ✅ раскладка для телефона, ✅ бета-релиз с APK |
+| **0.9** (сейчас) | ✅ подставка, ✅ конструктор скинов с импортом/экспортом, ✅ офлайн-кэш, ✅ уведомления, ✅ подсказка про VPN на устройстве, обход VPN на компьютере (проверить с включённым VPN); осталось: подтвердить запись меток в Capture One, **значок в строке меню** на сервере (статус, перезапуск службы), **мастер установки** на компьютер (что и откуда поставить, по шагам) |
+| 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее, `install-linux.sh`; первый стабильный релиз; **публикация приложения TabDock в RuStore** (и, возможно, Google Play) |
+| дальше | Lightroom Classic, сеансы Capture One, виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
+| iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
 Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
+
+**iPhone и iPad.** Сейчас на них работает веб-версия: откройте адрес компьютера в Safari и добавьте на экран «Домой».
+Нативное приложение возможно (Compose Multiplatform позволяет переиспользовать большую часть экранов), но требует
+платного аккаунта Apple Developer, проверки App Store, отдельной работы с локальной сетью и Bonjour на iOS и
+тестирования на реальных устройствах — поэтому оно отложено до стабильной 1.0.
 
 **Безопасность (рекомендации)**
 * HTTPS с самоподписанным сертификатом, отпечаток которого приложение запоминает при подключении.
@@ -415,11 +455,15 @@ fun, built with photographers in mind. On first launch you pick usage scenarios 
 (and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
 backups. Local network only, no cloud. Server: macOS 13+ (Linux planned); client: the Android app or any browser.
 
-**Status: beta.** Server and native Android client **TabDeck 0.8.0-beta** ([download](https://github.com/jjustping/tabdock/releases/tag/v0.8.0-beta)). Ready and tested on real devices:
-spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native TabDeck client
-(tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters). Done but not fully
-verified: writing stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN bypass.
-Planned: menu-bar icon, theme builder, Linux server, store releases (RuStore) at 1.0.
+**Status: beta.** Server and native Android app **TabDock 0.9.0-beta** ([download](https://github.com/jjustping/tabdock/releases)). Ready and tested on real devices:
+spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
+(tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
+gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
+weather, player, next deadline; turns on by itself on a phone lying sideways on a charger), offline cache with
+auto-reconnect, notifications (export finished, shoot due today/tomorrow). Done but not fully verified: writing
+stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN bypass on the computer (a VPN on the phone/tablet that forbids bypass, e.g. AmneziaVPN, needs TabDock excluded via split tunneling — the app says so).
+Planned: menu-bar icon, setup guide for the computer, Linux server, store releases (RuStore) at 1.0; iPhone/iPad use
+the web UI in Safari for now.
 
 ![Spaces](docs/img/spaces/work.png)
 
@@ -504,7 +548,7 @@ To run it by hand: `.venv/bin/python server.py` → http://localhost:8787
 
 ### Android app
 
-**TabDeck** (`client-android/`, beta) is a fully native Kotlin + Jetpack Compose client: every screen, widget, skin,
+The **TabDock Android app** (`client-android/`, beta) is a fully native Kotlin + Jetpack Compose client: every screen, widget, skin,
 settings, first-run setup and culling are native; tablet and phone layouts; Bonjour + subnet discovery, key pinning,
 Android 17 local-network permission, Wi-Fi-bound connections when a VPN is on. Build with
 `cd client-android && ./gradlew assembleRelease` (JDK 17).
@@ -535,10 +579,10 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 ### Roadmap
 
-**0.8 (now)**: ✅ native TabDeck client, ✅ culling with stars/tags, ✅ phone layout; left: confirm tag writing in
-Capture One, menu-bar status icon (TabDeck beta APK is out) · 0.9 phone "stand" mode, in-app theme builder, offline cache
-and notifications · 1.0 Linux server (systemd, MPRIS, sensors, darktable/digiKam, tray icon), first stable release,
-**TabDeck on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, X-T4 tether viewer, multiple computers, HTTPS.
+~~0.8~~ native Android app, culling, phone layout · **0.9 (now)**: ✅ stand mode, ✅ skin builder, ✅ offline cache,
+✅ notifications, ✅ VPN bypass (to be checked with a VPN on); left: confirm tag writing in Capture One, menu-bar
+status icon, setup guide for the computer · 1.0 Linux server (systemd, MPRIS, sensors, darktable/digiKam, tray icon), first stable release,
+**the TabDock app on RuStore** (maybe Google Play) · later: Android home-screen widgets, Lightroom Classic, Capture One sessions, multiple computers, HTTPS.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ### macOS permissions

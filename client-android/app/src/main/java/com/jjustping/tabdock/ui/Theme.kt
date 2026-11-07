@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.ui
+package com.jjustping.tabdock.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -61,6 +61,8 @@ data class Skin(
     val green: Color, val amber: Color, val red: Color, val blue: Color,
     val radius: Dp, val style: CardStyle, val upperTitles: Boolean,
     val titleColor: Color, val tabs: Brush, val light: Boolean,
+    /** Shoot cover drawn blurred under the widgets (own skins only). */
+    val bgImage: String? = null,
 )
 
 private fun c(hex: Long) = Color(hex)
@@ -105,7 +107,7 @@ val SKINS: List<Skin> = listOf(
         SolidColor(c(0xFFF2F2F2)), c(0xFF8FD19E), c(0xFFE8C46A), c(0xFFFF7B72), c(0xFF9FB7FF), 16.dp, CardStyle.FLAT, false,
         c(0xFFD6D6D8), SolidColor(Color.Black), false),
 )
-fun skinById(id: String?) = SKINS.firstOrNull { it.id == id } ?: SKINS[0]
+fun skinById(id: String?) = SKINS.firstOrNull { it.id == id } ?: Themes.custom.firstOrNull { it.id == id } ?: SKINS[0]
 val LocalSkin = staticCompositionLocalOf { SKINS[0] }
 /** true on phones (narrow screens): one-column layouts, smaller top bar. */
 val LocalCompact = androidx.compose.runtime.compositionLocalOf { false }

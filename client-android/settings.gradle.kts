@@ -18,5 +18,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "TabDeck"
+rootProject.name = "TabDock"
 include(":app")

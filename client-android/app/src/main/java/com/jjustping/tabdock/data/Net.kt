@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.data
+package com.jjustping.tabdock.data
 
 import android.content.Context
 import android.net.nsd.NsdManager
@@ -52,8 +52,10 @@ object Lan {
         if (w != null && private.containsMatchIn(u.host)) runCatching { return w.openConnection(u) }
         return u.openConnection()
     }
+    const val VPN_HINT = "На этом устройстве включён VPN, и он не пускает в домашнюю сеть. В приложении VPN добавьте TabDock " +
+        "в исключения (раздельное туннелирование / split tunneling) или разрешите локальную сеть (LAN), либо выключите VPN."
     fun explain(e: Throwable): String =
-        if (vpn) "Не достучаться до компьютера: на устройстве включён VPN, и он не пускает в домашнюю сеть. Разрешите в VPN локальную сеть (LAN) или выключите его."
+        if (vpn) "Не достучаться до компьютера. $VPN_HINT"
         else "Не удалось подключиться: компьютер не отвечает (${e.message?.substringBefore(" from ") ?: "нет ответа"})"
 }
 
@@ -125,11 +127,21 @@ object Crypto {
         return m.doFinal(msg.toByteArray()).joinToString("") { "%02x".format(it) }
     }
     fun same(a: String, b: String) = MessageDigest.isEqual(a.toByteArray(), b.toByteArray())
+    fun sha1(s: String): String = MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 }
 
 /** Locally stored servers: identity pins (TOFU) and access keys. */
 class Store(ctx: Context) {
-    private val p = ctx.getSharedPreferences("tabdeck", Context.MODE_PRIVATE)
+    private val p = ctx.getSharedPreferences("tabdock", Context.MODE_PRIVATE).also { now ->
+        // one-time move from the pre-0.9 name, so paired computers and settings survive the update
+        val old = ctx.getSharedPreferences("tabdeck", Context.MODE_PRIVATE)
+        // (the old WebView app also used "tabdock" with another format — the 0.8 data wins and replaces it)
+        if (old.all.isNotEmpty()) {
+            val e = now.edit().clear()
+            for ((k, v) in old.all) when (v) { is String -> e.putString(k, v); is Boolean -> e.putBoolean(k, v); is Int -> e.putInt(k, v); is Long -> e.putLong(k, v); is Float -> e.putFloat(k, v) }
+            e.apply(); old.edit().clear().apply()
+        }
+    }
     fun pins(): JSONObject = runCatching { JSONObject(p.getString("pins", "{}")!!) }.getOrDefault(JSONObject())
     fun savePins(o: JSONObject) = p.edit().putString("pins", o.toString()).apply()
     var current: String?
@@ -197,7 +209,7 @@ class Discovery(private val ctx: Context, private val store: Store) {
         if (listener != null) return
         runCatching {
             val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            lock = wm.createMulticastLock("tabdeck").apply { setReferenceCounted(false); acquire() }
+            lock = wm.createMulticastLock("tabdock").apply { setReferenceCounted(false); acquire() }
             val m = ctx.getSystemService(Context.NSD_SERVICE) as NsdManager
             nsd = m
             val l = object : NsdManager.DiscoveryListener {

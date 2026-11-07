@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.ui
+package com.jjustping.tabdock.ui
 
 // Generated from web/icons.js — same line icons as the web UI (24×24, stroke 1.8).
 val ICON_PATHS: Map<String, List<String>> = mapOf(

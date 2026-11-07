@@ -3,14 +3,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <application
-        android:label="TabDeck"
+        android:label="TabDock"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:allowBackup="false"
-        android:theme="@style/TabDeckTheme">
+        android:theme="@style/TabDockTheme">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -21,7 +22,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- the QR code on the computer encodes http://<ip>:8787/?k=<key>: open it with TabDeck to pair -->
+            <!-- the QR code on the computer encodes http://<ip>:8787/?k=<key>: open it with TabDock to pair -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

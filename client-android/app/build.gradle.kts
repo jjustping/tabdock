@@ -5,16 +5,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Signing key lives outside the repo: ~/.android/tabdeck-signing.properties
+// Signing key lives outside the repo: ~/.android/tabdock-signing.properties (older name: tabdeck-signing.properties)
 // (storeFile=…, storePassword=…, keyAlias=…, keyPassword=…). Same key as the old TabDock app,
-// so TabDeck installs as an update over it.
+// so TabDock installs as an update over it.
 val signingProps = Properties().apply {
-    val f = File(System.getProperty("user.home"), ".android/tabdeck-signing.properties")
+    val f = listOf("tabdock", "tabdeck").map { File(System.getProperty("user.home"), ".android/$it-signing.properties") }.firstOrNull { it.exists() }
+        ?: File(System.getProperty("user.home"), ".android/tabdock-signing.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
-    namespace = "com.jjustping.tabdeck"
+    namespace = "com.jjustping.tabdock"
     compileSdk {
         version = release(37)
     }
@@ -22,8 +23,8 @@ android {
         applicationId = "com.jjustping.tabdock"
         minSdk = 26
         targetSdk = 37
-        versionCode = 101
-        versionName = "0.8.0-beta"
+        versionCode = 102
+        versionName = "0.9.0-beta"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) {

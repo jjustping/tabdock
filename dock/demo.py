@@ -14,13 +14,13 @@ def shoots():
             "group": None, "source": "c1"}
     items = [
         dict(base, uuid="demo-1", name="Improv", total=77, picked=40, exported=12, shot_from=now - 6 * DAY,
-             created=now - 5 * DAY, last_export=now - DAY, demo_cover="/static/demo/cover1.svg"),
+             created=now - 5 * DAY, last_export=now - DAY, demo_cover="/static/demo/cover1.png"),
         dict(base, uuid="demo-2", name="Lookbook — студия", total=120, picked=0, exported=0, shot_from=now - 2 * DAY,
-             created=now - 2 * DAY, last_export=None, demo_cover="/static/demo/cover2.svg"),
+             created=now - 2 * DAY, last_export=None, demo_cover="/static/demo/cover2.png"),
         dict(base, uuid="demo-3", name="Я красивенький", total=163, exported=163, shot_from=now - 47 * DAY,
-             created=now - 47 * DAY, last_export=now - 16 * DAY, demo_cover="/static/demo/cover3.svg"),
+             created=now - 47 * DAY, last_export=now - 16 * DAY, demo_cover="/static/demo/cover3.png"),
         dict(base, uuid="demo-4", name="Свадьба", total=410, picked=96, exported=0, shot_from=now - 9 * DAY,
-             created=now - 9 * DAY, last_export=None, demo_cover="/static/demo/cover4.svg"),
+             created=now - 9 * DAY, last_export=None, demo_cover="/static/demo/cover4.png"),
     ]
     for s in items:
         s["key"] = "c1:" + s["uuid"]

@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.data
+package com.jjustping.tabdock.data
 
 import org.json.JSONArray
 import org.json.JSONObject

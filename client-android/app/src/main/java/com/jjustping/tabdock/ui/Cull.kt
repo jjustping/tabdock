@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.ui
+package com.jjustping.tabdock.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -40,11 +40,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jjustping.tabdeck.data.Deck
-import com.jjustping.tabdeck.data.b
-import com.jjustping.tabdeck.data.i
-import com.jjustping.tabdeck.data.objs
-import com.jjustping.tabdeck.data.s
+import com.jjustping.tabdock.data.Deck
+import com.jjustping.tabdock.data.b
+import com.jjustping.tabdock.data.i
+import com.jjustping.tabdock.data.objs
+import com.jjustping.tabdock.data.s
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject

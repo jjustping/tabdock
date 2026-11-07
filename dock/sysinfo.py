@@ -205,6 +205,14 @@ def thermal_pressure():
 
 def lan_ip():
     """Primary LAN IPv4 (interface of the default route)."""
+    # a VPN takes the default route: prefer the real Wi-Fi/Ethernet address, not the tunnel's
+    try:
+        from . import lanbind
+        lan = lanbind.lan_interfaces()
+        if lan:
+            return sorted(lan, key=lambda x: (x[0] not in ("en0", "en1"), x[0]))[0][1]
+    except Exception:
+        pass
     out = run(["/sbin/route", "-n", "get", "default"])
     m = re.search(r"interface:\s*(\S+)", out)
     ifaces = [m.group(1)] if m else []

@@ -27,12 +27,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from dock import actions as act_mod          # noqa: E402
-from dock import auth, bonjour, captureone, culling, demo, folders, netcheck, sysinfo, weather, wfolio  # noqa: E402
+from dock import auth, bonjour, captureone, culling, demo, folders, lanbind, netcheck, sysinfo, weather, wfolio  # noqa: E402
 from dock.calendar_mac import CalendarFeed    # noqa: E402
 from dock.media import Media                  # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.8.0-beta"
+VERSION = "0.9.0-beta"
 WEB = os.path.join(HERE, "web")
 
 
@@ -196,7 +196,7 @@ class App:
         return None
 
     def state(self):
-        return {"events": self.events, "net": self.net.data, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake,
+        return {"events": self.events, "net": self.net.data, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake, "vpn": lanbind.VPN,
                 "now": time.time(), "version": VERSION}
 
     def everything(self):
@@ -779,6 +779,23 @@ def qr_svg(text):
     return buf.getvalue().decode()
 
 
+class DockServer(ThreadingHTTPServer):
+    """HTTP server whose port can be shared with the interface-pinned LAN listeners (see dock/lanbind.py)."""
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(self, addr, handler, bound_if=None):
+        self.bound_if = bound_if
+        super().__init__(addr, handler)
+
+    def server_bind(self):
+        if hasattr(socket, "SO_REUSEPORT"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        if self.bound_if:
+            self.socket.setsockopt(socket.IPPROTO_IP, lanbind.IP_BOUND_IF, self.bound_if)
+        super().server_bind()
+
+
 def main():
     ap = argparse.ArgumentParser(description="TabDock server")
     ap.add_argument("--port", type=int, default=int(os.environ.get("DOCK_PORT", 8787)))
@@ -802,8 +819,10 @@ def main():
         print(app.url())
         return
     Handler.app = app
-    srv = ThreadingHTTPServer(("0.0.0.0", a.port), Handler)
-    srv.daemon_threads = True
+    srv = DockServer(("0.0.0.0", a.port), Handler)
+    # replies to the tablet/phone go straight through Wi-Fi/Ethernet even when a VPN is on
+    if not os.environ.get("DOCK_NO_LANBIND"):
+        lanbind.LanBinder(lambda ip, port, idx: DockServer((ip, port), Handler, idx), a.port).start()
     if not os.environ.get("DOCK_NO_BONJOUR"):
         bonjour.advertise(a.port, VERSION)
     print("TabDock %s on http://localhost:%d  (tablet: %s)" % (VERSION, a.port, app.url()), flush=True)

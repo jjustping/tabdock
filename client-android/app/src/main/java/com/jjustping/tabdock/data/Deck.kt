@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.data
+package com.jjustping.tabdock.data
 
 import android.content.Context
 import android.graphics.BitmapFactory
@@ -24,7 +24,7 @@ enum class Conn { STARTING, NEED_PAIRING, CONNECTED, LOST }
 class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     val store = Store(ctx)
     val discovery = Discovery(ctx, store)
-    init { Lan.init(ctx) }
+    init { Lan.init(ctx); Notify.init(ctx); com.jjustping.tabdock.ui.Themes.load(store) }
 
     @Volatile var api: Api? = null
         private set
@@ -39,6 +39,26 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     private var poller: Job? = null
     private var lastEvent = (store.string("last_event") ?: "0").toInt()
     var visible = true
+    /** When the data on screen was last received from the computer (ms); shown while offline. */
+    val syncedAt = MutableStateFlow(0L)
+
+    // ---------------- offline cache: the last data survives restarts and lost Wi-Fi ----------------
+    private val cacheFile = java.io.File(ctx.filesDir, "last_all.json")
+    private val imgDir = java.io.File(ctx.cacheDir, "img").apply { mkdirs() }
+    init {
+        runCatching {
+            if (cacheFile.exists()) {
+                val o = JSONObject(cacheFile.readText())
+                all.value = o.optJSONObject("all"); state.value = o.optJSONObject("all")?.optJSONObject("state")
+                syncedAt.value = o.optLong("at")
+            }
+        }
+    }
+    private fun saveCache(a: JSONObject) {
+        syncedAt.value = System.currentTimeMillis()
+        val text = JSONObject().put("at", syncedAt.value).put("all", a).toString()
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { cacheFile.writeText(text) } }
+    }
 
     fun toast(s: String) { toasts.tryEmit(s) }
     fun setSkin(id: String) { store.skin = id; _skin.value = id }
@@ -46,7 +66,11 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     /** Start: reconnect to the last pinned server if it proves its identity, else show pairing. */
     fun start() = scope.launch {
         discovery.startNsd()
-        if (!reconnect()) conn.value = Conn.NEED_PAIRING
+        // paired before and have cached data → show it and keep looking for the computer instead of the pairing screen
+        if (!reconnect()) {
+            conn.value = if (store.pins().length() > 0) Conn.LOST else Conn.NEED_PAIRING
+            store.entry(store.current)?.let { serverName.value = it.optString("name") }
+        }
         startPolling()
     }
 
@@ -89,7 +113,10 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
 
     suspend fun loadAll() {
         val a = api ?: return
-        runCatching { a.obj("/api/all", 8000) }.onSuccess { all.value = it; it.optJSONObject("state")?.let { s -> state.value = s } }
+        runCatching { a.obj("/api/all", 15000) }.onSuccess {
+            all.value = it; it.optJSONObject("state")?.let { s -> state.value = s }
+            saveCache(it); Notify.deadlines(ctx, store, it)
+        }
     }
 
     private fun startPolling() {
@@ -98,20 +125,21 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
             var tick = 0; var fails = 0
             while (isActive) {
                 val a = api
-                if (a != null && visible) {
+                if (a == null && conn.value == Conn.LOST && ++tick % 4 == 0) reconnect()
+                if (a != null) {
                     val r = runCatching { a.obj("/api/state", 3000) }
                     if (r.isSuccess) {
                         fails = 0
                         if (conn.value == Conn.LOST) { conn.value = Conn.CONNECTED; loadAll() }
                         val s = r.getOrThrow(); state.value = s; handleEvents(s)
-                        if (++tick % 12 == 0) loadAll()
+                        if (++tick % (if (visible) 12 else 2) == 0) loadAll()
                     } else if (++fails >= 3 && conn.value == Conn.CONNECTED) {
                         conn.value = Conn.LOST
                     } else if (conn.value == Conn.LOST && fails % 4 == 0) {
                         reconnect()   // the Mac came back on a new address, or another pinned Mac is here
                     }
                 }
-                delay(2500)
+                delay(if (visible) 2500 else 30000)   // in the background: every 30 s, for notifications
             }
         }
     }
@@ -121,7 +149,10 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         var max = lastEvent
         for (i in 0 until evs.length()) {
             val e = evs.getJSONObject(i); val id = e.optInt("id")
-            if (id > lastEvent && System.currentTimeMillis() / 1000.0 - e.optDouble("at") < 600) events.tryEmit(e)
+            if (id > lastEvent && System.currentTimeMillis() / 1000.0 - e.optDouble("at") < 600) {
+                events.tryEmit(e)
+                if (!visible) Notify.exportDone(ctx, store, e)
+            }
             if (id > max) max = id
         }
         if (max < lastEvent) max = 0
@@ -153,8 +184,13 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     fun cached(path: String?): ImageBitmap? = path?.let { images.get(it) }
     suspend fun image(path: String): ImageBitmap? {
         images.get(path)?.let { return it }
-        val a = api ?: return null
-        val b = runCatching { a.bytes(path, 6000) }.getOrNull() ?: return null
+        // small pictures (covers, thumbnails, app icons) are also kept on disk for offline use; big previews are not
+        val disk = if (path.startsWith("/api/cull/preview")) null else java.io.File(imgDir, Crypto.sha1(path))
+        val a = api
+        val b = (if (a != null) runCatching { a.bytes(path, 6000) }.getOrNull() else null)
+            ?.also { bytes -> disk?.let { f -> scope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { f.writeBytes(bytes) } } } }
+            ?: disk?.takeIf { it.exists() }?.let { f -> runCatching { f.readBytes() }.getOrNull() }
+            ?: return null
         val bmp = BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap() ?: return null
         images.put(path, bmp); return bmp
     }

@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.ui
+package com.jjustping.tabdock.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,14 +38,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jjustping.tabdeck.data.Deck
-import com.jjustping.tabdeck.data.a
-import com.jjustping.tabdeck.data.b
-import com.jjustping.tabdeck.data.i
-import com.jjustping.tabdeck.data.o
-import com.jjustping.tabdeck.data.objs
-import com.jjustping.tabdeck.data.s
-import com.jjustping.tabdeck.data.strs
+import com.jjustping.tabdock.data.Deck
+import com.jjustping.tabdock.data.a
+import com.jjustping.tabdock.data.b
+import com.jjustping.tabdock.data.i
+import com.jjustping.tabdock.data.o
+import com.jjustping.tabdock.data.objs
+import com.jjustping.tabdock.data.s
+import com.jjustping.tabdock.data.strs
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -61,6 +61,9 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
     val skin by c.deck.skin.collectAsState()
     val cur = skinById(skin ?: cfg.s("skin").ifBlank { null })
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var editing by remember { mutableStateOf<String?>(null) }   // "new" or a custom skin id
+    editing?.let { e -> ThemeEditor(c.deck, c.all, if (e == "new") null else e) { editing = null }; return }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         DeckCard("Пространства и сценарии") {
             Column {
@@ -69,19 +72,29 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             }
         }
         DeckCard("Оформление") {
-            Grid(SKINS, if (LocalCompact.current) 2 else 4) { k ->
+            Grid(SKINS + Themes.custom, if (LocalCompact.current) 2 else 4) { k ->
                 Column(Modifier.clip(RoundedCornerShape(14.dp)).border(2.dp, if (k.id == cur.id) s.accent else Color.Transparent, RoundedCornerShape(14.dp))
                     .background(s.inner).clickable { c.deck.setSkin(k.id) }) {
                     Box(Modifier.fillMaxWidth().height(64.dp).background(k.bg)) {
+                        if (k.bgImage != null) RemoteImage(c.deck, k.bgImage, Modifier.fillMaxSize())
                         Box(Modifier.padding(10.dp).size(70.dp, 40.dp).clip(RoundedCornerShape(8.dp)).background(k.card))
                         Box(Modifier.align(Alignment.BottomEnd).padding(10.dp).size(40.dp, 14.dp).clip(RoundedCornerShape(7.dp)).background(k.primary))
                     }
                     Column(Modifier.padding(10.dp)) { T(k.name, 15.sp, weight = FontWeight.SemiBold); T(k.desc, 12.sp, s.muted) }
                 }
             }
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Btn("Свой скин", "plus", primary = true) { editing = "new" }
+                if (cur.id.startsWith("custom-")) Btn("Изменить «${cur.name}»", "pencil") { editing = cur.id }
+                Btn("Вставить скин") {
+                    val t = pasteText(ctx)?.let { Themes.import(it) }
+                    if (t == null) c.deck.toast("В буфере обмена нет скина TabDock")
+                    else { Themes.save(t); c.deck.setSkin(t.s("id")); c.deck.toast("Скин «${t.s("name")}» добавлен") }
+                }
+            }
             Column(Modifier.padding(top = 10.dp)) {
-                T("Скин запоминается на этом устройстве.", 13.sp, s.dim, modifier = Modifier.padding(bottom = 8.dp))
-                Btn("Сделать скином для всех") { cfgPost(c, JSONObject().put("skin", cur.id)); c.deck.toast("Новые устройства откроются в «${cur.name}»") }
+                T("Скин запоминается на этом устройстве. Свой скин можно передать на другое устройство кнопкой «Скопировать» в редакторе.", 13.sp, s.dim, modifier = Modifier.padding(bottom = 8.dp))
+                if (!cur.id.startsWith("custom-")) Btn("Сделать скином для всех") { cfgPost(c, JSONObject().put("skin", cur.id)); c.deck.toast("Новые устройства откроются в «${cur.name}»") }
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -94,6 +107,21 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
                 T(if (c.all.o("calendar").b("ok")) "Доступ к календарю есть." else "Доступа пока нет — на компьютере появится запрос разрешения.", 13.sp, s.dim, modifier = Modifier.padding(top = 8.dp))
             }
         }
+        DeckCard("Это устройство") {
+            var notify by remember { mutableStateOf(c.deck.store.string("notify") != "0") }
+            var standAuto by remember { mutableStateOf(c.deck.store.string("stand_auto") != "0") }
+            T("Уведомления: экспорт закончился, срок сдачи сегодня или завтра", 14.sp, s.muted)
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Seg("Включены", notify) { notify = true; c.deck.store.put("notify", "1") }
+                Seg("Выключены", !notify) { notify = false; c.deck.store.put("notify", "0") }
+            }
+            T("Подставка: сама включается, когда телефон лежит боком на зарядке", 14.sp, s.muted)
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Seg("Автоматически", standAuto) { standAuto = true; c.deck.store.put("stand_auto", "1") }
+                Seg("Только кнопкой", !standAuto) { standAuto = false; c.deck.store.put("stand_auto", "0") }
+            }
+            T("Уведомления приходят, пока приложение открыто или свёрнуто; если его закрыть совсем — не проверяется ничего.", 12.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
+        }
         DeliveredRule(c)
         AppsSettings(c)
         CatalogSettings(c)
@@ -101,7 +129,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
         DeckCard("Компьютер") {
             val name by c.deck.serverName.collectAsState()
             T("$name · ${c.deck.api?.base ?: ""}", 16.sp)
-            T("Сервер ${c.state.s("version")} · TabDeck ${com.jjustping.tabdeck.BuildConfigShim.VERSION}", 13.sp, s.muted)
+            T("Сервер ${c.state.s("version")} · TabDock ${com.jjustping.tabdock.BuildConfigShim.VERSION}", 13.sp, s.muted)
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Btn("Сменить компьютер", "computer") { onConnect() }
                 Btn("Веб-версия", "link") { openWeb("/?tab=settings") }
@@ -293,7 +321,7 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
                 when (name) {
                     "hello" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         Ic("computer", 64.dp, s.accent); Spacer(Modifier.height(10.dp))
-                        T("Привет! Это TabDeck", 32.sp, weight = FontWeight.Bold)
+                        T("Привет! Это TabDock", 32.sp, weight = FontWeight.Bold)
                         T("Планшет или телефон, который лежит без дела, становится доком для работы: задачи, съёмки, музыка, состояние компьютера. Настроим всё под вас — займёт минуту.", 17.sp, s.muted, align = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
                     }
                     "usage" -> {
@@ -340,7 +368,7 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
             }
             Row(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
                 if (step > 0) Btn("Назад", "prev") { step-- }
-                Btn(when (name) { "hello" -> "Начать"; "done" -> "Открыть TabDeck"; else -> "Дальше" }, primary = true) {
+                Btn(when (name) { "hello" -> "Начать"; "done" -> "Открыть TabDock"; else -> "Дальше" }, primary = true) {
                     if (name == "usage" && usage.isEmpty()) deck.toast("Выберите хотя бы один вариант")
                     else if (name == "done") finish() else step++
                 }

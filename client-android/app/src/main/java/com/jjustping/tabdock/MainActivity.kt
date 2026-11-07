@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck
+package com.jjustping.tabdock
 
 import android.content.Intent
 import android.net.Uri
@@ -13,10 +13,10 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
-import com.jjustping.tabdeck.data.Deck
-import com.jjustping.tabdeck.ui.TabDeckApp
+import com.jjustping.tabdock.data.Deck
+import com.jjustping.tabdock.ui.TabDockApp
 
-/** TabDeck — native client for a TabDock server (computer at home). */
+/** TabDock — native client for a TabDock server (computer at home). */
 private const val LAN = "android.permission.ACCESS_LOCAL_NETWORK"
 
 class MainActivity : ComponentActivity() {
@@ -27,10 +27,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         deck = Deck(applicationContext, lifecycleScope)
-        setContent { TabDeckApp(deck) }
+        setContent { TabDockApp(deck) }
         // Android 17+: talking to computers on the home network is a runtime permission. Without it the system
         // asks to pick a device on every launch; with it discovery and the connection just work.
-        if (Build.VERSION.SDK_INT >= 37 && checkSelfPermission(LAN) != PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(LAN), 7)
+        // Android 13+: notifications (export finished, deadlines) are a runtime permission too — asked together.
+        val want = listOfNotNull(LAN.takeIf { Build.VERSION.SDK_INT >= 37 }, "android.permission.POST_NOTIFICATIONS".takeIf { Build.VERSION.SDK_INT >= 33 && deck.store.string("notif_asked") == null })
+            .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (want.isNotEmpty()) { deck.store.put("notif_asked", "1"); requestPermissions(want.toTypedArray(), 7) }
         else deck.start()
         handle(intent)
     }

@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.ui
+package com.jjustping.tabdock.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,11 +38,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jjustping.tabdeck.data.a
-import com.jjustping.tabdeck.data.i
-import com.jjustping.tabdeck.data.o
-import com.jjustping.tabdeck.data.objs
-import com.jjustping.tabdeck.data.s
+import com.jjustping.tabdock.data.a
+import com.jjustping.tabdock.data.i
+import com.jjustping.tabdock.data.o
+import com.jjustping.tabdock.data.objs
+import com.jjustping.tabdock.data.s
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.abs
@@ -73,7 +73,7 @@ private fun place(ws: List<JSONObject>, cols: Int): List<IntArray> {
     }
     return ws.map { wj ->
         val w = if (cols == 12) wj.i("w", 4).coerceIn(2, 12) else (wj.i("w", 4) * cols / 12.0).toInt().coerceIn(2, cols)
-        val h = if (cols == 2) wj.i("h", 2).coerceIn(2, 4) else wj.i("h", 2).coerceIn(1, 8)   // phone: one column, no giant cards
+        val h = if (cols < 12) wj.i("h", 2).coerceIn(2, 4) else wj.i("h", 2).coerceIn(1, 8)   // phone / narrow: no giant cards
         var r = 0
         while (true) {
             var placed = -1
@@ -142,10 +142,12 @@ fun HomeScreen(c: Ctx, dialogs: Dialogs) {
                 if (abs(dx) > 160) { val i = spaces.indexOfFirst { it.s("id") == sp.s("id") }; select(spaces[(i + (if (dx < 0) 1 else -1) + spaces.size) % spaces.size].s("id")) }
             }) { _, d -> dx += d }
         }) {
-            val cols = when { maxWidth < 600.dp -> 2; maxWidth < 700.dp -> 4; else -> 12 }
+            val phone = LocalCompact.current
+            // phone: one column upright, two columns lying sideways; small tablets: 4; tablets: the 12×6 grid
+            val cols = when { maxWidth < 600.dp -> 2; phone || maxWidth < 700.dp -> 4; else -> 12 }
             val gap = 12.dp
             val cellW = (maxWidth - gap * (cols - 1)) / cols
-            val cellH = when (cols) { 12 -> (maxHeight - gap * 5) / 6; 2 -> 96.dp; else -> 130.dp }
+            val cellH = when { cols == 12 -> (maxHeight - gap * 5) / 6; cols == 2 || phone -> 96.dp; else -> 130.dp }
             val slots = place(widgets, cols)
             val rows = (slots.maxOfOrNull { it[0] + it[3] } ?: 0).coerceAtLeast(1)
             if (widgets.isEmpty()) Empty("Пространство пустое — нажмите карандаш и добавьте виджеты")

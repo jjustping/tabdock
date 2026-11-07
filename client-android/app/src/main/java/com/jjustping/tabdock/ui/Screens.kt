@@ -1,4 +1,4 @@
-package com.jjustping.tabdeck.ui
+package com.jjustping.tabdock.ui
 
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
@@ -51,18 +51,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.jjustping.tabdeck.data.Deck
-import com.jjustping.tabdeck.data.FoundServer
-import com.jjustping.tabdeck.data.Fmt
-import com.jjustping.tabdeck.data.STATUS
-import com.jjustping.tabdeck.data.a
-import com.jjustping.tabdeck.data.b
-import com.jjustping.tabdeck.data.d
-import com.jjustping.tabdeck.data.i
-import com.jjustping.tabdeck.data.o
-import com.jjustping.tabdeck.data.objs
-import com.jjustping.tabdeck.data.s
-import com.jjustping.tabdeck.data.strs
+import com.jjustping.tabdock.data.Deck
+import com.jjustping.tabdock.data.FoundServer
+import com.jjustping.tabdock.data.Fmt
+import com.jjustping.tabdock.data.STATUS
+import com.jjustping.tabdock.data.a
+import com.jjustping.tabdock.data.b
+import com.jjustping.tabdock.data.d
+import com.jjustping.tabdock.data.i
+import com.jjustping.tabdock.data.o
+import com.jjustping.tabdock.data.objs
+import com.jjustping.tabdock.data.s
+import com.jjustping.tabdock.data.strs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -316,7 +316,7 @@ class Dialogs(val deck: Deck) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 40.dp, vertical = 30.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Ic("computer", 48.dp, s.accent); Spacer(Modifier.width(14.dp))
-            Column { T("TabDeck", 30.sp, weight = FontWeight.Bold); T("Подключитесь к компьютеру с TabDock", 16.sp, s.muted) }
+            Column { T("TabDock", 30.sp, weight = FontWeight.Bold); T("Подключитесь к компьютеру с TabDock", 16.sp, s.muted) }
         }
         DeckCard("Компьютеры в этой сети", action = { if (progress > 0f) T("${(progress * 100).toInt()}%", 13.sp, s.muted) else Link("Искать") { scope.launch { deck.discovery.scan() } } }) {
             if (servers.isEmpty()) Empty(if (progress > 0f) "Ищу…" else "Никого не нашли — проверьте, что компьютер включён и в той же сети")
@@ -336,7 +336,7 @@ class Dialogs(val deck: Deck) {
         pwFor?.let { sv ->
             DeckCard("Вход: ${sv.name}") {
                 if (sv.state == "mismatch") T("Этот сервер выдаёт себя за ваш компьютер, но не подтвердил ключ. Подключайтесь, только если уверены (например, на компьютере сменили ключ).", 14.sp, s.red)
-                if (!sv.hasPassword) T("На этом компьютере пароль не задан. Откройте TabDock на компьютере → «Подключение» → «Пароль для входа», или отсканируйте QR-код с экрана компьютера камерой и откройте ссылку в TabDeck.", 14.sp, s.muted)
+                if (!sv.hasPassword) T("На этом компьютере пароль не задан. Откройте TabDock на компьютере → «Подключение» → «Пароль для входа», или отсканируйте QR-код с экрана компьютера камерой и откройте ссылку в TabDock.", 14.sp, s.muted)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {
                     TextInput(pw, { pw = it }, "Пароль TabDock", Modifier.weight(1f), password = true); Spacer(Modifier.width(10.dp))
                     Btn("Войти", primary = true) { deck.login(sv, pw) { r -> if (r == "ok") onDone() else msg = r } }

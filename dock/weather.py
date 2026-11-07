@@ -48,19 +48,43 @@ def describe(code):
 
 
 class Weather:
+    """Forecast from Open-Meteo. get() never waits for the network: it returns what is cached and refreshes
+    in a background thread (a slow or blocked internet must not hold up the dock — it used to cost 8 s)."""
+
     def __init__(self):
         self._cache = None
         self._at = 0
         self._key = None
         self._lock = threading.Lock()
+        self._busy = False
+        self._tried = 0
+        self._error = None
 
     def get(self, place):
         if not place or place.get("lat") is None:
             return {"configured": False}
         key = (place["lat"], place["lon"])
+        now = time.time()
         with self._lock:
-            if self._cache and self._key == key and time.time() - self._at < 900:
-                return self._cache
+            fresh = self._cache and self._key == key and now - self._at < 900
+            if not fresh and not self._busy and (now - self._tried > 120 or self._key != key):
+                self._busy, self._tried = True, now
+                threading.Thread(target=self._refresh, args=(place,), name="weather", daemon=True).start()
+            if self._cache and self._key == key:
+                return self._cache if fresh else dict(self._cache, stale=True)
+            if self._error and self._key == key:
+                return {"configured": True, "error": self._error}
+            return {"configured": True, "loading": True}
+
+    def _refresh(self, place):
+        try:
+            self._fetch(place)
+        finally:
+            with self._lock:
+                self._busy = False
+
+    def _fetch(self, place):
+        key = (place["lat"], place["lon"])
         q = urllib.parse.urlencode({
             "latitude": place["lat"], "longitude": place["lon"], "timezone": "auto",
             "current": "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,is_day",
@@ -72,11 +96,10 @@ class Weather:
             d = _get("https://api.open-meteo.com/v1/forecast?" + q)
         except Exception as e:
             with self._lock:
-                if self._cache:
-                    c = dict(self._cache)
-                    c["stale"] = True
-                    return c
-            return {"configured": True, "error": str(e)}
+                if self._key != key:
+                    self._cache = None
+                self._key, self._error = key, "Нет связи с сервисом погоды (%s)" % (str(e)[:80])
+            return None
         cur = d.get("current", {})
         res = {"configured": True, "place": place.get("name"),
                "temp": cur.get("temperature_2m"), "feels": cur.get("apparent_temperature"),
@@ -100,5 +123,5 @@ class Weather:
                           "rain": hh["precipitation_probability"][i], **describe(hh["weather_code"][i])})
         res["hours"] = hours
         with self._lock:
-            self._cache, self._at, self._key = res, time.time(), key
+            self._cache, self._at, self._key, self._error = res, time.time(), key, None
         return res
