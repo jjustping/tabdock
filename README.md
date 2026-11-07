@@ -13,7 +13,7 @@
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать / Download](https://github.com/jjustping/tabdock/releases)** — APK для Android
+**⬇ [Скачать TabDock 0.11.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
 (Android 8+, планшет и телефон) и код сервера для Mac.
 
 | | |
@@ -293,7 +293,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
   открывает панель**, как только Mac снова в сети; если пропал совсем — переходит на другой найденный TabDock;
 * ссылки наружу (галереи wfolio и т.п.) открывает в обычном браузере.
 
-Готовый APK — в [релизах](https://github.com/jjustping/tabdock/releases/latest): скачайте на планшет, откройте,
+Готовый APK старого приложения — в [релизе v0.6.1](https://github.com/jjustping/tabdock/releases/tag/v0.6.1) (актуальное приложение — [последний релиз](https://github.com/jjustping/tabdock/releases/latest)): скачайте на планшет, откройте,
 разрешите установку из этого источника и нажмите «Установить».
 
 Сборка без Android Studio и Gradle (нужны Android SDK и JDK 17, `brew install openjdk@17`):
@@ -554,7 +554,7 @@ Send any amount via YooMoney — scan the QR code or open the link; you choose t
 **[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — thank you! Free ways to help: star
 the repository, tell a friend, report a bug or share an idea in [Issues](https://github.com/jjustping/tabdock/issues).
 
-**Status: beta.** Server and native Android app **TabDock 0.11.0-beta** ([download](https://github.com/jjustping/tabdock/releases)). Ready and tested on real devices:
+**Status: beta.** Server and native Android app **TabDock 0.11.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
@@ -670,7 +670,7 @@ Android 17 local-network permission, Wi-Fi-bound connections when a VPN is on. B
 The old WebView shell lives in `android-webview/`: a tiny (28 KB) WebView app that finds the Mac by itself (Bonjour `_tabdock._tcp` + subnet probe),
 runs fullscreen, keeps the screen on, remembers the last Mac and sign-in, reopens the dock by itself when the Mac
 comes back, and fails over to another TabDock. Build without Gradle: `./android-webview/build.sh` (Android SDK + JDK 17),
-then `adb install -r android-webview/build/TabDock.apk`. Ready-made APK: [latest release](https://github.com/jjustping/tabdock/releases/latest). Keep `~/.android/tabdock-release.keystore` to be able to update.
+then `adb install -r android-webview/build/TabDock.apk`. Its last APK: [v0.6.1](https://github.com/jjustping/tabdock/releases/tag/v0.6.1); the current app: [latest release](https://github.com/jjustping/tabdock/releases/latest). Keep `~/.android/tabdock-release.keystore` to be able to update.
 
 ### Pair the tablet
 
