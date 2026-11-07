@@ -656,6 +656,8 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/app_icon":
             f = act_mod.app_icon(qs.get("name", [""])[0], app.cache_dir)
             return self._file(f, "image/png", cache=True) if f else self._send(404, {})
+        if p == "/api/pin":   # native client: identity to pin after sign-in (never the access key itself)
+            return self._send(200, {"id": app.server_id(), "key": app.proof_key(), "name": app.sysdata().get("hostname")})
         if p == "/api/catalogs":
             app._discover_kick.set()
             return self._send(200, {"found": app.discovered,

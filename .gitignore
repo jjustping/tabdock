@@ -1,5 +1,5 @@
 .venv/
-data/
+/data/
 bin/
 __pycache__/
 *.pyc
@@ -19,8 +19,13 @@ reminders.json
 notes.json
 shoots.json
 wfolio.json
-android/build/
-android/assets/connect.js
+android-webview/build/
+android-webview/assets/connect.js
 *.keystore
 *.jks
 .wheels/
+client-android/.gradle/
+client-android/build/
+client-android/app/build/
+client-android/local.properties
+client-android/.kotlin/

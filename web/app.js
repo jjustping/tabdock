@@ -962,4 +962,5 @@ DockConnect.saved();
 if (window.__INIT__ && window.__INIT__.pin && window.TabDockNative && TabDockNative.pin) {
   try { TabDockNative.pin(location.origin, __INIT__.pin.id, __INIT__.pin.key, (__INIT__.state.sys || {}).hostname || ""); } catch (e) { /* old app */ }
 }
-if (window.__INIT__) { S = window.__INIT__; renderAll(); rememberHere(); showWizard(); } else loadAll().then(() => { rememberHere(); showWizard(); });
+const forceWz = /[?&]wz=/.test(location.search);
+if (window.__INIT__) { S = window.__INIT__; renderAll(); rememberHere(); showWizard(forceWz); } else loadAll().then(() => { rememberHere(); showWizard(forceWz); });
