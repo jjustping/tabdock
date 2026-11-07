@@ -278,6 +278,12 @@ macOS спросит разрешения у `python3` при первом об�
 * Каталоги ищутся сами (Spotlight + `~/Pictures`). Свой список — поле `c1_catalogs` в `data/config.json`.
 * Сами правки (экспозиция и т.п.) в базе Capture One 16 надёжно не отмечаются, поэтому «обработано»
   определяется по экспорту.
+* **Отбор с планшета** (TabDeck → съёмка → «Отбор и метки»): сетка миниатюр с фильтрами (без оценки, ★1+, ★3+,
+  не экспортированы, по цвету) и просмотр на весь экран со свайпом. Звёзды и цветные метки записываются
+  **через AppleScript самого Capture One** — база каталога не трогается. Нужно, чтобы каталог был открыт в
+  Capture One, и один раз разрешить «TabDock → Capture One» в окне «Автоматизация».
+  Миниатюры — из кэша Capture One (с правками), большой просмотр — встроенный в RAW снимок камеры
+  (для Fuji RAF мгновенно, остальное декодирует macOS).
 
 ### Данные и устройство
 
@@ -340,10 +346,10 @@ v0.1:
 | Версия | Что будет |
 |---|---|
 | **0.7 beta** (сейчас) | пространства и виджеты, первая настройка, правило «отдано», виджеты «Сеть» и «Команды», ускорение |
-| 0.8 | **отбор с планшета**: сетка миниатюр съёмки, ★ и метки прямо с планшета (запись в Capture One через его AppleScript), **значок в строке меню** на сервере (статус, перезапуск службы) |
+| 0.8 | ~~отбор с планшета~~ (готово в TabDeck alpha), **значок в строке меню** на сервере (статус, перезапуск службы) |
 | 0.9 | раскладка для **телефона** и режим «подставки»; **конструктор тем** в приложении (свои цвета, стекло, фон из обложки съёмки), импорт/экспорт тем |
 | 1.0 | **сервер на Linux**: systemd, MPRIS-плееры, датчики, darktable/digiKam, значок в трее; `install-linux.sh` |
-| **TabDeck** | **нативный клиент** для Android (Kotlin + Jetpack Compose) вместо веб-страницы в оболочке: плавнее, меньше батареи, офлайн-кэш, уведомления, виджеты на экране Android; тот же API сервера |
+| **TabDeck** (alpha) | **нативный клиент** для Android (Kotlin + Jetpack Compose): все экраны, настройки и первая настройка уже нативные, отбор с метками; дальше — офлайн-кэш, уведомления, виджеты на экране Android |
 | дальше | Lightroom Classic, сеансы Capture One, tether viewer для X-T4, несколько компьютеров в одном доке, HTTPS и ключи на устройство |
 
 Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
@@ -473,7 +479,7 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 ### Roadmap
 
-0.8 culling from the tablet (thumbnail grid, stars/labels written back via Capture One AppleScript) + menu-bar status
+0.8 culling from the tablet (done in TabDeck alpha: thumbnail grid, stars/colour tags written via Capture One AppleScript) + menu-bar status
 icon on the server · 0.9 phone layout & "stand" mode, in-app theme builder · 1.0 Linux server (systemd, MPRIS, sensors,
 darktable/digiKam, tray icon) · **TabDeck**: a fully native Android client (Kotlin + Jetpack Compose) instead of the
 WebView shell · later: Lightroom Classic, Capture One sessions, X-T4 tether viewer, multiple computers, HTTPS.

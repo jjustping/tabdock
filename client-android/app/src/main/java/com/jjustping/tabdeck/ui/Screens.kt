@@ -224,7 +224,8 @@ class Dialogs(val deck: Deck) {
                 DeckCard(null, Modifier.fillMaxWidth().clickable { c.openShoot(sh) }, pad = 0.dp) {
                     Box { RemoteImage(c.deck, sh.s("cover").ifBlank { null }, Modifier.fillMaxWidth().height(160.dp))
                         Box(Modifier.padding(10.dp).clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(.6f)).padding(horizontal = 10.dp, vertical = 3.dp)) {
-                            T(STATUS[sh.s("status")] ?: "", 12.sp, statusColor(sh.s("status"), s), FontWeight.SemiBold) } }
+                            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(8.dp).clip(CircleShape).background(statusColor(sh.s("status"), s))); Spacer(Modifier.width(6.dp))
+                                T(STATUS[sh.s("status")] ?: "", 12.sp, Color.White, FontWeight.SemiBold) } } }
                     Column(Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { T(sh.s("name"), 18.sp, weight = FontWeight.SemiBold, maxLines = 1); T(listOf(sh.s("catalog_name"), sh.s("camera")).filter { it.isNotBlank() }.joinToString(" · "), 13.sp, s.muted, maxLines = 1) }

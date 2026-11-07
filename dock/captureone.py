@@ -212,9 +212,11 @@ def read_catalog(catalog):
         except OSError:
             have = set()
         covers = {}
-        for cid, img in con.execute("SELECT ZCOLLECTION, ZIMAGE FROM ZIMAGEINCOLLECTION ORDER BY ZCOLLECTION, ZIMAGE"):
-            if cid not in covers and img in have:
-                covers[cid] = img
+        # thumbnails are named by the variant's Z_PK, not the image's
+        for cid, vpk in con.execute("SELECT ic.ZCOLLECTION, v.Z_PK FROM ZIMAGEINCOLLECTION ic JOIN ZVARIANT v ON v.ZIMAGE = ic.ZIMAGE "
+                                    "ORDER BY ic.ZCOLLECTION, ic.ZIMAGE, v.ZINDEX"):
+            if cid not in covers and vpk in have:
+                covers[cid] = vpk
     finally:
         con.close()
 
@@ -244,7 +246,7 @@ def read_catalog(catalog):
             continue
         s = stats[r["Z_PK"]]
         cover = None
-        img = covers.get(r["Z_PK"], s["first_img"])
+        img = covers.get(r["Z_PK"])
         thumb = os.path.join(thumbs, "%08d.cot" % img) if img else None
         if thumb and os.path.exists(thumb):
             cover = thumb

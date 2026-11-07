@@ -7,6 +7,7 @@ Changes are also kept in a small overlay until Capture One has saved them to its
 import hashlib
 import os
 import sqlite3
+import struct
 import subprocess
 import threading
 import time
@@ -17,6 +18,7 @@ IMAGES_SQL = """
 SELECT i.Z_PK AS pk, i.ZIMAGEFILENAME AS fn, i.ZEXP_DATE AS shot, p.ZISRELATIVE AS rel, p.ZRELATIVEPATH AS rp,
        p.ZMACROOT AS root,
        (SELECT v.ZVARIANTUUID FROM ZVARIANT v WHERE v.ZIMAGE = i.Z_PK ORDER BY v.ZINDEX, v.Z_PK LIMIT 1) AS vid,
+       (SELECT v.Z_PK FROM ZVARIANT v WHERE v.ZIMAGE = i.Z_PK ORDER BY v.ZINDEX, v.Z_PK LIMIT 1) AS vpk,
        (SELECT MAX(COALESCE(m.ZBASIC_RATING, 0)) FROM ZVARIANT v JOIN ZVARIANTLAYER l ON l.ZVARIANT = v.Z_PK
           JOIN ZVARIANTMETADATA m ON m.ZLAYER = l.Z_PK WHERE v.ZIMAGE = i.Z_PK) AS rating,
        (SELECT MAX(COALESCE(m.ZCOLOR_TAG_INDEX, 0)) FROM ZVARIANT v JOIN ZVARIANTLAYER l ON l.ZVARIANT = v.Z_PK
@@ -118,47 +120,60 @@ class Culling:
 
     # ---------------- pictures ----------------
     def _paths(self, catalog, r):
+        """Path of the original file (inside the catalog for referenced-in images, else at its own root)."""
         rp = (r["rp"] or "").strip("/")
-        if r["rel"]:
-            original = os.path.join(catalog, rp, r["fn"])
-            sub = rp[len("Originals/"):] if rp.startswith("Originals/") else rp
-        else:
-            original = os.path.join(r["root"] or "/", rp, r["fn"])
-            sub = rp
-        prev = os.path.join(catalog, "Cache", "Previews", sub, r["fn"])
-        return original, prev + ".cof", prev + ".cop"
+        return os.path.join(catalog if r["rel"] else (r["root"] or "/"), rp, r["fn"])
 
     def thumb(self, catalog, uuid, pk):
-        """Small JPEG for the grid: Capture One's own thumbnail or small preview, else made from the original."""
+        """Small JPEG for the grid: Capture One's own thumbnail (named by the *variant* id), else made from its preview.
+        (.cof files next to the previews are focus maps, not pictures.)"""
         r = self._row(catalog, uuid, pk)
         if not r:
             return None
-        cot = os.path.join(catalog, "Cache", "Thumbnails", "%08d.cot" % pk)
-        if os.path.exists(cot):
-            return cot
-        original, cof, cop = self._paths(catalog, r)
-        if os.path.exists(cof):
-            return cof
-        return self._convert(cop if os.path.exists(cop) else original, catalog, pk, 480, "s")
+        if r.get("vpk"):
+            cot = os.path.join(catalog, "Cache", "Thumbnails", "%08d.cot" % r["vpk"])
+            if os.path.exists(cot):
+                return cot
+        return self._picture(self._paths(catalog, r), catalog, pk, 480, "s")
 
     def preview(self, catalog, uuid, pk):
         """Large JPEG for the viewer (Capture One's big preview is JPEG XL → converted once and cached)."""
         r = self._row(catalog, uuid, pk)
         if not r:
             return None
-        original, cof, cop = self._paths(catalog, r)
-        src = cop if os.path.exists(cop) else original
-        return self._convert(src, catalog, pk, 1800, "l") or (cof if os.path.exists(cof) else None)
+        return self._picture(self._paths(catalog, r), catalog, pk, 1800, "l")
 
-    def _convert(self, src, catalog, pk, size, tag):
-        if not src or not os.path.exists(src):
+    # Capture One's own previews (.cop) are an internal JPEG XL proxy, not a display picture, and the .cof next
+    # to them is a focus map. So the big picture comes from the camera JPEG embedded in the RAW (instant for Fuji
+    # RAF), else macOS decodes the RAW / image itself. It shows the shot as the camera saw it, not the edit.
+    def _picture(self, original, catalog, pk, size, tag):
+        if not original or not os.path.exists(original):
             return None
         h = hashlib.sha1(catalog.encode()).hexdigest()[:10]
-        out = os.path.join(self.cache_dir, "%s_%d_%s.jpg" % (h, pk, tag))
-        if os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(src):
+        out = os.path.join(self.cache_dir, "%s_%d_%s2.jpg" % (h, pk, tag))   # "2": made from the RAW, not the .cop proxy
+        if os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(original):
             return out
-        subprocess.run(["/usr/bin/sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", "-Z", str(size), src, "--out", out],
-                       capture_output=True, timeout=60)
+        src, tmp = original, None
+        emb = embedded_jpeg(original)
+        if emb:
+            tmp = out + ".src.jpg"
+            with open(tmp, "wb") as f:
+                f.write(emb)
+            src = tmp
+        cmd = ["/usr/bin/sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", "-Z", str(size)]
+        rot = {3: 180, 6: 90, 8: 270}.get(jpeg_orientation(emb) if emb else 1)
+        if rot:
+            cmd += ["-r", str(rot)]
+        try:
+            subprocess.run(cmd + [src, "--out", out], capture_output=True, timeout=90)
+        finally:
+            if tmp and os.path.exists(tmp):
+                os.remove(tmp)
+        if rot and os.path.exists(out):
+            with open(out, "r+b") as f:
+                buf = bytearray(f.read())
+                if jpeg_orientation(buf, reset=True) != 1:
+                    f.seek(0); f.write(buf)
         return out if os.path.exists(out) else None
 
     # ---------------- writing tags via Capture One ----------------
@@ -204,3 +219,49 @@ class Culling:
         if "-1743" in err or "not allowed" in err.lower():
             return False, "macOS не разрешила TabDock управлять Capture One: Настройки → Конфиденциальность → Автоматизация"
         return False, "Capture One: " + (err or out or "ошибка")[:160]
+
+
+def embedded_jpeg(path):
+    """Full-size camera JPEG inside a Fujifilm RAF (offset/length at bytes 84..92 of the header)."""
+    if not path.lower().endswith(".raf"):
+        return None
+    try:
+        with open(path, "rb") as f:
+            head = f.read(100)
+            if not head.startswith(b"FUJIFILMCCD-RAW"):
+                return None
+            off, ln = struct.unpack(">II", head[84:92])
+            f.seek(off)
+            data = f.read(ln)
+        return data if data[:3] == b"\xff\xd8\xff" else None
+    except (OSError, struct.error):
+        return None
+
+
+def jpeg_orientation(data, reset=False):
+    """EXIF orientation (1..8) of a JPEG, 1 if absent. reset=True (data a bytearray) sets it to 1 in place,
+    for pictures that were already turned upright."""
+    try:
+        i = 2
+        while i < min(len(data), 65536):
+            if data[i] != 0xFF:
+                return 1
+            marker, ln = data[i + 1], struct.unpack(">H", data[i + 2:i + 4])[0]
+            if marker == 0xE1 and data[i + 4:i + 10] == b"Exif\0\0":
+                t = i + 10
+                end = ">" if data[t:t + 2] == b"MM" else "<"
+                ifd = t + struct.unpack(end + "I", data[t + 4:t + 8])[0]
+                for k in range(struct.unpack(end + "H", data[ifd:ifd + 2])[0]):
+                    e = ifd + 2 + 12 * k
+                    if struct.unpack(end + "H", data[e:e + 2])[0] == 0x0112:
+                        o = struct.unpack(end + "H", data[e + 8:e + 10])[0]
+                        if reset:
+                            data[e + 8:e + 10] = struct.pack(end + "H", 1)
+                        return o
+                return 1
+            if marker == 0xDA:
+                return 1
+            i += 2 + ln
+    except (IndexError, struct.error):
+        pass
+    return 1

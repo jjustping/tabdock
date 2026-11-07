@@ -30,6 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.Composable
@@ -403,6 +405,27 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
     }
 }
 
+/** System actions as one compact row (icon + label side by side) under the app tiles. */
+@Composable fun SysPills(c: Ctx) {
+    val s = LocalSkin.current
+    var armed by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(armed) { if (armed != null) { delay(3000); armed = null } }
+    val awake = c.state.b("awake")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for ((a, ic, t) in SYS_TILES) {
+            val on = a == "awake" && awake; val arm = armed == a
+            Row(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp))
+                .background(when { arm -> s.red.copy(.25f); on -> s.amber.copy(.2f); else -> s.inner })
+                .border(1.dp, if (arm) s.red else s.innerBorder.copy(.5f), RoundedCornerShape(12.dp))
+                .clickable { if (a == "sleep" && !arm) { armed = a; c.deck.toast("Нажмите ещё раз для подтверждения") } else { armed = null; c.deck.action(a) } }
+                .padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Ic(ic, 18.dp, if (on) s.amber else if (arm) s.red else s.text); Spacer(Modifier.width(6.dp))
+                T(if (arm) "Ещё раз" else t, 12.sp, if (arm) s.red else s.muted, maxLines = 1)
+            }
+        }
+    }
+}
+
 @Composable fun AppTiles(c: Ctx, max: Int = 8, cols: Int = 4) {
     val apps = c.all.a("apps").objs().filter { it.b("installed") }.take(max)
     Grid(apps, cols) { app ->
@@ -424,7 +447,7 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
 }
 
 @Composable fun QuickW(c: Ctx) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { AppTiles(c); SysTiles(c) }
+    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) { AppTiles(c); SysPills(c) }
 }
 
 // ---------------- computer / disks / network ----------------
