@@ -42,8 +42,6 @@ TabDock делает один человек в свободное время. �
 
 * **Время.** Каждая версия — это вечера разработки и проверки на настоящих устройствах. Поддержка позволяет
   тратить на TabDock больше времени: чаще выпускать обновления и быстрее чинить ошибки.
-* **Железо для проверки.** Планшеты и телефоны разных марок, компьютеры с Linux, внешние диски — всё, на чём
-  TabDock должен работать надёжно, а не «у меня запускается».
 * **Магазины и новые платформы.** Публикация в RuStore и Google Play, а для приложения на iPhone/iPad — платный
   аккаунт разработчика Apple. Без этого приложение ставится только из APK.
 * **Открытость.** Всё, что сделано, остаётся в открытом коде, бесплатно для всех — в том числе для тех, кто
@@ -524,8 +522,6 @@ collection — and it will stay that way. Support keeps the project moving:
 
 * **Time.** Every release means evenings of development and testing on real devices. Support buys more time for
   TabDock: more frequent updates and faster fixes.
-* **Test hardware.** Tablets and phones of different brands, Linux machines, external drives — everything TabDock
-  has to run reliably on, not just "works on my machine".
 * **Stores and new platforms.** Publishing on RuStore and Google Play, and a paid Apple developer account for an
   iPhone/iPad app. Until then the app is installed from the APK only.
 * **Openness.** Everything stays open source and free for everyone, including those who cannot chip in.
