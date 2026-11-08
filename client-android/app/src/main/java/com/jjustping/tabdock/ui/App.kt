@@ -56,7 +56,7 @@ import org.json.JSONObject
 import java.util.Calendar
 
 private val TABS = listOf(Triple("home", "home", "Главная"), Triple("shoots", "aperture", "Съёмки"), Triple("notes", "book", "Справка"),
-    Triple("mac", "computer", "Компьютер"), Triple("settings", "gear", "Настройки"))
+    Triple("files", "transfer", "Файлы"), Triple("mac", "computer", "Компьютер"), Triple("settings", "gear", "Настройки"))
 
 @Composable
 fun TabDockApp(deck: Deck) {
@@ -118,6 +118,7 @@ fun TabDockApp(deck: Deck) {
                                 "shoots" -> ShootsScreen(c)
                                 "notes" -> NotesScreen(c)
                                 "mac" -> ComputerScreen(c)
+                                "files" -> FilesScreen(c)
                                 "settings" -> SettingsScreen(c, openWeb = { web = it }, onConnect = { forceConnect = true }, onWizard = { wizard = true }, onScan = { scanning = true })
                                 else -> HomeScreen(c, dialogs)
                             }
@@ -235,13 +236,14 @@ private fun saveWidgetOpts(deck: Deck, all: JSONObject?, w: JSONObject, opts: JS
 
 @Composable private fun BottomTabs(tab: String, shown: List<String>?, onTab: (String) -> Unit) {
     val s = LocalSkin.current
-    Row(Modifier.fillMaxWidth().background(s.tabs).padding(horizontal = 22.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
-        for ((id, ic, name) in TABS) {
-            if (shown != null && id != "home" && id != "settings" && id !in shown) continue
+    val tabs = TABS.filter { (id) -> shown == null || id == "home" || id == "settings" || id in shown }
+    val tight = LocalCompact.current && tabs.size > 5      // six buttons on a phone: smaller labels so they fit
+    Row(Modifier.fillMaxWidth().background(s.tabs).padding(horizontal = if (tight) 4.dp else 22.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
+        for ((id, ic, name) in tabs) {
             val on = tab == id
             Column(Modifier.widthIn(max = 170.dp).weight(1f).clip(RoundedCornerShape(14.dp)).background(if (on) s.inner else Color.Transparent)
                 .clickable { onTab(id) }.padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Ic(ic, 24.dp, if (on) s.accent else s.muted); T(name, 13.sp, if (on) s.text else s.muted)
+                Ic(ic, 24.dp, if (on) s.accent else s.muted); T(name, if (tight) 11.sp else 13.sp, if (on) s.text else s.muted, maxLines = 1)
             }
         }
     }

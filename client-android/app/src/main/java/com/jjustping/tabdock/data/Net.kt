@@ -104,6 +104,29 @@ class Api(val base: String, @Volatile var key: String?) {
         } finally { c.disconnect() }
     }
 
+    /** Computer → phone: stream a file into [out] (no size limit, no buffering in memory). */
+    fun download(path: String, out: java.io.OutputStream) {   // call from Dispatchers.IO
+        val c = open(path, 15000)
+        try {
+            c.readTimeout = 120000
+            if (c.responseCode != 200) throw HttpError(c.responseCode, "HTTP ${c.responseCode}")
+            c.inputStream.use { it.copyTo(out, 256 * 1024) }
+        } finally { c.disconnect() }
+    }
+
+    /** Phone → computer: stream a file to ~/Downloads/TabDock on the computer. */
+    suspend fun putFile(name: String, length: Long, input: java.io.InputStream): JSONObject = withContext(Dispatchers.IO) {
+        val c = open("/api/send/file?name=" + java.net.URLEncoder.encode(name, "UTF-8"), 15000)
+        try {
+            c.requestMethod = "PUT"; c.doOutput = true; c.readTimeout = 120000
+            c.setRequestProperty("Content-Type", "application/octet-stream")
+            if (length >= 0) c.setFixedLengthStreamingMode(length) else c.setChunkedStreamingMode(256 * 1024)
+            c.outputStream.use { out -> input.use { it.copyTo(out, 256 * 1024) } }
+            val stream = if (c.responseCode in 200..299) c.inputStream else c.errorStream
+            JSONObject(stream?.use { String(it.readBytes()) } ?: "{}")
+        } finally { c.disconnect() }
+    }
+
     /** Password sign-in: the server answers with a cookie that carries the access key. */
     suspend fun login(password: String): Pair<String?, String> = withContext(Dispatchers.IO) {
         val c = open("/api/login", 5000)

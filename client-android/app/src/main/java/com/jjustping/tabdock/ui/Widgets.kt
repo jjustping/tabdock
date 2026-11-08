@@ -92,6 +92,7 @@ val WIDGETS = linkedMapOf(
     "network" to WidgetDef("Сеть", "link", "Роутер, DNS, интернет", 4, 3, true),
     "shortcuts" to WidgetDef("Команды", "frame", "Кнопки Apple Shortcuts", 4, 2),
     "wfolio" to WidgetDef("Галереи wfolio", "link", "Сроки хранения галерей", 4, 3, true),
+    "buttons" to WidgetDef("Свои кнопки", "star", "Сочетания клавиш, сайты, папки, текст, команды", 4, 3),
 )
 
 /** Everything a widget needs: the latest data and the actions. */
@@ -108,7 +109,7 @@ fun Widget(type: String, w: JSONObject, c: Ctx, modifier: Modifier) {
                 "reminders" -> RemindersW(c); "shoots" -> ShootsW(c); "calendar" -> CalendarW(c)
                 "player" -> PlayerW(c); "quick" -> QuickW(c); "weather" -> WeatherW(c); "deadlines" -> DeadlinesW(c)
                 "events" -> EventsW(c); "macstat" -> MacW(c); "disks" -> DisksW(c); "note" -> NoteW(c, w)
-                "focus" -> FocusW(c); "network" -> NetW(c); "shortcuts" -> ShortcutsW(c, w); "wfolio" -> WfolioW(c)
+                "focus" -> FocusW(c); "network" -> NetW(c); "shortcuts" -> ShortcutsW(c, w); "wfolio" -> WfolioW(c); "buttons" -> ButtonsW(c, w)
             }
         }
     }
@@ -124,7 +125,7 @@ private fun headerAction(type: String, c: Ctx, w: JSONObject): (@Composable andr
     "shoots" -> { { Link("Все") { c.goTab("shoots") } } }
     "macstat", "disks" -> { { Link("Подробно") { c.goTab("mac") } } }
     "wfolio" -> { { Link("Все") { c.goTab("shoots") } } }
-    "note", "shortcuts" -> { { Box(Modifier.clickable { c.editWidget(w) }.padding(4.dp)) { Ic("gear", 18.dp, LocalSkin.current.accent) } } }
+    "note", "shortcuts", "buttons" -> { { Box(Modifier.clickable { c.editWidget(w) }.padding(4.dp)) { Ic("gear", 18.dp, LocalSkin.current.accent) } } }
     else -> null
 }
 

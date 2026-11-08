@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Передача файлов — TabDock</title>
+<link rel="icon" href="/static/icon.svg">
+<style>
+  :root { --bg:#0a0c0f; --card:#14171c; --inner:#1b1f26; --border:#262b34; --text:#e9edf2; --muted:#8b94a3; --dim:#5d6573;
+          --accent:#4fd1c5; --on-accent:#06201d; --green:#68d391; --amber:#f6c453; --red:#fc8181; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f3ef; --card:#fff; --inner:#f4f3ef; --border:#e4e2db; --text:#17171a; --muted:#6d6b66; --dim:#a5a29b;
+            --accent:#0f9488; --on-accent:#fff; --green:#2e8b57; --amber:#b7791f; --red:#c8372d; }
+  }
+  * { box-sizing: border-box; } [hidden] { display:none !important; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 18px; margin: 0 0 12px; display:flex; align-items:center; gap:10px; }
+  h1 img { width: 26px; height: 26px; }
+  h2 { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:18px 0 8px; }
+  .drop { border:2px dashed var(--border); border-radius:18px; padding:26px 16px; text-align:center; background:var(--card);
+          cursor:pointer; transition: border-color .15s, background .15s; }
+  .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .drop b { font-size: 16px; display:block; margin-bottom:4px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  select, .btn { background:var(--inner); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:7px 10px; font:inherit; }
+  .btn { cursor:pointer; font-weight:600; }
+  .list { background:var(--card); border:1px solid var(--border); border-radius:14px; }
+  .it { display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid var(--border); }
+  .it:last-child { border-bottom:0; }
+  .it .n { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+  .it .m { color:var(--muted); font-size:12px; white-space:nowrap; }
+  .tag { font-size:12px; font-weight:700; border-radius:8px; padding:2px 8px; white-space:nowrap; }
+  .tag.wait { color:var(--amber); background: color-mix(in srgb, var(--amber) 16%, transparent); }
+  .tag.ok { color:var(--green); background: color-mix(in srgb, var(--green) 16%, transparent); }
+  .x { cursor:pointer; color:var(--dim); border:0; background:none; font-size:16px; }
+  .empty { padding:12px; color:var(--muted); }
+  .bar { height:6px; border-radius:3px; background:var(--inner); overflow:hidden; margin-top:10px; }
+  .bar i { display:block; height:100%; background:var(--accent); width:0; }
+  .msg { color:var(--muted); font-size:13px; margin-top:6px; min-height:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1><img src="/static/icon.svg" alt="">Передача файлов</h1>
+
+  <div class="drop" id="drop">
+    <b>Перетащите сюда файлы для телефона</b>
+    <span class="muted" style="color:var(--muted)">или нажмите, чтобы выбрать. Любые файлы — фото, видео, документы, архивы.</span>
+    <input type="file" id="pick" multiple hidden>
+  </div>
+  <div class="row">
+    <span style="color:var(--muted)">Кому:</span>
+    <select id="to"><option value="">Всем подключённым устройствам</option></select>
+  </div>
+  <div class="bar" id="bar" hidden><i id="barI"></i></div>
+  <div class="msg" id="msg"></div>
+
+  <h2>Отправлено на телефон</h2>
+  <div class="list" id="out"><div class="empty">Пока ничего</div></div>
+  <div class="msg">Телефон заберёт файлы, когда приложение TabDock открыто или свёрнуто, и положит их в «Загрузки → TabDock». Файлы ждут 24 часа.</div>
+
+  <h2>Пришло с телефона</h2>
+  <div class="list" id="in"><div class="empty">Пока ничего — на телефоне: «Поделиться» → TabDock</div></div>
+  <div class="row"><button class="btn" id="reveal">Открыть папку «Загрузки → TabDock»</button></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const size = (b) => b < 1024 ? b + " Б" : b < 1048576 ? (b / 1024).toFixed(0) + " КБ" : b < 1073741824 ? (b / 1048576).toFixed(1) + " МБ" : (b / 1073741824).toFixed(2) + " ГБ";
+const when = (t) => { const s = Date.now() / 1000 - t; return s < 60 ? "только что" : s < 3600 ? Math.floor(s / 60) + " мин назад" : new Date(t * 1000).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" }); };
+const post = (path, body) => fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+async function load() {
+  const d = await fetch("/api/transfer").then((r) => r.json()).catch(() => null);
+  if (!d) return;
+  const sel = $("to"), cur = sel.value, names = d.devices.map((x) => x.name);
+  sel.innerHTML = '<option value="">Всем подключённым устройствам</option>' + names.map((n) => `<option>${esc(n)}</option>`).join("");
+  if (names.includes(cur)) sel.value = cur;
+  $("out").innerHTML = d.outbox.length ? d.outbox.slice().reverse().map((it) => {
+    const st = it.delivered ? '<span class="tag ok">доставлено</span>'
+      : it.got.length ? `<span class="tag ok">забрали: ${it.got.length}</span>` : '<span class="tag wait">ждёт телефон</span>';
+    return `<div class="it"><span class="n" title="${esc(it.name)}">${esc(it.name)}</span><span class="m">${size(it.size)} · ${it.to ? esc(it.to) : "всем"} · ${when(it.at)}</span>${st}` +
+      (it.delivered ? "" : `<button class="x" title="Отменить" data-id="${it.id}">✕</button>`) + "</div>";
+  }).join("") : '<div class="empty">Пока ничего</div>';
+  $("in").innerHTML = d.inbox.length ? d.inbox.map((it) => `<div class="it"><span class="n" title="${esc(it.name)}">${esc(it.name)}</span><span class="m">${size(it.size)} · ${when(it.at)}</span></div>`).join("")
+    : '<div class="empty">Пока ничего — на телефоне: «Поделиться» → TabDock</div>';
+}
+
+function upload(file) {
+  return new Promise((resolve) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", "/api/outbox/file?name=" + encodeURIComponent(file.name) + "&to=" + encodeURIComponent($("to").value));
+    x.upload.onprogress = (e) => { if (e.lengthComputable) $("barI").style.width = (100 * e.loaded / e.total) + "%"; };
+    x.onload = () => { let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {} resolve(r); };
+    x.onerror = () => resolve({ ok: false, message: "Нет связи с TabDock" });
+    x.send(file);
+  });
+}
+
+async function send(files) {
+  if (!files.length) return;
+  $("bar").hidden = false;
+  let ok = 0, last = "";
+  for (const [i, f] of [...files].entries()) {
+    $("msg").textContent = `Отправляю ${i + 1} из ${files.length}: ${f.name}`;
+    $("barI").style.width = "0";
+    const r = await upload(f);
+    if (r.ok) ok++; else last = r.message || "ошибка";
+  }
+  $("bar").hidden = true;
+  $("msg").textContent = ok === files.length ? (ok === 1 ? "Готово — телефон заберёт файл, когда приложение открыто." : `Готово: ${ok} файла(ов) ждут телефон.`) : `Отправлено ${ok} из ${files.length}. ${last}`;
+  load();
+}
+
+const drop = $("drop");
+drop.onclick = () => $("pick").click();
+$("pick").onchange = (e) => { send(e.target.files); e.target.value = ""; };
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => send(e.dataTransfer.files));
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => { e.preventDefault(); if (e.target !== drop && !drop.contains(e.target)) send(e.dataTransfer.files); });
+$("out").addEventListener("click", async (e) => { const id = e.target.dataset?.id; if (id) { await post("/api/outbox", { op: "remove", id }); load(); } });
+$("reveal").onclick = () => post("/api/outbox", { op: "reveal" });
+load(); setInterval(load, 3000);
+</script>
+</body>
+</html>

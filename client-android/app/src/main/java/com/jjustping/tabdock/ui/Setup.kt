@@ -386,8 +386,8 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
 /** Which tabs the bottom bar shows (for all devices of this computer). «Главная» and «Настройки» always stay. */
 @Composable private fun BottomBarSettings(c: Ctx) {
     val s = LocalSkin.current
-    val all = listOf("shoots" to "Съёмки", "notes" to "Справка", "mac" to "Компьютер")
-    val cur = c.all.o("config").a("tabs")?.strs() ?: listOf("shoots", "notes", "mac", "connect", "settings")
+    val all = listOf("shoots" to "Съёмки", "notes" to "Справка", "files" to "Файлы", "mac" to "Компьютер")
+    val cur = c.all.o("config").a("tabs")?.strs() ?: listOf("shoots", "notes", "files", "mac", "connect", "settings")
     DeckCard("Нижняя панель") {
         T("Какие кнопки показывать внизу. «Главная» и «Настройки» есть всегда.", 14.sp, s.muted)
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

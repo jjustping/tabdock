@@ -91,6 +91,7 @@ class Tray:
         else:
             self._item(m, "TabDock не отвечает — перезапустите службу")
         m.append(Gtk.SeparatorMenuItem())
+        self._item(m, "Передача файлов…", lambda: self.open("/transfer"))
         self._item(m, "Показать QR-код для подключения…", lambda: self.open("/"))
         self._item(m, "Открыть панель TabDock", lambda: self.open("/"))
         m.append(Gtk.SeparatorMenuItem())

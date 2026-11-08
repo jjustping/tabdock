@@ -25,6 +25,8 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     val store = Store(ctx)
     val discovery = Discovery(ctx, store)
     init { Lan.init(ctx); Notify.init(ctx); com.jjustping.tabdock.ui.Themes.load(store) }
+    val transfers = Transfers(store)
+    private val receiver = Receiver(ctx, store, transfers)
 
     @Volatile var api: Api? = null
         private set
@@ -128,6 +130,59 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         if (force || store.string("update_skip") != u.version) update.value = u
     }
 
+    /** «Поделиться → TabDock»: files go to the computer's Downloads/TabDock, a link opens there, text goes to its clipboard. */
+    fun share(intent: android.content.Intent) = scope.launch {
+        val a = api ?: run { toast("Сначала подключитесь к компьютеру"); return@launch }
+        val uris = buildList {
+            if (intent.action == android.content.Intent.ACTION_SEND_MULTIPLE)
+                androidx.core.content.IntentCompat.getParcelableArrayListExtra(intent, android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)?.let { addAll(it) }
+            else androidx.core.content.IntentCompat.getParcelableExtra(intent, android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)?.let { add(it) }
+        }
+        if (uris.isNotEmpty()) { upload(a, uris); return@launch }
+        val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT).orEmpty()
+        if (text.isBlank()) { toast("Нечего отправлять"); return@launch }
+        val kind = if (Regex("""^\s*https?://\S+\s*$""").matches(text) || intent.getStringExtra(android.content.Intent.EXTRA_SUBJECT) != null && text.contains("http")) "link" else "text"
+        val r = runCatching { a.post("/api/send", JSONObject().put("kind", kind).put("value", text)) }.getOrElse { JSONObject().put("message", Lan.explain(it)) }
+        toast(r.optString("message", "Готово"))
+    }
+
+    /** Files picked on the «Файлы» screen. */
+    fun sendFiles(uris: List<android.net.Uri>) = scope.launch {
+        val a = api ?: run { toast("Сначала подключитесь к компьютеру"); return@launch }
+        upload(a, uris)
+    }
+
+    /** True while files are going to the computer (the «Файлы» screen shows it). */
+    val sending = MutableStateFlow<String?>(null)
+
+    private suspend fun upload(a: Api, uris: List<android.net.Uri>) {
+        toast(if (uris.size == 1) "Отправляю на компьютер…" else "Отправляю ${uris.size} файла(ов)…")
+        var ok = 0; var last = ""
+        for ((i, u) in uris.withIndex()) {
+            val (name, size) = queryName(u)
+            sending.value = if (uris.size == 1) name else "${i + 1} из ${uris.size}: $name"
+            val r = runCatching { ctx.contentResolver.openInputStream(u)!!.let { a.putFile(name, size, it) } }
+                .getOrElse { JSONObject().put("ok", false).put("message", Lan.explain(it)) }
+            if (r.optBoolean("ok")) { ok++; transfers.add("out", name, size, u.toString()) } else last = r.optString("message")
+        }
+        sending.value = null
+        toast(if (ok == uris.size) (if (ok == 1) "Готово: «Загрузки → TabDock» на компьютере" else "Готово: $ok файла(ов) в «Загрузки → TabDock»")
+              else "Отправлено $ok из ${uris.size}. $last")
+    }
+
+    private fun queryName(u: android.net.Uri): Pair<String, Long> {
+        var name = u.lastPathSegment?.substringAfterLast('/') ?: "файл"; var size = -1L
+        runCatching {
+            ctx.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME, android.provider.OpenableColumns.SIZE), null, null, null)?.use { cur ->
+                if (cur.moveToFirst()) {
+                    cur.getString(0)?.let { name = it }
+                    if (!cur.isNull(1)) size = cur.getLong(1)
+                }
+            }
+        }
+        return name to size
+    }
+
     fun login(server: FoundServer, password: String, done: (String) -> Unit) = scope.launch {
         val (token, msg) = runCatching { Api(server.base, null).login(password) }.getOrElse { null to (it.message ?: "Нет связи") }
         if (token == null) { done(msg); return@launch }
@@ -159,6 +214,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
                         fails = 0
                         if (conn.value == Conn.LOST) { conn.value = Conn.CONNECTED; loadAll() }
                         val s = r.getOrThrow(); state.value = s; handleEvents(s)
+                        s.optJSONArray("outbox")?.objs()?.takeIf { it.isNotEmpty() }?.let { files -> scope.launch { receiver.take(a, files) { toast(it) } } }
                         if (++tick % (if (visible) 12 else 2) == 0) loadAll()
                     } else if (++fails >= 3 && conn.value == Conn.CONNECTED) {
                         conn.value = Conn.LOST
@@ -177,8 +233,11 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         for (i in 0 until evs.length()) {
             val e = evs.getJSONObject(i); val id = e.optInt("id")
             if (id > lastEvent && System.currentTimeMillis() / 1000.0 - e.optDouble("at") < 600) {
-                events.tryEmit(e)
-                if (!visible) Notify.exportDone(ctx, store, e)
+                // only «export finished» shows the banner / notification; other events (a file sent from a phone…) are quiet
+                if (e.optString("type", "export_done") == "export_done") {
+                    events.tryEmit(e)
+                    if (!visible) Notify.exportDone(ctx, store, e)
+                }
             }
             if (id > max) max = id
         }

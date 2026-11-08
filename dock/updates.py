@@ -100,6 +100,12 @@ def apply():
                        capture_output=True, timeout=300)
     if "Already up to date" in r.stdout or "Уже актуально" in r.stdout:
         return True, "Уже последняя версия"
+    changed = subprocess.run(["git", "-C", HERE, "diff", "--name-only", "HEAD@{1}", "HEAD"], capture_output=True, text=True).stdout
+    if sys.platform == "darwin" and "helper/" in changed and os.path.exists(os.path.join(HERE, "helper", "build.sh")):
+        # the menu-bar app changed: rebuild it (macOS may ask for its permissions again once)
+        subprocess.run([os.path.join(HERE, "helper", "build.sh")], capture_output=True, timeout=600)
+    if sys.platform != "darwin":
+        subprocess.run(["systemctl", "--user", "restart", "tabdock-tray.service"], capture_output=True, timeout=30)
     return True, "Обновлено — сервер перезапускается"
 
 

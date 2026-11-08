@@ -1,5 +1,5 @@
 #!/bin/bash
-# TabDock installer: venv + calendar helper + LaunchAgent (autostart at login).
+# TabDock installer for macOS: venv + menu-bar app + calendar helper + LaunchAgent (autostart at login).
 #   ./install.sh              install / update and (re)start
 #   ./install.sh --port 9000  use another port
 #   ./install.sh --uninstall  stop and remove the LaunchAgent (data/ is kept)
@@ -90,8 +90,11 @@ for i in $(seq 1 20); do
 done
 if curl -fsS "http://localhost:$PORT/api/state" >/dev/null 2>&1; then
   URL=$("$DIR/.venv/bin/python" "$DIR/server.py" --port "$PORT" --print-url)
-  say "Готово!  На Mac: http://localhost:$PORT"
-  say "Планшет: отсканируйте QR (кнопка ▦) или откройте $URL"
+  say "Готово!  Панель TabDock на этом Mac: http://localhost:$PORT (там QR-код для подключения)"
+  say "Планшет или телефон: в приложении TabDock нажмите «Сканировать QR-код» — или откройте $URL"
+  say "Значок TabDock — в строке меню (вверху справа): статус, устройства, автозапуск, перезапуск."
+  say "Для «Своих кнопок» с сочетаниями клавиш один раз включите TabDock в Настройки → Конфиденциальность и"
+  say "безопасность → Универсальный доступ (macOS спросит при первом нажатии)."
   open "http://localhost:$PORT" || true
 else
   warn "Сервер не ответил. Лог: $LOGDIR/tabdock.err.log"

@@ -47,7 +47,7 @@ function handleEvents(evs) {
   if (!evs || !evs.length) return;
   const maxId = Math.max(...evs.map((e) => e.id));
   if (maxId < lastEvent) lastEvent = 0;               // server restarted
-  const fresh = evs.filter((e) => e.id > lastEvent && Date.now() / 1000 - e.at < 600);
+  const fresh = evs.filter((e) => e.id > lastEvent && Date.now() / 1000 - e.at < 600 && (e.type || "export_done") === "export_done");
   lastEvent = maxId; localStorage.setItem("dock_last_event", lastEvent);
   for (const e of fresh) {
     if (e.type === "export_done") banner("Экспорт закончился", `«${e.name}»: +${e.added} кадр${e.added % 10 === 1 && e.added % 100 !== 11 ? "" : "ов"}${e.target ? ` · ${e.done} из ${e.target}` : ""}`);

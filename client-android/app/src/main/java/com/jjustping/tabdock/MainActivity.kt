@@ -13,6 +13,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.jjustping.tabdock.data.Deck
 import com.jjustping.tabdock.ui.TabDockApp
 
@@ -50,6 +51,14 @@ class MainActivity : ComponentActivity() {
 
     /** QR code / link "http://<ip>:8787/?k=<key>" → pair with that server. */
     private fun handle(i: Intent?) {
+        if (i?.action == Intent.ACTION_SEND || i?.action == Intent.ACTION_SEND_MULTIPLE) {
+            // «Поделиться → TabDock»: wait until the computer answers, then send
+            lifecycleScope.launch {
+                repeat(20) { if (deck.api != null) return@repeat; kotlinx.coroutines.delay(500) }
+                deck.share(i)
+            }
+            return
+        }
         val u: Uri = i?.data ?: return
         val k = u.getQueryParameter("k") ?: return
         if (u.scheme == "http" && !u.host.isNullOrBlank()) deck.pairWithKey("http://${u.host}:${if (u.port > 0) u.port else 8787}", k)

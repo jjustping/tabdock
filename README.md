@@ -4,16 +4,16 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.11.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.12.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android app TabDock 0.11.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.12.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать TabDock 0.11.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
+**⬇ [Скачать TabDock 0.12.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
 (Android 8+, планшет и телефон) и код сервера для Mac.
 
 | | |
@@ -34,6 +34,26 @@
 Всё работает локально в домашней сети: без облака, аккаунтов и подписок (интернет нужен только для погоды
 и проверки ссылок wfolio). Сервер — компьютер с macOS 13+ или **Linux** (Ubuntu, Debian, Fedora, Arch), клиент — Android-приложение TabDock
 или любой современный браузер на планшете, телефоне или самом компьютере.
+
+### Передача файлов между телефоном и компьютером — как AirDrop, только для всех
+
+Перешли с iPhone на Android, а компьютер — Mac или Linux? Тогда вы знаете, чего не хватает больше всего: просто
+перекинуть фото, документ или ссылку между телефоном и компьютером. Без проводов, мессенджера «самому себе»,
+облака и почты. TabDock делает это в домашней сети, в обе стороны и между любыми системами:
+
+* **С телефона на компьютер** — «Поделиться → TabDock» в любом приложении (Фото, Файлы, браузер, мессенджер).
+  Фото, видео и любые файлы попадают на компьютер в «Загрузки → TabDock», ссылка открывается в браузере
+  компьютера, текст — в его буфер обмена.
+* **С компьютера на телефон** — окно «Передача файлов» (значок TabDock в строке меню / трее → «Передача
+  файлов…»): перетащите туда любые файлы, выберите устройство или «всем». Телефон заберёт их сам, сохранит в
+  «Загрузки → TabDock» и покажет уведомление — нажмите, чтобы открыть.
+* **Кнопка «Файлы» в нижней панели приложения** — история всего, что передано в обе стороны: нажмите на файл —
+  он откроется, значок папки — откроется «Загрузки → TabDock» в системных «Файлах». Оттуда же кнопка «Отправить на
+  компьютер» — выбрать любые файлы на телефоне. Кнопку, как и остальные внизу, можно убрать в настройках.
+* **Любые файлы и любой размер**: фото, видео, PDF, архивы, программы — проверено с файлами по 300 МБ, файлы
+  приходят без изменений (контрольные суммы совпадают). Скорость — как у вашей домашней сети.
+* **Mac ↔ Android и Linux ↔ Android** одинаково. Файлы идут напрямую между устройствами в вашей сети — без
+  облака и посредников, никуда не загружаются.
 
 ### Поддержать разработчика
 
@@ -217,6 +237,7 @@ WirePlumber (громкость), udisks2 (извлечение дисков), l
 ./install-linux.sh --status       # работает ли и адрес для планшета
 ./install-linux.sh --port 9000    # другой порт
 ./install-linux.sh --no-packages  # без apt/dnf/pacman, если всё уже стоит
+./install-linux.sh --keys         # разрешить «Своим кнопкам» нажимать клавиши (Wayland; один раз перезайти)
 ./install-linux.sh --uninstall    # убрать службы (данные в data/ остаются)
 journalctl --user -u tabdock -f   # журнал
 ```
@@ -248,6 +269,13 @@ journalctl --user -u tabdock -f   # журнал
 * **Конструктор скинов** (Настройки → Оформление → «Свой скин»): основа из семи скинов, акцентный цвет (палитра или
   `#RRGGBB`), фон — цвет, градиент или **размытая обложка съёмки**, карточки (плоские, стекло, глянец, окна Mac OS X),
   скругление углов. Живое превью. Скин передаётся на другое устройство через буфер обмена («Скопировать» → «Вставить скин»).
+* **Свои кнопки** (виджет «Свои кнопки», настройка — значок ⚙): как Stream Deck на планшете. Кнопка нажимает
+  сочетание клавиш (`cmd+shift+4`, `ctrl+alt+t`, `f5`…), вставляет готовый текст, открывает сайт, папку или
+  приложение, запускает команду (Apple Shortcut на Mac, свой скрипт из `~/.config/tabdock/commands` на Linux).
+  Кнопки общие для всех устройств компьютера. Произвольные команды оболочки нельзя — только то, что вы сами положили
+  в папку команд. Для сочетаний клавиш на Mac один раз нужен «Универсальный доступ» для TabDock, на Linux под
+  Wayland — `./install-linux.sh --keys`.
+* **Передача файлов** в обе стороны — см. раздел «Передача файлов между телефоном и компьютером» выше.
 * **Шпаргалки** («Справка» → «Шпаргалки»): готовые наборы — горячие клавиши macOS, Ubuntu/GNOME и терминала,
   Photoshop, Capture One, Lightroom Classic, команды для сисадминов (сеть, службы, логи, диски, ssh/rsync/tmux),
   git и VS Code для программистов и «рофлы для терминала» (`sl`, `cowsay`, `cmatrix`, попугай `curl parrot.live`…).
@@ -506,8 +534,8 @@ v0.1:
 | ~~0.8 beta~~ | ✅ нативное Android-приложение, ✅ отбор с метками, ✅ раскладка для телефона, ✅ бета-релиз с APK |
 | ~~0.9 beta~~ | ✅ подставка, ✅ конструктор скинов, ✅ офлайн-кэш, ✅ уведомления, ✅ VPN |
 | ~~0.10 beta~~ | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям |
-| **0.11** (сейчас) | ✅ **кнопка «Сканировать QR-код»** в приложении; ✅ **проверка обновлений** со списком изменений (приложение предлагает скачать и поставить новую версию, значок в меню и панель — обновить сервер); ✅ **настраиваемая нижняя панель**; ✅ на компьютере вместо копии дока — **панель управления**; ✅ проверено: приложение не мешает глубокому сну телефона; осталось: запись меток в Capture One и обход VPN на компьютере |
-| 0.12 · пульт | **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка, скрипт, вставить текст); **с телефона на компьютер**: фото, файлы, ссылки, текст в буфер обмена |
+| ~~0.11 beta~~ | ✅ **кнопка «Сканировать QR-код»** в приложении; ✅ **проверка обновлений** со списком изменений (приложение предлагает скачать и поставить новую версию, значок в меню и панель — обновить сервер); ✅ **настраиваемая нижняя панель**; ✅ на компьютере вместо копии дока — **панель управления**; ✅ проверено: приложение не мешает глубокому сну телефона; осталось: запись меток в Capture One и обход VPN на компьютере |
+| **0.12** (сейчас) | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
 | 0.13 · админам и программистам | **мониторинг хостов** (ping/HTTP с уведомлениями), **Wake-on-LAN**, **бэкапы** (Time Machine / rsync — когда был последний), **SMART дисков**; **Docker** (запуск, остановка, журнал), **GitHub Actions** (статус сборок), **git-репозитории** |
 | 0.14 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
 | 1.0 · стабильный релиз | **мастер установки** «что и откуда поставить» по шагам для Mac и Linux; новый ключ подписи, политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
@@ -553,7 +581,24 @@ Send any amount via YooMoney — scan the QR code or open the link; you choose t
 **[yoomoney.ru/to/4100115736818477](https://yoomoney.ru/to/4100115736818477)** — thank you! Free ways to help: star
 the repository, tell a friend, report a bug or share an idea in [Issues](https://github.com/jjustping/tabdock/issues).
 
-**Status: beta.** Server and native Android app **TabDock 0.11.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
+### File transfer between phone and computer — like AirDrop, for everyone
+
+Moved from an iPhone to Android while your computer is a Mac or runs Linux? Then you know what is missing most:
+just sending a photo, a document or a link between the phone and the computer. TabDock does it on your home
+network, both ways, across systems:
+
+* **Phone → computer**: «Share → TabDock» in any app. Photos, videos and any files land in Downloads/TabDock on
+  the computer, a link opens in the computer's browser, text goes to its clipboard.
+* **Computer → phone**: the «File transfer» window (TabDock menu-bar / tray icon → «Передача файлов…»): drop any
+  files, pick a device or «all». The phone takes them by itself, saves them to Downloads/TabDock and shows a
+  notification.
+* **«Файлы» button in the app's bottom bar**: the history of transfers both ways — tap a file to open it, the folder
+  icon opens Downloads/TabDock in the system Files app, «Send to computer» picks any files on the phone. It can be
+  removed from the bottom bar like the other buttons.
+* **Any file, any size** — tested with 300 MB files, checksums match. Mac ↔ Android and Linux ↔ Android alike,
+  directly between your devices — no cloud, nothing is uploaded anywhere.
+
+**Status: beta.** Server and native Android app **TabDock 0.12.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
@@ -564,6 +609,8 @@ stars/colour tags back through Capture One's AppleScript, folder-based shoots, V
 actions, your own scripts as "Commands", `.ics` calendar), menu-bar icon on the Mac and tray icon on Linux (status,
 connected devices, start at login, restart, log), ready-made cheat sheets per scenario (macOS, Ubuntu/terminal,
 Photoshop, Capture One, Lightroom, sysadmin, git + VS Code, terminal fun).
+**0.12**: file transfer both ways between the phone and the computer (see above) and Stream-Deck-like custom
+buttons (key combos, paste text, open a site/folder/app, run a command).
 Planned: setup guide for the computer, darktable/digiKam, store releases (RuStore) at 1.0; iPhone/iPad use the web
 UI in Safari for now.
 

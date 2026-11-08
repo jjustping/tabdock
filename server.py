@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import ipaddress
 import secrets
+import shutil
 import io
 import json
 import mimetypes
@@ -26,7 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from dock import auth, captureone, culling, demo, folders, lanbind, netcheck, notesets, updates, weather, wfolio  # noqa: E402
+from dock import auth, buttons, captureone, culling, demo, folders, inbox, lanbind, netcheck, notesets, outbox, updates, weather, wfolio  # noqa: E402
 if sys.platform == "darwin":
     from dock import actions as act_mod, bonjour, sysinfo   # noqa: E402
     from dock.calendar_mac import CalendarFeed               # noqa: E402
@@ -37,7 +38,7 @@ else:   # Linux: same interfaces, see dock/linux/
     from dock.linux.media import Media                             # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.11.1-beta"
+VERSION = "0.12.0-beta"
 WEB = os.path.join(HERE, "web")
 
 
@@ -50,6 +51,14 @@ class App:
         self.cache_dir = os.path.join(data_dir, "cache")
         os.makedirs(self.cache_dir, exist_ok=True)
         self.cfg = self.store.load("config", default_config)
+        # 0.12: the new «Файлы» tab also appears for those who already chose their bottom-bar buttons (once)
+        if isinstance(self.cfg.get("tabs"), list) and not self.cfg.get("tabs_files"):
+            def _add_files(c):
+                c["tabs_files"] = True
+                if "files" not in c.get("tabs", []):
+                    c["tabs"] = list(c["tabs"]) + ["files"]
+                return c
+            self.cfg = self.store.update("config", default_config, _add_files)
         self.store.load("reminders", [])
         self.store.load("notes", default_notes)
         self.store.load("shoots", {"manual": {}, "custom": []})
@@ -66,6 +75,7 @@ class App:
         self.c1 = captureone.CaptureOne()
         self.weather = weather.Weather()
         self.updates = updates.Updates(VERSION)
+        self.outbox = outbox.Outbox(data_dir)
         self.calendar = CalendarFeed(lambda: not self.demo and self.config().get("calendar", True))
         self._catalogs = None
         self._catalogs_at = 0
@@ -431,9 +441,9 @@ def op_wfolio(app, body):
 
 
 WIDGET_TYPES = {"reminders", "shoots", "calendar", "player", "quick", "clock", "weather", "deadlines", "events",
-                "macstat", "disks", "note", "focus", "network", "shortcuts", "wfolio"}
+                "macstat", "disks", "note", "focus", "network", "shortcuts", "wfolio", "buttons"}
 USAGES = {"photo", "work", "fun", "admin"}
-TABS = {"shoots", "notes", "mac", "connect", "settings"}
+TABS = {"shoots", "notes", "files", "mac", "connect", "settings"}
 
 
 def clean_spaces(spaces):
@@ -483,6 +493,8 @@ def op_config(app, body):
                                 "rating": max(1, min(5, int(r.get("rating") or 5)))}
         if "skin" in body:
             cfg["skin"] = re.sub(r"[^a-z0-9-]", "", str(body["skin"]))[:30]
+        if isinstance(body.get("buttons"), list):
+            cfg["buttons"] = buttons.clean(body["buttons"])
         if "folder_roots" in body and isinstance(body["folder_roots"], list):
             cfg["folder_roots"] = [{"path": str(r.get("path", ""))[:500], "app": str(r.get("app", ""))[:60]}
                                    for r in body["folder_roots"] if isinstance(r, dict) and r.get("path")][:12]
@@ -534,6 +546,11 @@ def op_action(app, body):
         return True, "Открываю Capture One"
     if a == "shortcut":
         return netcheck.run_shortcut(str(arg or ""))
+    if a == "button":            # «Свои кнопки»: only buttons saved in the config can be pressed
+        b = next((x for x in app.config().get("buttons", []) if x.get("id") == arg), None)
+        if not b:
+            return False, "Кнопка не найдена"
+        return buttons.run(b, act_mod, netcheck)
     if a == "calendar_access":
         app.calendar.refresh_soon()
         return True, "Запрос доступа отправлен — подтвердите на компьютере"
@@ -610,6 +627,24 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _stream(self, path, name):
+        """Send a (possibly big) file in chunks, as a download."""
+        try:
+            size = os.path.getsize(path)
+            f = open(path, "rb")
+        except OSError:
+            return self._send(404, {"error": "not found"})
+        with f:
+            self.send_response(200)
+            self.send_header("Content-Type", mimetypes.guess_type(name)[0] or "application/octet-stream")
+            self.send_header("Content-Length", str(size))
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(name))
+            self.end_headers()
+            shutil.copyfileobj(f, self.wfile, 1024 * 1024)
+
+    def _device(self):
+        return (self.headers.get("X-Dock-Device") or "").strip()[:60]
+
     def _panel(self):
         """On the computer itself: a control panel (connect devices, password, updates) instead of a copy of the dock."""
         return self._file(os.path.join(WEB, "panel.html"))
@@ -627,6 +662,32 @@ class Handler(BaseHTTPRequestHandler):
         skin = re.sub(r"[^a-z0-9-]", "", str(self.app.config().get("skin") or ""))
         html = html.replace("<head>", '<head><script>window.__SKIN__="%s";</script>' % skin, 1)
         return self._send(200, html.replace("<script src=", boot + "\n<script src=", 1), "text/html; charset=utf-8")
+
+    def do_PUT(self):
+        """Phone → computer file upload: PUT /api/send/file?name=… with the X-Dock-Key header (no cookie: a web page on
+        another site cannot send this header without a CORS preflight, which the server never allows)."""
+        if not self._guard():
+            return
+        u = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(u.query)
+        if u.path == "/api/outbox/file":   # computer → phone: only from the computer itself (the transfer window)
+            if not self._is_local():
+                return self._send(403, {"error": "local only"})
+            n = int(self.headers.get("Content-Length") or 0)
+            to = qs.get("to", [""])[0][:60]
+            expected = [c["name"] for c in self.app.clients(600) if c.get("kind") == "app"]
+            ok, msg, item = self.app.outbox.add(self.rfile, n, qs.get("name", [""])[0], to, expected)
+            return self._send(200, {"ok": ok, "message": msg, "item": item})
+        if u.path != "/api/send/file":
+            return self._send(404, {"error": "not found"})
+        if self.headers.get("X-Dock-Key") != self.app.config()["token"] and not self._is_local():
+            return self._send(401, {"error": "unauthorized"})
+        self._token_ok({})          # remember the device for the menu-bar icon
+        n = int(self.headers.get("Content-Length") or 0)
+        ok, msg, path = inbox.receive_file(self.rfile, n, qs.get("name", [""])[0])
+        if ok:
+            self.app.add_event(type="received", name=os.path.basename(path))
+        return self._send(200, {"ok": ok, "message": msg, "name": os.path.basename(path) if path else None})
 
     def do_HEAD(self):
         self.do_GET()
@@ -703,7 +764,21 @@ class Handler(BaseHTTPRequestHandler):
         if not self._token_ok(qs):
             return self._send(401, {"error": "unauthorized"})
         if p == "/api/state":
-            return self._send(200, app.state())
+            d = app.state()
+            if self._device():      # the app: files waiting for this device (computer → phone)
+                d = dict(d, outbox=app.outbox.for_device(self._device()))
+            return self._send(200, d)
+        if p == "/api/outbox/file":
+            fid = qs.get("id", [""])[0]
+            f = app.outbox.path(fid)
+            if not f:
+                return self._send(404, {"error": "not found"})
+            return self._stream(f, os.path.basename(f))
+        if p == "/api/transfer":     # the «Передача файлов» window, on the computer itself
+            if not self._is_local():
+                return self._send(403, {"error": "local only"})
+            return self._send(200, {"outbox": app.outbox.listing(), "inbox": inbox.recent(),
+                                    "devices": [c for c in app.clients(600) if c.get("kind") == "app"]})
         if p == "/api/all":
             d = app.everything()
             d["is_local"] = self._is_local()
@@ -739,6 +814,10 @@ class Handler(BaseHTTPRequestHandler):
                                     "active": app.catalogs(), "manual": app.config().get("c1_catalogs", [])})
         if p == "/api/update":
             return self._send(200, app.updates.info())
+        if p in ("/transfer", "/transfer.html"):
+            if not self._is_local():
+                return self._send(403, {"error": "local only"})
+            return self._file(os.path.join(WEB, "transfer.html"))
         if p == "/api/tray":   # menu-bar icon / tray on this computer only
             if not self._is_local():
                 return self._send(403, {"error": "local only"})
@@ -806,6 +885,20 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, {"ok": ok, "message": msg})
                 app.updates.check()
                 return self._send(200, dict(app.updates.info(), ok=True))
+            if p == "/api/outbox":     # the app took a file / the window removes one
+                if body.get("op") == "done" and self._device():
+                    app.outbox.done(str(body.get("id", "")), self._device())
+                    return self._send(200, {"ok": True})
+                if body.get("op") == "remove" and self._is_local():
+                    app.outbox.remove(str(body.get("id", "")))
+                    return self._send(200, {"ok": True})
+                if body.get("op") == "reveal" and self._is_local():
+                    inbox.reveal_dir()
+                    return self._send(200, {"ok": True})
+                return self._send(400, {"ok": False})
+            if p == "/api/send":       # phone → computer: a link or a piece of text
+                ok, msg = inbox.receive(body.get("kind"), body.get("value"))
+                return self._send(200, {"ok": ok, "message": msg})
             if p == "/api/password":
                 if not self._is_local():
                     return self._send(403, {"ok": False, "message": "Пароль меняется только на самом компьютере"})

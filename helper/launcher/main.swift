@@ -6,6 +6,7 @@
 //
 //   TabDock.app/Contents/MacOS/TabDock <python> <server.py> [args...]
 import AppKit
+import WebKit
 import Foundation
 
 let LABEL = "com.jjustping.tabdock"
@@ -162,6 +163,7 @@ final class Tray: NSObject, NSMenuDelegate {
             _ = add("TabDock не отвечает — перезапустите службу")
         }
         menu.addItem(.separator())
+        _ = add("Передача файлов…", #selector(showTransfer), key: "t")
         _ = add("Показать QR-код для подключения…", #selector(showQR))
         _ = add("Открыть панель TabDock", #selector(openDock))
         menu.addItem(.separator())
@@ -171,6 +173,25 @@ final class Tray: NSObject, NSMenuDelegate {
         _ = add("Открыть журнал", #selector(openLog))
         menu.addItem(.separator())
         _ = add("Остановить TabDock…", #selector(stopAll))
+    }
+
+    // «Передача файлов»: a small window with the drag-and-drop page of the local server
+    var transferWindow: NSWindow?
+    @objc func showTransfer() {
+        if transferWindow == nil {
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 620),
+                             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+            w.title = "TabDock — передача файлов"
+            w.isReleasedWhenClosed = false
+            let web = WKWebView(frame: w.contentView!.bounds)
+            web.autoresizingMask = [.width, .height]
+            w.contentView!.addSubview(web)
+            web.load(URLRequest(url: URL(string: "http://localhost:\(port)/transfer")!))
+            w.center()
+            transferWindow = w
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        transferWindow?.makeKeyAndOrderFront(nil)
     }
 
     @objc func copyAddress() {
