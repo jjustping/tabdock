@@ -57,8 +57,8 @@ object Lan {
         if (w != null && private.containsMatchIn(u.host)) runCatching { return w.openConnection(u) }
         return u.openConnection()
     }
-    const val VPN_HINT = "На этом устройстве включён VPN, и он не пускает в домашнюю сеть. В приложении VPN добавьте TabDock " +
-        "в исключения (раздельное туннелирование / split tunneling) или разрешите локальную сеть (LAN), либо выключите VPN."
+    const val VPN_HINT = "На этом устройстве включён VPN, и он не пускает в домашнюю сеть. " +
+        "В настройках VPN-клиента добавьте TabDock в исключения."
     fun explain(e: Throwable): String =
         if (vpn) "Не достучаться до компьютера. $VPN_HINT"
         else "Не удалось подключиться: компьютер не отвечает (${e.message?.substringBefore(" from ") ?: "нет ответа"})"

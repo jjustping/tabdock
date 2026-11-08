@@ -261,10 +261,9 @@ journalctl --user -u tabdock -f   # журнал
   приложение открыто или свёрнуто; если его закрыть совсем — не проверяется ничего. Выключаются в настройках.
 * **VPN.** Если VPN включён **на компьютере**, сервер отвечает устройствам из домашней сети напрямую через Wi-Fi/Ethernet
   (отдельный сокет, привязанный к сетевой карте), мимо туннеля. Если VPN включён **на телефоне или планшете**, приложение
-  ходит к компьютеру через Wi-Fi напрямую, если VPN это разрешает. Многие VPN (например, AmneziaVPN) обход запрещают
-  и забирают всю сеть — тогда в приложении VPN добавьте TabDock в исключения («Раздельное туннелирование» / split
-  tunneling) или разрешите локальную сеть; приложение само показывает эту подсказку и до тех пор показывает
-  последние сохранённые данные.
+  ходит к компьютеру через Wi-Fi напрямую, если VPN это разрешает. Если не разрешает — **в настройках VPN-клиента
+  добавьте TabDock в исключения**. Приложение само показывает эту подсказку и до тех пор показывает последние
+  сохранённые данные.
 * На Android 17 приложение один раз просит разрешение «Устройства в локальной сети», на Android 13+ — уведомления.
 * **Подключение по QR-коду** — кнопкой «Сканировать QR-код» в самом приложении (на экране подключения и в
   Настройках). Камера телефона для этого не подходит: она открывает ссылку в браузере.
@@ -491,8 +490,8 @@ v0.1:
 | **Отбор с планшета/телефона**: миниатюры, просмотр на весь экран, фильтры | ✅ |
 | Запись ★ и цветных меток в Capture One (через его AppleScript) | 🧪 написано, запись ещё не подтверждена на живом каталоге |
 | Android 17: разрешение «локальная сеть» | ✅ |
-| VPN на компьютере: ответы через сетевую карту мимо туннеля | 🧪 написано, с включённым VPN ещё не проверено |
-| VPN на телефоне/планшете | ✅ если VPN разрешает обход; AmneziaVPN не разрешает (проверено) — нужно исключить TabDock в самом VPN, приложение подсказывает |
+| VPN на компьютере: устройства дома подключаются напрямую, мимо туннеля | ✅ проверено (MacBook с VPN) |
+| VPN на телефоне/планшете | ✅ если VPN разрешает обход; иначе — в настройках VPN-клиента добавьте TabDock в исключения (приложение подсказывает) |
 | Старое WebView-приложение (`android-webview/`) | заменено нативным приложением |
 | Мастер установки «что и откуда поставить», darktable/digiKam, публикация в магазинах, iPhone/iPad | ⏳ |
 
@@ -560,7 +559,7 @@ spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivere
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
 weather, player, next deadline; turns on by itself on a phone lying sideways on a charger), offline cache with
 auto-reconnect, notifications (export finished, shoot due today/tomorrow). Done but not fully verified: writing
-stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN bypass on the computer (a VPN on the phone/tablet that forbids bypass, e.g. AmneziaVPN, needs TabDock excluded via split tunneling — the app says so).
+stars/colour tags back through Capture One's AppleScript, folder-based shoots, VPN on the phone/tablet: if it does not allow local traffic, add TabDock to the exclusions in your VPN client's settings — the app says so.
 **0.10**: Linux server with `install-linux.sh` (systemd user service, Avahi, MPRIS media, PipeWire volume, quick
 actions, your own scripts as "Commands", `.ics` calendar), menu-bar icon on the Mac and tray icon on Linux (status,
 connected devices, start at login, restart, log), ready-made cheat sheets per scenario (macOS, Ubuntu/terminal,

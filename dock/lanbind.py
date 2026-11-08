@@ -41,13 +41,19 @@ def lan_interfaces():
 
 
 def vpn_active():
-    """True when the default route goes into a tunnel interface (a VPN is on)."""
+    """True when internet traffic goes into a tunnel (a VPN is on). Many VPNs (WireGuard, OpenVPN and others) keep the
+    default route and add 0/1 + 128/1 instead, so ask where a public address is actually routed."""
     try:
-        out = subprocess.run(["/sbin/route", "-n", "get", "default"], capture_output=True, text=True, timeout=3).stdout
+        if sys.platform == "darwin":
+            out = subprocess.run(["/sbin/route", "-n", "get", "1.1.1.1"], capture_output=True, text=True, timeout=3).stdout
+            m = re.search(r"interface:\s*(\S+)", out)
+        else:
+            out = subprocess.run(["ip", "-4", "route", "get", "1.1.1.1"], capture_output=True, text=True, timeout=3).stdout
+            m = re.search(r"\bdev\s+(\S+)", out)
     except Exception:
         return False
-    m = re.search(r"interface:\s*(\S+)", out)
-    return bool(m and TUNNEL.match(m.group(1)) and not m.group(1).startswith(("awdl", "llw", "bridge", "ap")))
+    i = m.group(1) if m else ""
+    return bool(i and re.match(r"(utun|ipsec|ppp|tun|tap|wg|tailscale|zt|nordlynx|proton)", i))
 
 
 class LanBinder:
@@ -61,8 +67,17 @@ class LanBinder:
 
     def start(self):
         if sys.platform != "darwin":
+            # Linux: replies to the home network follow the more specific LAN route even with wg-quick/OpenVPN;
+            # only keep the «VPN is on» flag current for the menu and the apps
+            threading.Thread(target=self._vpn_loop, name="vpnflag", daemon=True).start()
             return
         threading.Thread(target=self._loop, name="lanbind", daemon=True).start()
+
+    def _vpn_loop(self):
+        global VPN
+        while True:
+            VPN = vpn_active()
+            time.sleep(30)
 
     def _loop(self):
         while True:

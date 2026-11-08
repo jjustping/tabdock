@@ -124,12 +124,21 @@ fun TabDockApp(deck: Deck) {
                         }
                         BottomTabs(tab, tabsShown) { tab = it; deck.store.put("tab", it) }
                     }
-                    if (conn == Conn.LOST || conn == Conn.STARTING) Box(Modifier.fillMaxWidth().statusBarsPadding().background(if (conn == Conn.LOST) s.red else s.inner).padding(6.dp), contentAlignment = Alignment.Center) {
+                    if (conn == Conn.LOST || conn == Conn.STARTING) {
+                        // one short line over the top bar; the VPN explanation opens on tap
+                        var more by remember { mutableStateOf(false) }
+                        val vpn = com.jjustping.tabdock.data.Lan.vpn
                         val at = if (synced > 0) java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(synced)) else null
-                        T(if (conn == Conn.STARTING) "Подключаюсь к компьютеру…" + (at?.let { " Показаны данные от $it" } ?: "")
-                          else "Нет связи с компьютером" + (at?.let { " — данные от $it" } ?: "") + ". " +
-                              (if (com.jjustping.tabdock.data.Lan.vpn) com.jjustping.tabdock.data.Lan.VPN_HINT else "Переподключусь сам"),
-                          14.sp, if (conn == Conn.LOST) Color.White else s.muted, FontWeight.SemiBold, maxLines = 2, align = androidx.compose.ui.text.style.TextAlign.Center)
+                        Column(Modifier.fillMaxWidth().statusBarsPadding().background(if (conn == Conn.LOST) s.red else s.inner)
+                            .clickable(enabled = vpn) { more = !more }.padding(horizontal = 12.dp, vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            T(when {
+                                conn == Conn.STARTING -> "Подключаюсь к компьютеру…" + (at?.let { " · данные от $it" } ?: "")
+                                vpn -> "Нет связи: VPN на этом устройстве не пускает в домашнюю сеть" + (at?.let { " · данные от $it" } ?: "") + (if (more) "" else " · подробнее")
+                                else -> "Нет связи с компьютером" + (at?.let { " · данные от $it" } ?: "") + " · переподключусь сам"
+                            }, 13.sp, if (conn == Conn.LOST) Color.White else s.muted, FontWeight.SemiBold, maxLines = 1)
+                            if (more && vpn) T(com.jjustping.tabdock.data.Lan.VPN_HINT, 13.sp, Color.White, maxLines = 4,
+                                align = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 3.dp))
+                        }
                     }
                     dialogs.Host()
                     update?.let { u -> UpdateDialog(deck, u) { deck.update.value = null } }

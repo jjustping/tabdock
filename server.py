@@ -37,7 +37,7 @@ else:   # Linux: same interfaces, see dock/linux/
     from dock.linux.media import Media                             # noqa: E402
 from dock.store import Store, default_config, default_notes, new_id  # noqa: E402
 
-VERSION = "0.11.0-beta"
+VERSION = "0.11.1-beta"
 WEB = os.path.join(HERE, "web")
 
 
