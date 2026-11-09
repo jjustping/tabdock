@@ -32,27 +32,52 @@ ORDER BY i.ZEXP_DATE, i.ZIMAGEFILENAME
 """
 
 TAG_SCRIPT = r'''
+-- albums can sit at any depth, and Capture One's scripting id is not always the UUID stored in the catalog:
+-- look by id everywhere first, then by name (a name counts only when exactly one collection has it)
+on findById(parentRef, collId)
+  tell application "Capture One"
+    repeat with c in (get collections of parentRef)
+      set c to contents of c
+      try
+        if (id of c as text) is collId then return c
+      end try
+      set r to my findById(c, collId)
+      if r is not missing value then return r
+    end repeat
+  end tell
+  return missing value
+end findById
+
+on findByName(parentRef, collName)
+  set found to {}
+  tell application "Capture One"
+    repeat with c in (get collections of parentRef)
+      set c to contents of c
+      try
+        if (name of c as text) is collName then set end of found to c
+      end try
+      set found to found & my findByName(c, collName)
+    end repeat
+  end tell
+  return found
+end findByName
+
 on run argv
   set collId to item 1 of argv
-  set catName to item 2 of argv
-  set changes to items 3 thru -1 of argv
+  set collName to item 2 of argv
+  set catName to item 3 of argv
+  set changes to items 4 thru -1 of argv
   -- never start Capture One ourselves: only talk to it when the user already has it open
   if application "Capture One" is not running then return "nodoc"
   tell application "Capture One"
     if (count of documents) is 0 then return "nodoc"
     set doc to current document
     if name of doc does not contain catName then return "otherdoc:" & (name of doc)
-    set coll to missing value
-    try
-      set coll to first collection of doc whose id is collId
-    end try
+    set coll to my findById(doc, collId)
     if coll is missing value then
-      repeat with c in (collections of doc)
-        try
-          set coll to first collection of c whose id is collId
-          exit repeat
-        end try
-      end repeat
+      set same to my findByName(doc, collName)
+      if (count of same) is 1 then set coll to item 1 of same
+      if (count of same) > 1 then return "manycoll"
     end if
     if coll is missing value then return "nocoll"
     set n to 0
@@ -178,6 +203,15 @@ class Culling:
                     f.seek(0); f.write(buf)
         return out if os.path.exists(out) else None
 
+    def _album_name(self, catalog, uuid):
+        db = captureone.db_path(catalog)
+        con = sqlite3.connect("file:%s?mode=ro" % db.replace("?", "%3F").replace("#", "%23"), uri=True, timeout=3)
+        try:
+            row = con.execute("SELECT ZNAME FROM ZCOLLECTION WHERE ZUUID = ?", (uuid,)).fetchone()
+        finally:
+            con.close()
+        return (row[0] if row else "") or ""
+
     # ---------------- writing tags via Capture One ----------------
     def tag(self, catalog, uuid, changes):
         """changes: [{"img": pk, "rating": 0..5?, "color": 0..7?}] → AppleScript to Capture One."""
@@ -196,7 +230,7 @@ class Culling:
             return False, "Нечего менять"
         cat_name = os.path.splitext(os.path.basename(catalog))[0]
         try:
-            res = subprocess.run(["/usr/bin/osascript", "-e", TAG_SCRIPT, uuid, cat_name] + args,
+            res = subprocess.run(["/usr/bin/osascript", "-e", TAG_SCRIPT, uuid, self._album_name(catalog, uuid), cat_name] + args,
                                  capture_output=True, text=True, timeout=30)
         except subprocess.TimeoutExpired:
             return False, "Capture One не ответил — возможно, на компьютере ждёт окно разрешения"
@@ -216,8 +250,9 @@ class Culling:
             return False, "Откройте каталог в Capture One — метки ставятся через него"
         if out.startswith("otherdoc"):
             return False, "В Capture One открыт другой каталог (%s)" % out.split(":", 1)[-1]
-        if out == "nocoll":
-            return False, "Capture One не нашёл эту съёмку в открытом каталоге"
+        if out in ("nocoll", "manycoll"):
+            return False, ("Capture One не нашёл эту съёмку в открытом каталоге" if out == "nocoll"
+                           else "В каталоге несколько альбомов с таким именем — переименуйте один из них")
         if "-1743" in err or "not allowed" in err.lower():
             return False, "macOS не разрешила TabDock управлять Capture One: Настройки → Конфиденциальность → Автоматизация"
         return False, "Capture One: " + (err or out or "ошибка")[:160]
