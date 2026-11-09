@@ -53,15 +53,15 @@ fi
 # 1. Packages: Python, Bonjour (Avahi), media keys (playerctl), volume (PipeWire), disks (udisks2), icons (rsvg)
 if [ "$PACKAGES" = 1 ]; then
   if command -v apt-get >/dev/null; then
-    PKGS="python3 python3-venv curl openssl avahi-daemon avahi-utils playerctl wireplumber udisks2 lm-sensors librsvg2-bin gnome-screenshot python3-gi gir1.2-ayatanaappindicator3-0.1 wl-clipboard xclip xdotool"
+    PKGS="python3 python3-venv curl openssl libnotify-bin avahi-daemon avahi-utils playerctl wireplumber udisks2 lm-sensors librsvg2-bin gnome-screenshot python3-gi gir1.2-ayatanaappindicator3-0.1 wl-clipboard xclip xdotool"
     say "Ставлю пакеты (apt): $PKGS"
     sudo apt-get update -qq && sudo apt-get install -y -qq $PKGS
   elif command -v dnf >/dev/null; then
-    PKGS="python3 curl openssl avahi avahi-tools playerctl wireplumber udisks2 lm_sensors librsvg2-tools gnome-screenshot python3-gobject libayatana-appindicator-gtk3 wl-clipboard xclip xdotool"
+    PKGS="python3 curl openssl libnotify avahi avahi-tools playerctl wireplumber udisks2 lm_sensors librsvg2-tools gnome-screenshot python3-gobject libayatana-appindicator-gtk3 wl-clipboard xclip xdotool"
     say "Ставлю пакеты (dnf): $PKGS"
     sudo dnf install -y -q $PKGS
   elif command -v pacman >/dev/null; then
-    PKGS="python curl openssl avahi playerctl wireplumber udisks2 lm_sensors librsvg python-gobject libayatana-appindicator wl-clipboard xclip xdotool"
+    PKGS="python curl openssl libnotify avahi playerctl wireplumber udisks2 lm_sensors librsvg python-gobject libayatana-appindicator wl-clipboard xclip xdotool"
     say "Ставлю пакеты (pacman): $PKGS"
     sudo pacman -S --needed --noconfirm $PKGS
   else
@@ -84,6 +84,8 @@ if [ "$KEYS" = 1 ]; then
     NEED_RELOGIN=1
   fi
 fi
+
+command -v openssl >/dev/null || die "Нужна команда openssl: без неё TabDock не сможет включить HTTPS для устройств"
 
 # 2. Python venv
 PY="$(command -v python3 || true)"
@@ -187,12 +189,13 @@ done
 if curl -fsS "http://localhost:$PORT/api/hello" >/dev/null 2>&1; then
   URL=$("$DIR/.venv/bin/python" "$DIR/server.py" --port "$PORT" --print-url)
   say "Готово!  На этом компьютере: http://localhost:$PORT"
-  say "Планшет или телефон: отсканируйте QR-код (приложение TabDock или камера) —"
+  say "Планшет или телефон: в приложении TabDock нажмите «Сканировать QR-код» и наведите камеру на этот код —"
   "$DIR/.venv/bin/python" - "$URL" <<'PY'
 import sys, qrcode
 q = qrcode.QRCode(border=1); q.add_data(sys.argv[1]); q.print_ascii(invert=True)
 PY
-  echo "  $URL"
+  say "Затем откройте панель http://localhost:$PORT и нажмите «Разрешить»: новое устройство работает только после этого."
+  say "Если приложение уже стояло до версии 0.13, удалите его и поставите новое: у него новый ключ подписи."
   say "Свои команды для виджета «Команды»: исполняемые скрипты в ~/.config/tabdock/commands/"
   if [ "${NEED_RELOGIN:-0}" = 1 ]; then
     warn "Чтобы кнопки могли нажимать клавиши, выйдите из системы и войдите снова (один раз)."

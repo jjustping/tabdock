@@ -63,9 +63,13 @@ else
   "$DIR/.venv/bin/pip" install -q --disable-pip-version-check -r "$DIR/requirements.txt"
 fi
 
-# 2. Calendar helper (EventKit)
-if command -v swiftc >/dev/null; then
-  say "Собираю помощник календаря"
+# 2. Menu-bar app and calendar helper. Rebuilt only when their sources changed: macOS ties permissions
+#    (full disk access, accessibility…) to the exact binary and would ask for them all over again.
+APP="$DIR/bin/TabDock.app/Contents/MacOS/TabDock"
+if [ -x "$APP" ] && [ -x "$DIR/bin/dock-calendar" ] && [ -z "$(find "$DIR/helper" -type f -newer "$APP" 2>/dev/null | head -1)" ]; then
+  say "Значок и помощник календаря уже собраны — разрешения macOS сохраняются"
+elif command -v swiftc >/dev/null; then
+  say "Собираю значок и помощник календаря"
   "$DIR/helper/build.sh" >/dev/null && echo "  ok: bin/dock-calendar, bin/TabDock.app" || warn "не удалось собрать помощники — календарь через AppleScript"
 else
   warn "swiftc не найден — календарь через AppleScript"
@@ -89,9 +93,10 @@ for i in $(seq 1 20); do
   sleep 0.5
 done
 if curl -fsS "http://localhost:$PORT/api/state" >/dev/null 2>&1; then
-  URL=$("$DIR/.venv/bin/python" "$DIR/server.py" --port "$PORT" --print-url)
   say "Готово!  Панель TabDock на этом Mac: http://localhost:$PORT (там QR-код для подключения)"
-  say "Планшет или телефон: в приложении TabDock нажмите «Сканировать QR-код» — или откройте $URL"
+  say "Планшет или телефон: в приложении TabDock нажмите «Сканировать QR-код» и наведите камеру на код в панели."
+  say "Затем нажмите «Разрешить» в панели: новое устройство работает только после этого."
+  say "Если приложение уже стояло до версии 0.13, удалите его и поставите новое: у него новый ключ подписи."
   say "Значок TabDock — в строке меню (вверху справа): статус, устройства, автозапуск, перезапуск."
   say "Для «Своих кнопок» с сочетаниями клавиш один раз включите TabDock в Настройки → Конфиденциальность и"
   say "безопасность → Универсальный доступ (macOS спросит при первом нажатии)."

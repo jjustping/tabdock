@@ -4,16 +4,16 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.12.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.13.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android app TabDock 0.12.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.13.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать TabDock 0.12.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
+**⬇ [Скачать TabDock 0.13.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
 (Android 8+, планшет и телефон) и код сервера для Mac.
 
 | | |
@@ -203,11 +203,14 @@ cd ~/tabdock
 ./install.sh --uninstall   # убрать автозапуск (данные в data/ остаются)
 ```
 
+Повторный запуск `install.sh` безопасен: значок пересобирается, только если изменился его код, поэтому разрешения macOS
+сохраняются.
+
 Ручной запуск без автозапуска: `.venv/bin/python server.py` → http://localhost:8787
 
 **Панель управления.** Если открыть `http://localhost:8787` на самом компьютере, там не копия дока, а панель:
 QR-код для подключения, подключённые сейчас устройства, обновления (со списком изменений и кнопкой «Обновить
-сервер», если он стоит из `git clone`), пароль для входа и новый ключ доступа. Полный док в браузере остаётся по
+сервер», если он стоит из `git clone`), пароль для входа и **список устройств**: здесь разрешают новые и отключают ненужные. Полный док в браузере остаётся по
 ссылке внизу панели — например, для iPhone/iPad.
 
 **Значок в строке меню.** TabDock живёт в строке меню Mac (значок планшета): видно, работает ли служба, адрес для
@@ -241,6 +244,8 @@ WirePlumber (громкость), udisks2 (извлечение дисков), l
 ./install-linux.sh --uninstall    # убрать службы (данные в data/ остаются)
 journalctl --user -u tabdock -f   # журнал
 ```
+
+После сканирования QR-кода откройте панель `http://localhost:8787` и нажмите «Разрешить» рядом с новым устройством.
 
 Что работает на Linux так же, как на Mac: пространства и виджеты, напоминания, заметки и шпаргалки, погода,
 состояние компьютера (процессор, память, диски, температура), музыка и громкость, быстрые действия (приложения из
@@ -541,8 +546,8 @@ v0.1:
 | ~~0.9 beta~~ | ✅ подставка, ✅ конструктор скинов, ✅ офлайн-кэш, ✅ уведомления, ✅ VPN |
 | ~~0.10 beta~~ | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям |
 | ~~0.11 beta~~ | ✅ **кнопка «Сканировать QR-код»** в приложении; ✅ **проверка обновлений** со списком изменений (приложение предлагает скачать и поставить новую версию, значок в меню и панель — обновить сервер); ✅ **настраиваемая нижняя панель**; ✅ на компьютере вместо копии дока — **панель управления**; ✅ проверено: приложение не мешает глубокому сну телефона; осталось: запись меток в Capture One и обход VPN на компьютере |
-| **0.12** (сейчас) | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
-| **0.13** (в работе) · надёжность и безопасность | **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); **HTTPS** с сертификатом, который приложение запоминает при подключении; **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
+| ~~0.12 beta~~ | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
+| **0.13** (сейчас) | ✅ **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); ✅ **HTTPS** с сертификатом, который приложение запоминает при подключении; ✅ **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
 | 0.14 · админам и программистам | **мониторинг хостов** (ping/HTTP с уведомлениями), **Wake-on-LAN**, **бэкапы** (Time Machine / rsync — когда был последний), **SMART дисков**; **Docker** (запуск, остановка, журнал), **GitHub Actions** (статус сборок), **git-репозитории** |
 | 0.15 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
 | 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
@@ -600,7 +605,7 @@ network, both ways, across systems:
 * **Any file, any size** — tested with 300 MB files, checksums match. Mac ↔ Android and Linux ↔ Android alike,
   directly between your devices — no cloud, nothing is uploaded anywhere.
 
-**Status: beta.** Server and native Android app **TabDock 0.12.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
+**Status: beta.** Server and native Android app **TabDock 0.13.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
@@ -611,7 +616,7 @@ stars/colour tags back through Capture One's AppleScript, folder-based shoots, V
 actions, your own scripts as "Commands", `.ics` calendar), menu-bar icon on the Mac and tray icon on Linux (status,
 connected devices, start at login, restart, log), ready-made cheat sheets per scenario (macOS, Ubuntu/terminal,
 Photoshop, Capture One, Lightroom, sysadmin, git + VS Code, terminal fun).
-**0.12**: file transfer both ways between the phone and the computer (see above) and Stream-Deck-like custom
+**0.13**: HTTPS, a separate key per device and approving new devices on the computer, long press to customize, zoom in culling. **0.12**: file transfer both ways between the phone and the computer (see above) and Stream-Deck-like custom
 buttons (key combos, paste text, open a site/folder/app, run a command).
 Planned: setup guide for the computer, darktable/digiKam, store releases (RuStore) at 1.0; iPhone/iPad use the web
 UI in Safari for now.
