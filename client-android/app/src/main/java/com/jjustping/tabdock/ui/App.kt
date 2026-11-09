@@ -74,6 +74,7 @@ fun TabDockApp(deck: Deck) {
     var stand by remember { mutableStateOf(false) }
     var scanning by remember { mutableStateOf(false) }
     val update by deck.update.collectAsState()
+    val approval by deck.approval.collectAsState()
     var standDismissed by remember { mutableStateOf(false) }
     val synced by deck.syncedAt.collectAsState()
     val dialogs = remember { Dialogs(deck) }
@@ -99,6 +100,7 @@ fun TabDockApp(deck: Deck) {
                     if (deck.pairFromLink(text)) forceConnect = false
                     else deck.toast("Это не QR-код TabDock. Он показан на компьютере: в панели TabDock в браузере или в меню значка")
                 }, onClose = { scanning = false })
+                approval != null -> ApprovalScreen(approval!!) { deck.cancelApproval() }
                 conn == Conn.NEED_PAIRING || forceConnect -> ConnectScreen(deck, onScan = { scanning = true }) { forceConnect = false }
                 all == null -> WaitScreen(deck, conn) { forceConnect = true }
                 web != null -> WebScreen(deck, web!!) { web = null }
@@ -123,7 +125,7 @@ fun TabDockApp(deck: Deck) {
                                 else -> HomeScreen(c, dialogs)
                             }
                         }
-                        BottomTabs(tab, tabsShown) { tab = it; deck.store.put("tab", it) }
+                        BottomTabs(tab, tabsShown, onHold = { dialogs.custom { val fresh by deck.all.collectAsState(); BottomBarSettings(Ctx(deck, fresh, null, {}, {}, {}, {})) } }) { tab = it; deck.store.put("tab", it) }
                     }
                     if (conn == Conn.LOST || conn == Conn.STARTING) {
                         // one short line over the top bar; the VPN explanation opens on tap
@@ -234,11 +236,11 @@ private fun saveWidgetOpts(deck: Deck, all: JSONObject?, w: JSONObject, opts: JS
     }
 }
 
-@Composable private fun BottomTabs(tab: String, shown: List<String>?, onTab: (String) -> Unit) {
+@Composable private fun BottomTabs(tab: String, shown: List<String>?, onHold: () -> Unit, onTab: (String) -> Unit) {
     val s = LocalSkin.current
     val tabs = TABS.filter { (id) -> shown == null || id == "home" || id == "settings" || id in shown }
     val tight = LocalCompact.current && tabs.size > 5      // six buttons on a phone: smaller labels so they fit
-    Row(Modifier.fillMaxWidth().background(s.tabs).padding(horizontal = if (tight) 4.dp else 22.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
+    Row(Modifier.fillMaxWidth().onLongHold(onHold = onHold).background(s.tabs).padding(horizontal = if (tight) 4.dp else 22.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
         for ((id, ic, name) in tabs) {
             val on = tab == id
             Column(Modifier.widthIn(max = 170.dp).weight(1f).clip(RoundedCornerShape(14.dp)).background(if (on) s.inner else Color.Transparent)
@@ -249,6 +251,19 @@ private fun saveWidgetOpts(deck: Deck, all: JSONObject?, w: JSONObject, opts: JS
     }
 }
 
+
+/** The computer has to allow this device first (its panel lists the request). */
+@Composable private fun ApprovalScreen(name: String, onCancel: () -> Unit) {
+    val s = LocalSkin.current
+    Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Ic("computer", 56.dp, s.accent); Spacer(Modifier.height(14.dp))
+        T("Подтвердите на компьютере", 24.sp, weight = FontWeight.Bold, align = androidx.compose.ui.text.style.TextAlign.Center)
+        T("Откройте панель TabDock на компьютере ($name) и нажмите «Разрешить» рядом с «${com.jjustping.tabdock.data.Lan.deviceName}». Приложение подключится само.",
+            16.sp, s.muted, align = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.widthIn(max = 560.dp).padding(top = 8.dp))
+        Spacer(Modifier.height(18.dp))
+        Btn("Отмена") { onCancel() }
+    }
+}
 
 /** No data yet: connecting, loading, or the paired computer is not answering. */
 @Composable private fun WaitScreen(deck: Deck, conn: Conn, onOther: () -> Unit) {

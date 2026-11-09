@@ -67,7 +67,7 @@
             <li>В приложении нажмите <b>«Сканировать QR-код»</b> и наведите камеру на этот код.</li>
             <li>Или выберите этот компьютер в списке найденных и введите пароль (ниже).</li>
           </ol>
-          <p class="small muted" style="margin:10px 0 0">Устройство и компьютер должны быть в одной домашней сети. Ключ из QR-кода — как пароль: не показывайте его посторонним.</p>
+          <p class="small muted" style="margin:10px 0 0">Устройство и компьютер должны быть в одной домашней сети. Новое устройство всё равно нужно будет разрешить здесь же, на компьютере.</p>
           <div class="row"><button class="btn" id="copy">Скопировать ссылку</button>
             <a class="btn" href="/transfer">Передача файлов</a></div>
         </div>
@@ -75,9 +75,10 @@
     </section>
 
     <section class="card">
-      <h2>Подключённые устройства</h2>
+      <h2>Устройства</h2>
+      <div id="pending"></div>
       <div id="devices"><div class="muted">Пока никого</div></div>
-      <p class="small muted" style="margin:10px 0 0">Устройство считается подключённым, если обращалось к компьютеру в последние полторы минуты.</p>
+      <p class="small muted" style="margin:10px 0 0">Новое устройство начинает работать только после вашего разрешения здесь. Зелёная точка — обращалось к компьютеру в последние полторы минуты.</p>
     </section>
 
     <section class="card">
@@ -103,9 +104,9 @@
     </section>
 
     <section class="card">
-      <h2>Ключ доступа</h2>
-      <p class="small muted" style="margin:0 0 6px">Новый ключ отключит <b>все</b> подключённые устройства — их нужно будет подключить заново (QR-код или пароль). Пригодится, если ключ мог попасть к посторонним.</p>
-      <div class="row"><button class="btn danger" id="newkey">Новый ключ — отключить все устройства</button></div>
+      <h2>Отключить все устройства</h2>
+      <p class="small muted" style="margin:0 0 6px">Создаст новый QR-код и отключит <b>все</b> устройства — их нужно будет подключить заново. Чтобы отключить одно, нажмите «Удалить» рядом с ним.</p>
+      <div class="row"><button class="btn danger" id="newkey">Новый QR-код — отключить все устройства</button></div>
       <div class="msg" id="keymsg"></div>
     </section>
   </div>
@@ -142,14 +143,30 @@ async function loadAll() {
   $("pwdel").hidden = !has;
 }
 
+let lastPending = "";
 async function loadDevices() {
-  const t = await fetch("/api/tray").then((r) => r.json()).catch(() => null);
-  const list = t?.clients || [];
-  $("devices").innerHTML = list.length
-    ? list.map((c) => `<div class="dev"><span class="dot"></span><span class="n">${esc(c.name)}</span>` +
-        `<span class="muted small">${c.kind === "app" ? "приложение" : "браузер"}</span><span class="m">${esc(c.ip)} · ${ago(c.ago)}</span></div>`).join("")
-    : '<div class="muted">Сейчас никто не подключён</div>';
+  const r = await fetch("/api/devices").then((x) => x.json()).catch(() => null);
+  if (!r) return;
+  const now = Date.now() / 1000, pend = r.devices.filter((d) => d.status === "pending"), ok = r.devices.filter((d) => d.status === "ok");
+  // the buttons must not be replaced under the cursor: redraw only what changed, and leave the list alone while pointing at it
+  const pendHtml = pend.map((d) => `<div class="dev" style="flex-wrap:wrap"><span class="n"><b>${esc(d.name)}</b> просит доступ</span>` +
+    `<span class="m">${esc(d.ip)}</span><button class="btn primary" data-allow="${d.id}">Разрешить</button><button class="btn danger" data-del="${d.id}">Отклонить</button></div>`).join("");
+  if (pendHtml !== lastPending) { lastPending = pendHtml; $("pending").innerHTML = pendHtml; }
+  if ($("devices").matches(":hover")) return;
+  $("devices").innerHTML = ok.length ? ok.map((d) => {
+    const on = d.last_seen && now - d.last_seen < 90;
+    return `<div class="dev"><span class="dot" style="opacity:${on ? 1 : .2}"></span><span class="n">${esc(d.name)}</span>` +
+      `<span class="muted small">${d.kind === "app" ? "приложение" : "браузер"}</span><span class="m">${esc(d.ip)}${d.last_seen ? " · " + ago(Math.round(now - d.last_seen)) : ""}</span>` +
+      `<button class="btn" data-del="${d.id}" data-named="${esc(d.name)}">Удалить</button></div>`;
+  }).join("") : '<div class="muted">Устройств пока нет</div>';
 }
+document.addEventListener("click", async (e) => {
+  const a = e.target.dataset?.allow, x = e.target.dataset?.del;
+  if (!a && !x) return;
+  if (x && e.target.dataset.named && !confirm("Отключить «" + e.target.dataset.named + "»? Чтобы вернуть его, устройство нужно будет подключить заново.")) return;
+  await post("/api/devices", a ? { op: "allow", id: a } : { op: "remove", id: x });
+  loadDevices();
+});
 
 function showUpdate(u) {
   const l = u.latest;
@@ -178,12 +195,12 @@ $("copy").onclick = async () => { try { await navigator.clipboard.writeText(url)
 $("pwset").onclick = async () => { const r = await post("/api/password", { password: $("pw").value }); $("pwmsg").textContent = r.message; if (r.ok) { $("pw").value = ""; loadAll(); } };
 $("pwdel").onclick = async () => { if (!confirm("Убрать пароль? Подключиться можно будет только по QR-коду.")) return; const r = await post("/api/password", { remove: true }); $("pwmsg").textContent = r.message; loadAll(); };
 $("newkey").onclick = async () => {
-  if (!confirm("Создать новый ключ? Все планшеты и телефоны отключатся, их нужно будет подключить заново.")) return;
-  await post("/api/config", { new_token: true }); $("keymsg").textContent = "Новый ключ создан — QR-код обновлён."; loadAll();
+  if (!confirm("Создать новый QR-код? Все планшеты и телефоны отключатся, их нужно будет подключить заново.")) return;
+  await post("/api/config", { new_token: true }); $("keymsg").textContent = "Готово — QR-код обновлён, устройства отключены."; loadAll();
 };
 
 loadAll(); loadDevices(); fetch("/api/update").then((r) => r.json()).then(showUpdate);
-setInterval(loadDevices, 5000);
+setInterval(loadDevices, 2000);
 </script>
 </body>
 </html>

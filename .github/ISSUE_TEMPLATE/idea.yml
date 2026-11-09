@@ -1,0 +1,11 @@
+name: Идея
+description: Чего не хватает в доке
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Какую задачу это решит
+      description: Что вы делаете сейчас и как TabDock мог бы помочь.
+    validations:
+      required: true

@@ -191,6 +191,8 @@ class Dialogs(val deck: Deck) {
         }
     } }
 
+    fun custom(content: @Composable () -> Unit) { current = content }
+
     @Composable fun Host() {
         val d = current ?: return
         Box(Modifier.fillMaxSize().background(Color.Black.copy(.55f)).clickable(interactionSource = noRipple(), indication = null) { close() },
@@ -348,11 +350,10 @@ class Dialogs(val deck: Deck) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     T(sv.name, 17.sp, weight = FontWeight.SemiBold)
-                    T("${sv.base.removePrefix("http://")} · ${sv.model} · " + when (sv.state) { "pinned" -> "ваш компьютер"; "mismatch" -> "⚠ не подтверждён"; else -> "новый" }, 13.sp, if (sv.state == "mismatch") s.red else s.muted)
+                    T("${sv.base.substringAfter("://")} · ${sv.model} · " + when (sv.state) { "pinned" -> "ваш компьютер"; "mismatch" -> "⚠ не подтверждён"; else -> "новый" }, 13.sp, if (sv.state == "mismatch") s.red else s.muted)
                 }
                 Btn("Подключить", primary = sv.state == "pinned") {
-                    val e = deck.store.entry(sv.id)
-                    if (sv.state == "pinned" && e != null) { deck.pairWithKey(sv.base, e.getString("token")); onDone() } else { pwFor = sv; msg = "" }
+                    if (sv.state == "pinned" && deck.store.entry(sv.id) != null) deck.connectKnown(sv.id, onDone) else { pwFor = sv; msg = "" }
                 }
             }
         }
@@ -372,9 +373,9 @@ class Dialogs(val deck: Deck) {
                 TextInput(manual, { manual = it }, "IP компьютера, например 192.168.1.20", Modifier.weight(1f)); Spacer(Modifier.width(10.dp))
                 Btn("Найти", primary = true) {
                     scope.launch {
-                        var a = manual.trim().removePrefix("http://").substringBefore('/'); if (a.isBlank()) return@launch
+                        var a = manual.trim().substringAfter("://").substringBefore('/'); if (a.isBlank()) return@launch
                         if (!a.contains(':')) a += ":8787"
-                        val f = deck.discovery.verify("http://$a")
+                        val f = deck.discovery.verify("https://$a")
                         if (f == null) msg = "По адресу $a TabDock не отвечает" else { pwFor = f; msg = "" }
                     }
                 }
@@ -395,9 +396,16 @@ class Dialogs(val deck: Deck) {
         }
         AndroidView({ ctx ->
             val api = deck.api
-            if (api != null) { CookieManager.getInstance().setCookie(api.base, "dock_k=${api.key}; Path=/"); CookieManager.getInstance().flush() }
+            if (api != null) { CookieManager.getInstance().setCookie(api.base, "dock_k=${api.key}; Path=/; Secure"); CookieManager.getInstance().flush() }
             WebView(ctx).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.textZoom = 100
-                webViewClient = WebViewClient(); loadUrl((api?.base ?: "") + path) }
+                webViewClient = object : WebViewClient() {
+                    // the same rule as the app's own connections: only the certificate remembered at pairing
+                    override fun onReceivedSslError(view: WebView, handler: android.webkit.SslErrorHandler, error: android.net.http.SslError) {
+                        val der = android.net.http.SslCertificate.saveState(error.certificate).getByteArray("x509-certificate")
+                        if (der != null && api?.pin != null && com.jjustping.tabdock.data.Crypto.same(api.pin, com.jjustping.tabdock.data.Crypto.sha256(der))) handler.proceed() else handler.cancel()
+                    }
+                }
+                loadUrl((api?.base ?: "") + path) }
         }, Modifier.fillMaxSize())
     }
 }

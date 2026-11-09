@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Подтвердите на компьютере — TabDock</title><link rel="icon" href="/static/icon.svg">
+<style>
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0a0c0f; color:#e9edf2;
+         font:16px/1.5 -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; text-align:center; padding:24px; box-sizing:border-box; }
+  img { width:64px; height:64px; } h1 { font-size:22px; margin:14px 0 8px; } p { color:#8b94a3; max-width:460px; margin:0 auto; }
+</style></head>
+<body><main>
+  <img src="/static/icon.svg" alt="">
+  <h1 id="t">Подтвердите на компьютере</h1>
+  <p id="m">Откройте панель TabDock на компьютере (значок в строке меню или трее) и разрешите это устройство. Страница откроется сама.</p>
+</main>
+<script>
+setInterval(async () => {
+  const r = await fetch("/api/devices/me").catch(() => null);
+  if (!r) return;
+  if (r.status === 401) { document.getElementById("t").textContent = "Запрос отклонён"; document.getElementById("m").textContent = "Компьютер не разрешил это устройство. Чтобы попробовать ещё раз, снова отсканируйте QR-код."; return; }
+  const d = await r.json();
+  if (d.status === "ok") location.href = "/";
+}, 2000);
+</script>
+</body></html>

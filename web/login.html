@@ -39,7 +39,7 @@ let me = null; const seen = new Map();
 function row(s, on) {
   const cur = s.base === here;
   return `<div class="srv" data-base="${esc(s.base)}"><span class="dot ${on ? "on" : ""}"></span>
-    <div class="n"><b>${esc(s.name || s.base)}${cur ? " · этот" : ""}</b><small>${esc(s.base.replace("http://", ""))}${s.model ? " · " + esc(s.model) : ""}${s.password === false ? " · пароль не задан" : ""}</small></div>
+    <div class="n"><b>${esc(s.name || s.base)}${cur ? " · этот" : ""}</b><small>${esc(s.base.replace(/^https?:\/\//, ""))}${s.model ? " · " + esc(s.model) : ""}${s.password === false ? " · пароль не задан" : ""}</small></div>
     ${cur ? "" : '<button class="btn">Открыть</button>'}</div>`;
 }
 function render() {

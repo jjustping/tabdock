@@ -1,5 +1,15 @@
 package com.jjustping.tabdock.ui
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -131,14 +141,12 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
             }
         } else {
             val list = viewIds.mapNotNull { id -> frames.firstOrNull { it.img == id } }
+            var zoomed by remember { mutableStateOf(false) }
             val pager = rememberPagerState(initialPage = viewer!!.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size }
             Column(Modifier.fillMaxSize()) {
-                HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), key = { list[it].img }) { p ->
+                HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), key = { list[it].img }, userScrollEnabled = !zoomed) { p ->
                     val f = list[p]
-                    Box(Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(Color.Black)) {
-                        RemoteImage(deck, "/api/cull/thumb?key=$ek&img=${f.img}", Modifier.fillMaxSize(), crop = false, transparentBg = true)
-                        RemoteImage(deck, "/api/cull/preview?key=$ek&img=${f.img}", Modifier.fillMaxSize(), crop = false, transparentBg = true)
-                    }
+                    ZoomablePhoto(deck, "key=$ek&img=${f.img}", isCurrent = p == pager.currentPage) { zoomed = it }
                 }
                 val f = list.getOrNull(pager.currentPage)
                 if (f != null) {
@@ -178,6 +186,64 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
     Row {
         for (r in 1..5) Box(Modifier.size((size + 8).dp).let { m -> if (onSet != null) m.clickable { onSet(r) } else m }, contentAlignment = Alignment.Center) {
             T("★", size.sp, if (r <= rating) s.amber else s.dim.copy(.5f))
+        }
+    }
+}
+
+
+/** One photo of the viewer: pinch or double-tap to zoom, drag to look around; a sharper picture loads once zoomed in. */
+@Composable private fun ZoomablePhoto(deck: Deck, query: String, isCurrent: Boolean, onZoomed: (Boolean) -> Unit) {
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var box by remember { mutableStateOf(IntSize.Zero) }
+    fun limit(o: Offset, z: Float): Offset {
+        // the photo itself, not its black margins, decides how far it can be moved
+        val w = box.width.toFloat(); val h = box.height.toFloat()
+        val aspect = deck.cached("/api/cull/thumb?$query")?.let { it.width.toFloat() / it.height } ?: (w / h.coerceAtLeast(1f))
+        val cw = minOf(w, h * aspect); val ch = cw / aspect
+        val mx = ((cw * z - w) / 2).coerceAtLeast(0f); val my = ((ch * z - h) / 2).coerceAtLeast(0f)
+        return Offset(o.x.coerceIn(-mx, mx), o.y.coerceIn(-my, my))
+    }
+    fun set(z: Float, o: Offset) {
+        scale = z.coerceIn(1f, 8f)
+        offset = if (scale <= 1.02f) Offset.Zero else limit(o, scale)
+        if (scale <= 1.02f) scale = 1f
+        onZoomed(scale > 1f)
+    }
+    LaunchedEffect(isCurrent) { if (!isCurrent && scale > 1f) set(1f, Offset.Zero) }   // back to the whole frame after leaving it
+    Box(Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(Color.Black).onSizeChanged { box = it }.pointerInput(Unit) {
+        var lastTap = 0L
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            var moved = false; var fingers = 1
+            var last = down.position; var up = false
+            do {
+                val e = awaitPointerEvent()
+                val pressed = e.changes.count { it.pressed }
+                fingers = maxOf(fingers, pressed)
+                e.changes.firstOrNull { it.id == down.id }?.let { if ((it.position - down.position).getDistance() > viewConfiguration.touchSlop) moved = true; last = it.position }
+                if (pressed >= 2 || (scale > 1f && pressed == 1 && moved)) {
+                    val c = Offset(size.width / 2f, size.height / 2f)
+                    val centre = e.calculateCentroid(useCurrent = true) - c
+                    val z = (scale * e.calculateZoom()).coerceIn(1f, 8f) / scale
+                    set(scale * z, centre - (centre - offset) * z + e.calculatePan())
+                    e.changes.forEach { it.consume() }
+                }
+                up = pressed == 0
+            } while (!up)
+            val now = System.currentTimeMillis()
+            if (!moved && fingers == 1) {
+                if (now - lastTap < 320) {
+                    lastTap = 0
+                    if (scale > 1f) set(1f, Offset.Zero) else { val p = last - Offset(size.width / 2f, size.height / 2f); set(3f, p * -2f) }
+                } else lastTap = now
+            }
+        }
+    }, contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)) {
+            RemoteImage(deck, "/api/cull/thumb?$query", Modifier.fillMaxSize(), crop = false, transparentBg = true)
+            RemoteImage(deck, "/api/cull/preview?$query", Modifier.fillMaxSize(), crop = false, transparentBg = true)
+            if (scale > 1.4f) RemoteImage(deck, "/api/cull/preview?$query&hi=1", Modifier.fillMaxSize(), crop = false, transparentBg = true)
         }
     }
 }

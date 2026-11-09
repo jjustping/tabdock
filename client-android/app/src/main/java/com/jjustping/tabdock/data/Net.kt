@@ -22,9 +22,15 @@ import java.net.NetworkInterface
 import java.net.URL
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.security.cert.CertificateException
+import java.security.cert.X509Certificate
 import java.util.Collections
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 
 /**
  * The Wi-Fi network itself. A VPN on the phone (corporate, "unblock" apps…) often swallows LAN traffic too;
@@ -64,13 +70,35 @@ object Lan {
         else "Не удалось подключиться: компьютер не отвечает (${e.message?.substringBefore(" from ") ?: "нет ответа"})"
 }
 
-/** HTTP client for one TabDock server. The access key goes in the X-Dock-Key header. */
-class Api(val base: String, @Volatile var key: String?) {
+/**
+ * HTTPS with a self-signed certificate: no authority can vouch for a computer at home, so its certificate is compared
+ * with the fingerprint remembered at pairing. pin = null only for the first contact and for looking around the network.
+ */
+class PinnedTrust(private val pin: String?) : X509TrustManager {
+    @Volatile var seen: String? = null
+    override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String?) {
+        val fp = Crypto.sha256(chain[0].encoded)
+        seen = fp
+        if (pin != null && !Crypto.same(pin, fp)) throw CertificateException("Сертификат компьютера изменился")
+    }
+    override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String?) = throw CertificateException()
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+}
+
+/** HTTPS client for one TabDock server. This device's own key goes in the X-Dock-Key header. */
+class Api(val base: String, @Volatile var key: String?, val pin: String? = null) {
 
     class HttpError(val code: Int, msg: String) : Exception(msg)
 
+    private val trust = PinnedTrust(pin)
+    private val tls = SSLContext.getInstance("TLS").apply { init(null, arrayOf(trust), SecureRandom()) }.socketFactory
+    /** Fingerprint of the certificate this computer presented. */
+    val certSeen: String? get() = trust.seen
+
     private fun open(path: String, timeoutMs: Int): HttpURLConnection {
         val c = Lan.open(URL(base.trimEnd('/') + path)) as HttpURLConnection
+        // the host name of a computer at home means nothing: the certificate itself is what is checked
+        if (c is HttpsURLConnection) { c.sslSocketFactory = tls; c.hostnameVerifier = HostnameVerifier { _, _ -> true } }
         c.connectTimeout = timeoutMs
         c.readTimeout = timeoutMs * 3
         key?.let { c.setRequestProperty("X-Dock-Key", it) }
@@ -99,7 +127,7 @@ class Api(val base: String, @Volatile var key: String?) {
             c.outputStream.use { it.write(body.toString().toByteArray()) }
             val stream = if (c.responseCode in 200..299) c.inputStream else c.errorStream
             val txt = stream?.use { String(it.readBytes()) } ?: "{}"
-            if (c.responseCode !in 200..299) throw HttpError(c.responseCode, JSONObject(txt).optString("error", "HTTP ${c.responseCode}"))
+            if (c.responseCode !in 200..299) throw HttpError(c.responseCode, JSONObject(txt).let { o -> o.optString("error").ifBlank { o.optString("message", "HTTP ${c.responseCode}") } })
             JSONObject(txt)
         } finally { c.disconnect() }
     }
@@ -126,27 +154,11 @@ class Api(val base: String, @Volatile var key: String?) {
             JSONObject(stream?.use { String(it.readBytes()) } ?: "{}")
         } finally { c.disconnect() }
     }
-
-    /** Password sign-in: the server answers with a cookie that carries the access key. */
-    suspend fun login(password: String): Pair<String?, String> = withContext(Dispatchers.IO) {
-        val c = open("/api/login", 5000)
-        try {
-            c.requestMethod = "POST"; c.doOutput = true
-            c.setRequestProperty("Content-Type", "application/json")
-            c.outputStream.use { it.write(JSONObject().put("password", password).toString().toByteArray()) }
-            val stream = if (c.responseCode in 200..299) c.inputStream else c.errorStream
-            val r = JSONObject(stream?.use { String(it.readBytes()) } ?: "{}")
-            val cookie = c.headerFields.entries.filter { it.key.equals("Set-Cookie", true) }.flatMap { it.value }
-                .firstOrNull { it.startsWith("dock_k=") }
-            val token = cookie?.substringAfter("dock_k=")?.substringBefore(";")
-            if (r.optBoolean("ok") && !token.isNullOrBlank()) token to "ok" else null to r.optString("message", "Не получилось")
-        } finally { c.disconnect() }
-    }
 }
 
 /** A server seen on the network (Bonjour or subnet probe), verified against the pinned identity. */
 data class FoundServer(val base: String, val name: String, val model: String, val id: String,
-                       val state: String /* pinned | unknown | mismatch */, val hasPassword: Boolean)
+                       val state: String /* pinned | unknown | mismatch */, val hasPassword: Boolean, val cert: String)
 
 object Crypto {
     fun nonce(): String = ByteArray(16).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
@@ -156,6 +168,7 @@ object Crypto {
         return m.doFinal(msg.toByteArray()).joinToString("") { "%02x".format(it) }
     }
     fun same(a: String, b: String) = MessageDigest.isEqual(a.toByteArray(), b.toByteArray())
+    fun sha256(b: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
     fun sha1(s: String): String = MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 }
 
@@ -185,9 +198,9 @@ class Store(ctx: Context) {
     fun string(k: String): String? = p.getString(k, null)
     fun put(k: String, v: String?) = p.edit().putString(k, v).apply()
 
-    fun pin(id: String, base: String, name: String, proofKey: String, token: String) {
+    fun pin(id: String, base: String, name: String, proofKey: String, token: String, cert: String) {
         val o = pins()
-        o.put(id, JSONObject().put("base", base).put("name", name).put("key", proofKey).put("token", token))
+        o.put(id, JSONObject().put("base", base).put("name", name).put("key", proofKey).put("token", token).put("cert", cert))
         savePins(o); current = id
     }
     fun forget(id: String) { val o = pins(); o.remove(id); savePins(o); if (current == id) current = null }
@@ -207,21 +220,23 @@ class Discovery(private val ctx: Context, private val store: Store) {
     /** Ask the server to prove it knows our pinned key (HMAC over nonce|id). */
     suspend fun verify(base: String): FoundServer? {
         val n = Crypto.nonce()
-        val h = runCatching { Api(base, null).obj("/api/hello?nonce=$n", 1500) }.getOrNull() ?: return null
+        val api = Api(base, null)
+        val h = runCatching { api.obj("/api/hello?nonce=$n", 1500) }.getOrNull() ?: return null
+        val cert = api.certSeen.orEmpty()
         if (h.optString("app") != "tabdock") return null
         val id = h.optString("id")
         val pins = store.pins()
         val state = when {
             pins.has(id) -> {
                 val want = Crypto.hmac(pins.getJSONObject(id).getString("key"), "$n|$id")
-                if (Crypto.same(want, h.optString("proof"))) {
+                if (Crypto.same(want, h.optString("proof")) && Crypto.same(pins.getJSONObject(id).optString("cert"), cert)) {
                     pins.getJSONObject(id).put("base", base); store.savePins(pins); "pinned"
                 } else "mismatch"
             }
             pins.keys().asSequence().any { pins.getJSONObject(it).optString("base") == base } -> "mismatch"
             else -> "unknown"
         }
-        return FoundServer(base, h.optString("name", base), h.optString("model"), id, state, h.optBoolean("password"))
+        return FoundServer(base, h.optString("name", base), h.optString("model"), id, state, h.optBoolean("password"), cert)
     }
 
     private fun add(s: FoundServer) {
@@ -253,7 +268,7 @@ class Discovery(private val ctx: Context, private val store: Store) {
                         override fun onResolveFailed(si: NsdServiceInfo?, e: Int) {}
                         override fun onServiceResolved(si: NsdServiceInfo) {
                             @Suppress("DEPRECATION") val a = si.host
-                            if (a is Inet4Address) nsdBases.add("http://${a.hostAddress}:${si.port}")
+                            if (a is Inet4Address) nsdBases.add("https://${a.hostAddress}:${si.port}")
                         }
                     })
                 }
@@ -275,8 +290,8 @@ class Discovery(private val ctx: Context, private val store: Store) {
         for (b in nsdBases.toList()) verify(b)?.let { add(it) }
         val prefixes = mutableSetOf<String>()
         deviceIp()?.substringBeforeLast('.')?.let { prefixes += it }
-        store.pins().let { p -> p.keys().forEach { k -> p.getJSONObject(k).optString("base").removePrefix("http://").substringBefore(':').substringBeforeLast('.').takeIf { it.isNotBlank() }?.let { prefixes += it } } }
-        val targets = prefixes.flatMap { pre -> (1..254).map { "http://$pre.$it:8787" } }
+        store.pins().let { p -> p.keys().forEach { k -> p.getJSONObject(k).optString("base").substringAfter("://").substringBefore(':').substringBeforeLast('.').takeIf { it.isNotBlank() }?.let { prefixes += it } } }
+        val targets = prefixes.flatMap { pre -> (1..254).map { "https://$pre.$it:8787" } }
         val sem = Semaphore(48)
         var done = 0
         targets.map { b ->

@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
         handle(intent)
     }
 
-    /** QR code / link "http://<ip>:8787/?k=<key>" → pair with that server. */
+    /** QR code / link "https://<ip>:8787/?k=<code>&fp=<certificate>" → ask that computer for access. */
     private fun handle(i: Intent?) {
         if (i?.action == Intent.ACTION_SEND || i?.action == Intent.ACTION_SEND_MULTIPLE) {
             // «Поделиться → TabDock»: wait until the computer answers, then send
@@ -60,8 +60,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         val u: Uri = i?.data ?: return
-        val k = u.getQueryParameter("k") ?: return
-        if (u.scheme == "http" && !u.host.isNullOrBlank()) deck.pairWithKey("http://${u.host}:${if (u.port > 0) u.port else 8787}", k)
+        deck.pairFromLink(u.toString())
     }
 
     override fun onResume() { super.onResume(); immersive(); deck.visible = true }

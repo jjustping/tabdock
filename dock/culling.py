@@ -163,12 +163,12 @@ class Culling:
                 return cot
         return self._picture(self._paths(catalog, r), catalog, pk, 480, "s")
 
-    def preview(self, catalog, uuid, pk):
-        """Large JPEG for the viewer (Capture One's big preview is JPEG XL → converted once and cached)."""
+    def preview(self, catalog, uuid, pk, hi=False):
+        """Large JPEG for the viewer; hi=True is the sharper one fetched only when the photo is zoomed in."""
         r = self._row(catalog, uuid, pk)
         if not r:
             return None
-        return self._picture(self._paths(catalog, r), catalog, pk, 1800, "l")
+        return self._picture(self._paths(catalog, r), catalog, pk, *((4000, "x") if hi else (1800, "l")))
 
     # Capture One's own previews (.cop) are an internal JPEG XL proxy, not a display picture, and the .cof next
     # to them is a focus map. So the big picture comes from the camera JPEG embedded in the RAW (instant for Fuji

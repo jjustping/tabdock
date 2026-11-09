@@ -1,5 +1,11 @@
 package com.jjustping.tabdock.ui
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -228,3 +234,35 @@ fun Btn(text: String? = null, icon: String? = null, primary: Boolean = false, da
 
 @Composable fun Empty(text: String) = T(text, 15.sp, LocalSkin.current.dim, modifier = Modifier.fillMaxWidth().padding(20.dp), align = TextAlign.Center)
 @Composable fun noRipple() = remember { MutableInteractionSource() }
+
+
+/**
+ * Long press anywhere on an element, even over its buttons. It watches the touch before the children do and takes it
+ * only when the finger stayed in place long enough, so taps and scrolling inside keep working.
+ * [except]: places where a long press has its own meaning (text fields).
+ */
+fun Modifier.onLongHold(enabled: Boolean = true, except: (androidx.compose.ui.geometry.Offset) -> Boolean = { false }, onHold: () -> Unit): Modifier = composed {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val action by androidx.compose.runtime.rememberUpdatedState(onHold)
+    if (!enabled) this else pointerInput(Unit) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (except(down.position)) return@awaitEachGesture
+            val ended = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis + 100) {
+                while (true) {
+                    val c = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                    if (!c.pressed || (c.position - down.position).getDistance() > viewConfiguration.touchSlop) break
+                }
+                true
+            }
+            if (ended == null) {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                action()
+                do {   // the finger is still down: its release must not count as a tap on whatever is under it
+                    val e = awaitPointerEvent(PointerEventPass.Initial)
+                    e.changes.forEach { it.consume() }
+                } while (e.changes.any { it.pressed })
+            }
+        }
+    }
+}

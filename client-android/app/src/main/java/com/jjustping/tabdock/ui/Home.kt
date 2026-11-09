@@ -48,6 +48,9 @@ import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.random.Random
 
+
+/** A long press opens these widgets' own settings; on the others it turns on the edit mode of the space. */
+private val WIDGETS_WITH_SETTINGS = setOf("buttons", "note", "shortcuts")
 private val TEMPLATES = linkedMapOf(
     "photo" to Triple("Фото", "aperture", listOf(Triple("reminders", 4, 6), Triple("shoots", 4, 4), Triple("player", 4, 3), Triple("quick", 4, 3), Triple("calendar", 4, 2))),
     "work" to Triple("Работа", "check", listOf(Triple("reminders", 4, 6), Triple("note", 4, 4), Triple("clock", 4, 2), Triple("deadlines", 4, 2), Triple("events", 4, 2), Triple("focus", 4, 2))),
@@ -155,7 +158,8 @@ fun HomeScreen(c: Ctx, dialogs: Dialogs) {
                 widgets.forEachIndexed { idx, wj ->
                     val (r, col, w, h) = slots[idx].let { listOf(it[0], it[1], it[2], it[3]) }
                     val mod = Modifier.offset(x = (cellW + gap) * col, y = (cellH + gap) * r).size(cellW * w + gap * (w - 1), cellH * h + gap * (h - 1))
-                    Box(mod) {
+                    val settings = wj.s("type") in WIDGETS_WITH_SETTINGS
+                    Box(mod.onLongHold(!edit, except = { p -> wj.s("type") == "reminders" && p.y < 240f }) { if (settings) c.editWidget(wj) else edit = true }) {
                         Widget(wj.s("type"), wj, c, Modifier.fillMaxSize())
                         if (edit) EditOverlay(wj, idx, widgets.size, onAct = { act ->
                             mutate { t, _ ->

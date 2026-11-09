@@ -53,7 +53,7 @@ const DockConnect = (() => {
   async function scan({ extraIps = [], onFound, onProgress } = {}) {
     const ports = [...new Set([PORT, +location.port || PORT])];
     const targets = [];
-    for (const p of prefixes(extraIps)) for (let i = 1; i < 255; i++) for (const port of ports) targets.push(`http://${p}.${i}:${port}`);
+    for (const p of prefixes(extraIps)) for (let i = 1; i < 255; i++) for (const port of ports) targets.push(`${location.protocol}//${p}.${i}:${port}`);
     const found = []; let done = 0, idx = 0;
     async function worker() {
       while (idx < targets.length) {

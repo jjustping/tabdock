@@ -862,7 +862,7 @@ function renderConnect() {
     ${list.map((s) => {
       const cur = s.base === here, on = cur || scanState.found.has(s.base);
       return `<div class="srv"><span class="dot ${on ? "on" : ""}"></span><div class="n"><b>${esc(s.name || s.base)}${cur ? " · вы здесь" : ""}</b>
-        <small>${esc(s.base.replace("http://", ""))}${s.model ? " · " + esc(s.model) : ""}${!on ? " · не в сети" : ""}</small></div>
+        <small>${esc(s.base.replace(/^https?:\/\//, ""))}${s.model ? " · " + esc(s.model) : ""}${!on ? " · не в сети" : ""}</small></div>
         ${cur ? "" : `<button class="btn" data-go="${esc(s.base)}">Перейти</button><button class="btn sq danger" data-forget="${esc(s.base)}">×</button>`}</div>`;
     }).join("")}
     <div class="row" style="margin-top:12px"><div class="seg" style="flex:none"><button id="autoBtn" class="${autoOn() ? "on" : ""}">⟳ Автоподключение</button></div>

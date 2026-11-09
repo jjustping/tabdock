@@ -87,34 +87,71 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
             val e = pins.optJSONObject(id) ?: continue
             val s = discovery.verify(e.optString("base")) ?: continue
             if (gen != pairGen) return true   // a QR code / link paired a computer meanwhile — it wins
-            if (s.state == "pinned" && s.id == id) { useServer(e.optString("base"), e.optString("token"), e.optString("name")); store.current = id; return true }
+            if (s.state == "pinned" && s.id == id) { useServer(e.optString("base"), e.optString("token"), e.optString("name"), e.optString("cert")); store.current = id; return true }
         }
         return false
     }
 
-    private suspend fun useServer(base: String, token: String, name: String) {
-        api = Api(base, token)
+    private suspend fun useServer(base: String, token: String, name: String, cert: String) {
+        api = Api(base, token, cert)
         serverName.value = name
         conn.value = Conn.CONNECTED
         loadAll()
     }
 
-    /** Pair with a key (QR link or adb), then pin the server's identity. */
-    fun pairWithKey(base: String, key: String) = scope.launch {
+    /** Waiting for the computer to allow this device: the name shown on the waiting screen. */
+    val approval = MutableStateFlow<String?>(null)
+    private var approvalJob: Job? = null
+    fun cancelApproval() { approvalJob?.cancel(); approval.value = null }
+
+    /** Ask the computer for this device's own key, with the QR code's pairing code or the password. Null = sent, else the error. */
+    private suspend fun requestAccess(base: String, proof: JSONObject, pin: String?, name: String): String? {
         pairGen++
-        val a = Api(base, key)
-        val pin = runCatching { a.obj("/api/pin") }.getOrElse { toast(Lan.explain(it)); return@launch }
-        store.pin(pin.getString("id"), base, pin.optString("name"), pin.getString("key"), key)
-        useServer(base, key, pin.optString("name"))
-        toast("Подключено: ${pin.optString("name")}")
+        val a = Api(base, null, pin)
+        val r = runCatching { a.post("/api/devices/request", proof.put("name", Lan.deviceName)) }
+            .getOrElse { return if (it is javax.net.ssl.SSLException) "Это не тот компьютер: его сертификат не совпал с QR-кодом" else if (it is Api.HttpError) it.message else Lan.explain(it) }
+        if (!r.optBoolean("ok")) return r.optString("message", "Не получилось")
+        waitForApproval(base, r.getString("key"), a.certSeen.orEmpty(), name)
+        return null
     }
 
-    /** QR code / link "http://<ip>:<port>/?k=<key>" → pair. False if the text is not a TabDock link. */
+    private fun waitForApproval(base: String, key: String, cert: String, name: String) {
+        approvalJob?.cancel()
+        approval.value = name
+        approvalJob = scope.launch {
+            val a = Api(base, key, cert)
+            while (isActive) {
+                delay(2000)
+                val r = runCatching { a.obj("/api/devices/me") }
+                if ((r.exceptionOrNull() as? Api.HttpError)?.code == 401) { approval.value = null; toast("Компьютер не разрешил это устройство"); return@launch }
+                if (r.getOrNull()?.optString("status") == "ok") {
+                    val pin = runCatching { a.obj("/api/pin") }.getOrNull() ?: continue
+                    store.pin(pin.getString("id"), base, pin.optString("name"), pin.getString("key"), key, cert)
+                    approval.value = null
+                    useServer(base, key, pin.optString("name"), cert)
+                    toast("Подключено: ${pin.optString("name")}")
+                    return@launch
+                }
+            }
+        }
+    }
+
+    /** A computer this device already has a key for. */
+    fun connectKnown(id: String, onDone: () -> Unit) = scope.launch {
+        val e = store.entry(id) ?: return@launch
+        pairGen++
+        store.current = id
+        useServer(e.optString("base"), e.optString("token"), e.optString("name"), e.optString("cert"))
+        onDone()
+    }
+
+    /** QR code / link "https://<ip>:<port>/?k=<code>&fp=<certificate>" → ask for access. False if the text is not a TabDock link. */
     fun pairFromLink(text: String): Boolean {
         val u = runCatching { android.net.Uri.parse(text.trim()) }.getOrNull() ?: return false
         val k = u.getQueryParameter("k") ?: return false
-        if (u.scheme != "http" || u.host.isNullOrBlank() || k.length < 8) return false
-        pairWithKey("http://${u.host}:${if (u.port > 0) u.port else 8787}", k)
+        val fp = u.getQueryParameter("fp")?.lowercase()
+        if (u.scheme != "https" || u.host.isNullOrBlank() || k.length < 8 || fp?.length != 64) return false
+        scope.launch { requestAccess("https://${u.host}:${if (u.port > 0) u.port else 8787}", JSONObject().put("k", k), fp, u.host!!)?.let { toast(it) } }
         return true
     }
 
@@ -184,9 +221,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     }
 
     fun login(server: FoundServer, password: String, done: (String) -> Unit) = scope.launch {
-        val (token, msg) = runCatching { Api(server.base, null).login(password) }.getOrElse { null to (it.message ?: "Нет связи") }
-        if (token == null) { done(msg); return@launch }
-        pairWithKey(server.base, token).join(); done("ok")
+        done(requestAccess(server.base, JSONObject().put("password", password), server.cert.ifBlank { null }, server.name) ?: "ok")
     }
 
     fun refresh() = scope.launch { loadAll() }
@@ -216,6 +251,11 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
                         val s = r.getOrThrow(); state.value = s; handleEvents(s)
                         s.optJSONArray("outbox")?.objs()?.takeIf { it.isNotEmpty() }?.let { files -> scope.launch { receiver.take(a, files) { toast(it) } } }
                         if (++tick % (if (visible) 12 else 2) == 0) loadAll()
+                    } else if ((r.exceptionOrNull() as? Api.HttpError)?.code == 401) {
+                        // switched off on the computer: this key will never work again
+                        store.current?.let { store.forget(it) }
+                        api = null; conn.value = Conn.NEED_PAIRING
+                        toast("Это устройство отключено на компьютере. Подключите его заново")
                     } else if (++fails >= 3 && conn.value == Conn.CONNECTED) {
                         conn.value = Conn.LOST
                     } else if (conn.value == Conn.LOST && fails % 4 == 0) {

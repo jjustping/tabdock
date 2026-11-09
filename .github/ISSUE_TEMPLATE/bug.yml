@@ -1,0 +1,29 @@
+name: Ошибка
+description: Что-то работает не так
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось
+      description: Что делали, что ожидали и что получилось. Пожалуйста, без ключей, адресов и фото клиентов.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия TabDock
+      placeholder: "0.12.0-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: server
+    attributes:
+      label: Компьютер
+      options: [macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Устройство и версия Android

@@ -53,15 +53,15 @@ fi
 # 1. Packages: Python, Bonjour (Avahi), media keys (playerctl), volume (PipeWire), disks (udisks2), icons (rsvg)
 if [ "$PACKAGES" = 1 ]; then
   if command -v apt-get >/dev/null; then
-    PKGS="python3 python3-venv curl avahi-daemon avahi-utils playerctl wireplumber udisks2 lm-sensors librsvg2-bin gnome-screenshot python3-gi gir1.2-ayatanaappindicator3-0.1 wl-clipboard xclip xdotool"
+    PKGS="python3 python3-venv curl openssl avahi-daemon avahi-utils playerctl wireplumber udisks2 lm-sensors librsvg2-bin gnome-screenshot python3-gi gir1.2-ayatanaappindicator3-0.1 wl-clipboard xclip xdotool"
     say "Ставлю пакеты (apt): $PKGS"
     sudo apt-get update -qq && sudo apt-get install -y -qq $PKGS
   elif command -v dnf >/dev/null; then
-    PKGS="python3 curl avahi avahi-tools playerctl wireplumber udisks2 lm_sensors librsvg2-tools gnome-screenshot python3-gobject libayatana-appindicator-gtk3 wl-clipboard xclip xdotool"
+    PKGS="python3 curl openssl avahi avahi-tools playerctl wireplumber udisks2 lm_sensors librsvg2-tools gnome-screenshot python3-gobject libayatana-appindicator-gtk3 wl-clipboard xclip xdotool"
     say "Ставлю пакеты (dnf): $PKGS"
     sudo dnf install -y -q $PKGS
   elif command -v pacman >/dev/null; then
-    PKGS="python curl avahi playerctl wireplumber udisks2 lm_sensors librsvg python-gobject libayatana-appindicator wl-clipboard xclip xdotool"
+    PKGS="python curl openssl avahi playerctl wireplumber udisks2 lm_sensors librsvg python-gobject libayatana-appindicator wl-clipboard xclip xdotool"
     say "Ставлю пакеты (pacman): $PKGS"
     sudo pacman -S --needed --noconfirm $PKGS
   else
