@@ -536,11 +536,12 @@ v0.1:
 | ~~0.10 beta~~ | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям |
 | ~~0.11 beta~~ | ✅ **кнопка «Сканировать QR-код»** в приложении; ✅ **проверка обновлений** со списком изменений (приложение предлагает скачать и поставить новую версию, значок в меню и панель — обновить сервер); ✅ **настраиваемая нижняя панель**; ✅ на компьютере вместо копии дока — **панель управления**; ✅ проверено: приложение не мешает глубокому сну телефона; осталось: запись меток в Capture One и обход VPN на компьютере |
 | **0.12** (сейчас) | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
-| 0.13 · админам и программистам | **мониторинг хостов** (ping/HTTP с уведомлениями), **Wake-on-LAN**, **бэкапы** (Time Machine / rsync — когда был последний), **SMART дисков**; **Docker** (запуск, остановка, журнал), **GitHub Actions** (статус сборок), **git-репозитории** |
-| 0.14 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
-| 1.0 · стабильный релиз | **мастер установки** «что и откуда поставить» по шагам для Mac и Linux; новый ключ подписи, политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
-| после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One |
-| отложено / думаем | **доступ не из дома** (HTTPS и ключ на устройство, Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
+| 0.13 · надёжность и безопасность | **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); **HTTPS** с сертификатом, который приложение запоминает при подключении; **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
+| 0.14 · админам и программистам | **мониторинг хостов** (ping/HTTP с уведомлениями), **Wake-on-LAN**, **бэкапы** (Time Machine / rsync — когда был последний), **SMART дисков**; **Docker** (запуск, остановка, журнал), **GitHub Actions** (статус сборок), **git-репозитории** |
+| 0.15 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
+| 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
+| после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
+| отложено / думаем | **доступ не из дома** (Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
 Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
@@ -550,7 +551,8 @@ Windows пока не планируется (оценка — [docs/WINDOWS.md]
 платного аккаунта Apple Developer, проверки App Store, отдельной работы с локальной сетью и Bonjour на iOS и
 тестирования на реальных устройствах — поэтому оно отложено до стабильной 1.0.
 
-**Безопасность (рекомендации)**
+**Безопасность (в версии 0.13).** Кнопки, вставка текста и передача файлов делают ключ доступа почти равным
+клавиатуре компьютера, поэтому защита подключения идёт раньше новых функций:
 * HTTPS с самоподписанным сертификатом, отпечаток которого приложение запоминает при подключении.
 * Отдельный ключ на каждое устройство со списком и отзывом; подтверждение нового устройства на компьютере.
 * Bonjour и доступ только в домашних сетях (для ноутбука, который носят с собой).
@@ -739,14 +741,15 @@ Planned: HTTPS with a pinned self-signed certificate, per-device keys with revoc
 
 ### Roadmap
 
-~~0.9~~ stand mode, skin builder, offline cache, notifications · **0.10 (now)**: ✅ Linux server + installer, ✅ menu-bar /
+~~0.9~~ stand mode, skin builder, offline cache, notifications · ~~0.10~~ ✅ Linux server + installer, ✅ menu-bar /
 tray icon, ✅ cheat sheets · **0.11** in-app QR scanner, update check with changelog, customizable bottom bar, a control
 panel instead of the dock in the computer's own browser, deep-sleep check · **0.12** Stream-Deck-like custom buttons,
-send photos/files/links/text from the phone · **0.13** host monitoring, Wake-on-LAN, backups,
-SMART, Docker, GitHub Actions, git repos · **0.14** darktable/digiKam, OBS + soundboard · **1.0** setup guide for
-the computer, store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
-app closed, multiple computers, Lightroom Classic, Capture One sessions · on hold / thinking: access from outside the
-home (HTTPS + per-device keys, read-only Telegram bot, Tailscale/ZeroTier, relay), a Home Assistant "home hub" mode.
+file transfer both ways · **0.13** reliability & security: tests and CI builds, a new signing key, HTTPS with a pinned
+certificate, per-device keys with revoke and confirmation on the computer, a threat model, CHANGELOG; long-press to customize any element, zoom in photo culling · **0.14** host monitoring, Wake-on-LAN, backups,
+SMART, Docker, GitHub Actions, git repos · **0.15** darktable/digiKam, OBS + soundboard · **1.0** setup guide and packages (.dmg for Mac, .deb
+for Ubuntu/Debian), store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
+app closed, multiple computers, Lightroom Classic, Capture One sessions, LocalSend compatibility · on hold / thinking: access from outside the
+home (read-only Telegram bot, Tailscale/ZeroTier, relay), a Home Assistant "home hub" mode.
 Principle: a convenient dock for your computer, not an app that does everything badly.
 Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
