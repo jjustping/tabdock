@@ -50,12 +50,13 @@ import kotlin.random.Random
 
 
 /** A long press opens these widgets' own settings; on the others it turns on the edit mode of the space. */
-private val WIDGETS_WITH_SETTINGS = setOf("buttons", "note", "shortcuts")
+private val WIDGETS_WITH_SETTINGS = setOf("buttons", "note", "shortcuts", "hosts", "backups", "git", "ci")
 private val TEMPLATES = linkedMapOf(
     "photo" to Triple("Фото", "aperture", listOf(Triple("reminders", 4, 6), Triple("shoots", 4, 4), Triple("player", 4, 3), Triple("quick", 4, 3), Triple("calendar", 4, 2))),
     "work" to Triple("Работа", "check", listOf(Triple("reminders", 4, 6), Triple("note", 4, 4), Triple("clock", 4, 2), Triple("deadlines", 4, 2), Triple("events", 4, 2), Triple("focus", 4, 2))),
     "fun" to Triple("Отдых", "note", listOf(Triple("clock", 6, 2), Triple("weather", 6, 2), Triple("player", 6, 4), Triple("quick", 6, 4))),
-    "admin" to Triple("Система", "computer", listOf(Triple("macstat", 6, 3), Triple("network", 6, 3), Triple("disks", 6, 3), Triple("shortcuts", 6, 3))),
+    "admin" to Triple("Система", "computer", listOf(Triple("macstat", 4, 3), Triple("network", 4, 3), Triple("hosts", 4, 3),
+        Triple("disks", 4, 3), Triple("docker", 4, 3), Triple("git", 4, 3))),
 )
 
 private fun rid() = (1..8).map { "abcdefghijklmnopqrstuvwxyz0123456789"[Random.nextInt(36)] }.joinToString("")

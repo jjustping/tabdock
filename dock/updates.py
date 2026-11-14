@@ -56,7 +56,8 @@ class Updates:
                                                        "User-Agent": "TabDock/%s" % self.current})
             with urllib.request.urlopen(req, timeout=15) as r:
                 rels = json.loads(r.read())
-            rels = [x for x in rels if not x.get("draft")]
+            # pre-releases are builds not yet tested on devices: they are never offered as an update
+            rels = [x for x in rels if not x.get("draft") and not x.get("prerelease")]
             rels.sort(key=lambda x: parse(x.get("tag_name")), reverse=True)
             if rels:
                 x = rels[0]

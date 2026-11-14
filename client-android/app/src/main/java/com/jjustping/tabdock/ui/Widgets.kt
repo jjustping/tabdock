@@ -93,6 +93,11 @@ val WIDGETS = linkedMapOf(
     "shortcuts" to WidgetDef("Команды", "frame", "Кнопки Apple Shortcuts", 4, 2),
     "wfolio" to WidgetDef("Галереи wfolio", "link", "Сроки хранения галерей", 4, 3, true),
     "buttons" to WidgetDef("Свои кнопки", "star", "Сочетания клавиш, сайты, папки, текст, команды", 4, 3),
+    "hosts" to WidgetDef("Хосты", "link", "Роутер, NAS, серверы: работают ли; пробуждение по сети", 4, 3, true),
+    "backups" to WidgetDef("Бэкапы", "archive", "Time Machine и свои бэкапы: когда был последний", 4, 2, true),
+    "docker" to WidgetDef("Docker", "frame", "Контейнеры: запуск, остановка, журнал", 4, 3, true),
+    "ci" to WidgetDef("Сборки GitHub", "check", "Последний запуск GitHub Actions по репозиториям", 4, 2, true),
+    "git" to WidgetDef("Git", "pencil", "Локальные репозитории: ветка, изменения, pull", 4, 3, true),
 )
 
 /** Everything a widget needs: the latest data and the actions. */
@@ -110,6 +115,7 @@ fun Widget(type: String, w: JSONObject, c: Ctx, modifier: Modifier) {
                 "player" -> PlayerW(c); "quick" -> QuickW(c); "weather" -> WeatherW(c); "deadlines" -> DeadlinesW(c)
                 "events" -> EventsW(c); "macstat" -> MacW(c); "disks" -> DisksW(c); "note" -> NoteW(c, w)
                 "focus" -> FocusW(c); "network" -> NetW(c); "shortcuts" -> ShortcutsW(c, w); "wfolio" -> WfolioW(c); "buttons" -> ButtonsW(c, w)
+                "hosts" -> HostsW(c); "backups" -> BackupsW(c); "docker" -> DockerW(c); "ci" -> CiW(c); "git" -> GitW(c)
             }
         }
     }
@@ -125,7 +131,7 @@ private fun headerAction(type: String, c: Ctx, w: JSONObject): (@Composable andr
     "shoots" -> { { Link("Все") { c.goTab("shoots") } } }
     "macstat", "disks" -> { { Link("Подробно") { c.goTab("mac") } } }
     "wfolio" -> { { Link("Все") { c.goTab("shoots") } } }
-    "note", "shortcuts", "buttons" -> { { Box(Modifier.clickable { c.editWidget(w) }.padding(4.dp)) { Ic("gear", 18.dp, LocalSkin.current.accent) } } }
+    "note", "shortcuts", "buttons", "hosts", "backups", "ci", "git" -> { { Box(Modifier.clickable { c.editWidget(w) }.padding(4.dp)) { Ic("gear", 18.dp, LocalSkin.current.accent) } } }
     else -> null
 }
 
@@ -472,6 +478,7 @@ val SYS_TILES = listOf(Triple("awake", "cup", "Не спать"), Triple("screen
         Spacer(Modifier.height(5.dp))
         Bar(((d.d("pct") ?: 0.0) / 100).toFloat(), when { ro -> s.dim; (d.d("pct") ?: 0.0) > 90 -> s.red; else -> s.green })
     }
+    SmartLines(c)
 }
 
 @Composable fun NetW(c: Ctx) {

@@ -367,6 +367,9 @@ class Handler(BaseHTTPRequestHandler):
             if not self._is_local():
                 return self._send(403, {"error": "local only"})
             return self._send(200, app.tray())
+        if p == "/api/docker/logs":
+            text = app.admin.docker_logs(qs.get("name", [""])[0], int(qs.get("lines", ["80"])[0] or 80) if qs.get("lines", ["80"])[0].isdigit() else 80)
+            return self._send(200 if text is not None else 404, {"text": text or ""})
         if p == "/api/notesets":
             return self._send(200, notesets.listing(app.store.load("notes", default_notes)))
         if p == "/api/shortcuts":

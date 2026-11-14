@@ -23,8 +23,8 @@ android {
         applicationId = "com.jjustping.tabdock"
         minSdk = 26
         targetSdk = 37
-        versionCode = 107
-        versionName = "0.13.0-beta"
+        versionCode = 108
+        versionName = "0.14.0-beta"
     }
     signingConfigs {
         if (signingProps.isNotEmpty()) {

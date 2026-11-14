@@ -18,6 +18,7 @@ import org.json.JSONObject
 object Notify {
     private const val CH_EVENTS = "events"
     private const val CH_DEADLINES = "deadlines"
+    private const val CH_HOSTS = "hosts"
 
     fun init(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
@@ -25,6 +26,8 @@ object Notify {
             .apply { description = "Capture One или папка закончили выгрузку съёмки" })
         nm.createNotificationChannel(NotificationChannel(CH_DEADLINES, "Сроки сдачи", NotificationManager.IMPORTANCE_DEFAULT)
             .apply { description = "Съёмки, которые нужно сдать сегодня или завтра" })
+        nm.createNotificationChannel(NotificationChannel(CH_HOSTS, "Хосты в сети", NotificationManager.IMPORTANCE_HIGH)
+            .apply { description = "Роутер, NAS или сервер перестал отвечать или снова работает" })
     }
 
     private fun allowed(ctx: Context, store: Store) =
@@ -45,6 +48,14 @@ object Notify {
         val target = e.optInt("target")
         post(ctx, CH_EVENTS, 1000 + e.optInt("id") % 1000, "Экспорт закончился",
             "«${e.optString("name")}»: +${e.optInt("added")} кадров" + if (target > 0) " · ${e.optInt("done")} из $target" else "")
+    }
+
+    fun host(ctx: Context, store: Store, e: JSONObject) {
+        if (!allowed(ctx, store)) return
+        val down = e.optString("type") == "host_down"
+        post(ctx, CH_HOSTS, 3000 + (e.optString("name").hashCode() and 0x3ff),
+            if (down) "Не отвечает: ${e.optString("name")}" else "Снова работает: ${e.optString("name")}",
+            if (down) "TabDock на компьютере больше не получает ответа" else "Хост снова отвечает")
     }
 
     /** Shoots due today / tomorrow and not delivered yet: one notification per shoot per day. */

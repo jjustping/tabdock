@@ -12,7 +12,7 @@ import threading
 import time
 import urllib.parse
 
-from . import buttons, captureone, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
+from . import admin, buttons, captureone, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
 from .store import Store, default_config, default_notes, new_id
 from .version import VERSION
 
@@ -75,6 +75,7 @@ class App:
         self.weather = weather.Weather()
         self.updates = updates.Updates(VERSION)
         self.outbox = outbox.Outbox(data_dir)
+        self.admin = admin.Admin(self.config, self.add_event)
         self.calendar = CalendarFeed(lambda: not self.demo and self.config().get("calendar", True))
         self._catalogs = None
         self._catalogs_at = 0
@@ -214,7 +215,7 @@ class App:
 
     def state(self):
         return {"events": self.events, "net": self.net.data, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake, "vpn": lanbind.VPN,
-                "now": time.time(), "version": VERSION}
+                "now": time.time(), "version": VERSION, "admin": self.admin.data}
 
     def everything(self):
         cfg = self.config()
@@ -446,7 +447,8 @@ def op_wfolio(app, body):
 
 
 WIDGET_TYPES = {"reminders", "shoots", "calendar", "player", "quick", "clock", "weather", "deadlines", "events",
-                "macstat", "disks", "note", "focus", "network", "shortcuts", "wfolio", "buttons"}
+                "macstat", "disks", "note", "focus", "network", "shortcuts", "wfolio", "buttons",
+                "hosts", "backups", "docker", "ci", "git"}
 USAGES = {"photo", "work", "fun", "admin"}
 TABS = {"shoots", "notes", "files", "mac", "connect", "settings"}
 
@@ -508,6 +510,10 @@ def op_config(app, body):
         if "c1_catalogs" in body and isinstance(body["c1_catalogs"], list):
             cfg["c1_catalogs"] = [os.path.expanduser(c.strip()).rstrip("/") for c in body["c1_catalogs"]
                                   if isinstance(c, str) and c.strip()][:12]
+        for key, clean in (("hosts", admin.clean_hosts), ("backups", admin.clean_backups), ("repos", admin.clean_repos),
+                           ("gh_repos", admin.clean_gh)):
+            if isinstance(body.get(key), list):
+                cfg[key] = clean(body[key])
         if body.get("new_token"):       # the pairing code in the QR; the handler allows this on the computer only
             cfg["token"] = secrets.token_urlsafe(16)
         return True
@@ -521,6 +527,8 @@ def op_config(app, body):
         app.folders.refresh()
     if "calendar" in body:
         app.calendar.refresh_soon()
+    if any(k in body for k in ("hosts", "backups", "repos", "gh_repos")):
+        app.admin.kick()
     return r
 
 
@@ -555,6 +563,12 @@ def op_action(app, body):
         if not b:
             return False, "Кнопка не найдена"
         return buttons.run(b, act_mod, netcheck)
+    if a == "wol":
+        return app.admin.wake(str(arg or ""))
+    if a == "docker":
+        return app.admin.docker(str(arg or ""), body.get("op"))
+    if a == "git":
+        return app.admin.git_op(str(arg or ""), body.get("op"))
     if a == "calendar_access":
         app.calendar.refresh_soon()
         return True, "Запрос доступа отправлен — подтвердите на компьютере"

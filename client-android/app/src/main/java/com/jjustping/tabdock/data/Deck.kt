@@ -274,7 +274,10 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
             val e = evs.getJSONObject(i); val id = e.optInt("id")
             if (id > lastEvent && System.currentTimeMillis() / 1000.0 - e.optDouble("at") < 600) {
                 // only «export finished» shows the banner / notification; other events (a file sent from a phone…) are quiet
-                if (e.optString("type", "export_done") == "export_done") {
+                if (e.optString("type") == "host_down" || e.optString("type") == "host_up") {
+                    Notify.host(ctx, store, e)
+                    if (visible) toast((if (e.optString("type") == "host_down") "Не отвечает: " else "Снова работает: ") + e.optString("name"))
+                } else if (e.optString("type", "export_done") == "export_done") {
                     events.tryEmit(e)
                     if (!visible) Notify.exportDone(ctx, store, e)
                 }
