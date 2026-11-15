@@ -14,7 +14,6 @@ progress = finished files / originals (or a manual target). Scanned in the backg
 import hashlib
 import unicodedata
 import os
-import subprocess
 import threading
 import time
 
@@ -127,6 +126,6 @@ class FolderShoots:
         out = os.path.join(self.cache_dir, "thumbs", hashlib.sha1(src.encode()).hexdigest()[:16] + ".jpg")
         if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
             os.makedirs(os.path.dirname(out), exist_ok=True)
-            subprocess.run(["/usr/bin/sips", "-s", "format", "jpeg", "-Z", "480", src, "--out", out],
-                           capture_output=True, timeout=30)
+            from .osutil import make_jpeg
+            make_jpeg(src, out, 480)
         return out if os.path.exists(out) else None

@@ -13,7 +13,7 @@ def box(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("bad,good", [("../../etc/passwd", "passwd"), ("a/b.txt", "b.txt"), ('x:y*z?.jpg', "x_y_z_.jpg"),
-                                      (".hidden", "hidden"), ("..\\..\\win.ini", ".._.._win.ini".lstrip("."))])
+                                      (".hidden", "hidden"), ("..\\..\\win.ini", "win.ini")])
 def test_safe_name(bad, good):
     assert inbox.safe_name(bad) == good
 

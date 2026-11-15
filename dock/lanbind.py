@@ -44,6 +44,10 @@ def vpn_active():
     """True when internet traffic goes into a tunnel (a VPN is on). Many VPNs (WireGuard, OpenVPN and others) keep the
     default route and add 0/1 + 128/1 instead, so ask where a public address is actually routed."""
     try:
+        if sys.platform == "win32":
+            from .windows import ps
+            name = ps("(Find-NetRoute -RemoteIPAddress 1.1.1.1 -ErrorAction SilentlyContinue|Select -First 1).InterfaceAlias")
+            return bool(re.search(r"(vpn|wireguard|wintun|tap|tun|tailscale|zerotier|openvpn|nord|proton)", name, re.I))
         if sys.platform == "darwin":
             out = subprocess.run(["/sbin/route", "-n", "get", "1.1.1.1"], capture_output=True, text=True, timeout=3).stdout
             m = re.search(r"interface:\s*(\S+)", out)

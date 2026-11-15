@@ -500,6 +500,10 @@ class DockServer(ThreadingHTTPServer):
         super().__init__(addr, handler)
 
     def server_bind(self):
+        if sys.platform == "win32":
+            # on Windows SO_REUSEADDR would let another program take over the port: ask for it exclusively instead
+            self.allow_reuse_address = False
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         if hasattr(socket, "SO_REUSEPORT"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         if self.bound_if:
@@ -529,3 +533,8 @@ class DockServer(ThreadingHTTPServer):
         """A device that goes away mid-request is normal, not an error worth a traceback."""
         if not isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError, ssl.SSLError)):
             super().handle_error(request, client_address)
+
+
+class DockServer6(DockServer):
+    """The same server on the IPv6 loopback (::1) — only for this computer itself."""
+    address_family = socket.AF_INET6

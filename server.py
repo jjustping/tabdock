@@ -9,13 +9,14 @@ The code lives in dock/: core.py (the application), httpd.py (HTTP layer), the r
 import argparse
 import os
 import sys
+import threading
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from dock import auth, lanbind                        # noqa: E402
 from dock.core import App, bonjour                    # noqa: E402
-from dock.httpd import DockServer, Handler            # noqa: E402
+from dock.httpd import DockServer, DockServer6, Handler  # noqa: E402
 from dock.store import Store, default_config          # noqa: E402
 from dock.version import VERSION                      # noqa: E402
 
@@ -45,6 +46,11 @@ def main():
     Handler.app = app
     DockServer.tls_context = app.tls_context
     srv = DockServer(("0.0.0.0", a.port), Handler)
+    try:   # "localhost" in a browser may try IPv6 first (Windows waits ~2 s before falling back): answer there too
+        srv6 = DockServer6(("::1", a.port), Handler)
+        threading.Thread(target=srv6.serve_forever, name="ipv6-loopback", daemon=True).start()
+    except OSError:
+        pass
     # replies to the tablet/phone go straight through Wi-Fi/Ethernet even when a VPN is on
     if not os.environ.get("DOCK_NO_LANBIND"):
         lanbind.LanBinder(lambda ip, port, idx: DockServer((ip, port), Handler, idx), a.port).start()

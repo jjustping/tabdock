@@ -20,6 +20,59 @@ import time
 import uuid
 
 MAC = sys.platform == "darwin"
+WIN = sys.platform == "win32"
+WIN_VK = {"ctrl": 0x11, "control": 0x11, "alt": 0x12, "option": 0x12, "shift": 0x10, "win": 0x5B, "cmd": 0x5B, "command": 0x5B,
+          "super": 0x5B, "enter": 0x0D, "return": 0x0D, "tab": 0x09, "space": 0x20, "esc": 0x1B, "escape": 0x1B,
+          "backspace": 0x08, "delete": 0x2E, "left": 0x25, "up": 0x26, "right": 0x27, "down": 0x28, "home": 0x24,
+          "end": 0x23, "pageup": 0x21, "pagedown": 0x22, "printscreen": 0x2C}
+WIN_EXT = {0x2E, 0x25, 0x26, 0x27, 0x28, 0x24, 0x23, 0x21, 0x22, 0x5B}
+
+
+def win_vk(key):
+    if key in WIN_VK:
+        return WIN_VK[key]
+    if re.match(r"^f([1-9]|1[0-9]|2[0-4])$", key):
+        return 0x6F + int(key[1:])
+    if len(key) == 1 and key.isalnum() and key.isascii():
+        return ord(key.upper())
+    return {"-": 0xBD, "=": 0xBB, ",": 0xBC, ".": 0xBE, "/": 0xBF, ";": 0xBA, "'": 0xDE, "[": 0xDB, "]": 0xDD,
+            "\\": 0xDC, "`": 0xC0}.get(key)
+
+
+def _win_press(mods, key):
+    import ctypes
+    u = ctypes.windll.user32
+    codes = [WIN_VK[m] for m in mods if m in WIN_VK] + [win_vk(key)]
+    for c in codes:
+        u.keybd_event(c, 0, 1 if c in WIN_EXT else 0, 0)
+    for c in reversed(codes):
+        u.keybd_event(c, 0, (1 if c in WIN_EXT else 0) | 2, 0)
+
+
+def _win_clipboard(text):
+    import ctypes
+    from ctypes import wintypes
+    u, k = ctypes.windll.user32, ctypes.windll.kernel32
+    k.GlobalAlloc.restype = wintypes.HGLOBAL
+    k.GlobalLock.restype = ctypes.c_void_p
+    k.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    u.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    data = (text + "\0").encode("utf-16-le")
+    for _ in range(10):                     # another program may hold the clipboard for a moment
+        if u.OpenClipboard(None):
+            break
+        time.sleep(0.05)
+    else:
+        return False
+    try:
+        u.EmptyClipboard()
+        h = k.GlobalAlloc(0x0002, len(data))     # GMEM_MOVEABLE
+        p = k.GlobalLock(h)
+        ctypes.memmove(p, data, len(data))
+        k.GlobalUnlock(h)
+        return bool(u.SetClipboardData(13, h))     # CF_UNICODETEXT
+    finally:
+        u.CloseClipboard()
 KINDS = ("hotkey", "text", "url", "folder", "app", "command")
 ICONS = ("frame", "link", "folder", "app", "star", "play", "note", "computer", "display", "cup", "moon", "check",
          "calendar", "book", "gear", "volume", "qr", "reset", "drive", "pencil")
@@ -102,6 +155,11 @@ def press(combo):
             return False, "Неизвестная клавиша «%s»" % key
         ok, msg = _osa('tell application "System Events" to ' + action)
         return ok, msg or "Нажато: " + combo
+    if WIN:
+        if win_vk(key) is None or any(m not in WIN_VK for m in mods):
+            return False, "Неизвестная клавиша в «%s»" % combo
+        _win_press(mods, key)
+        return True, "Нажато: " + combo
     # Linux: X11 → xdotool; Wayland → ydotool (needs its daemon) or wtype (wlroots desktops)
     xmods = {"cmd": "super", "command": "super", "super": "super", "win": "super", "ctrl": "ctrl", "control": "ctrl",
              "alt": "alt", "option": "alt", "shift": "shift"}
@@ -135,6 +193,8 @@ def press(combo):
 
 
 def set_clipboard(text):
+    if WIN:
+        return _win_clipboard(text)
     if MAC:
         subprocess.run(["/usr/bin/pbcopy"], input=text, text=True, timeout=5)
         return True
@@ -156,8 +216,8 @@ def type_text(text):
 
 
 def open_target(target):
-    subprocess.Popen(["/usr/bin/open" if MAC else "xdg-open", target], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
+    from .osutil import open_path
+    open_path(target)
 
 
 def run(button, actions_mod, netcheck_mod):

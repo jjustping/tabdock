@@ -95,7 +95,7 @@ def apply():
     r = subprocess.run(["git", "-C", HERE, "pull", "--ff-only"], capture_output=True, text=True, timeout=120)
     if r.returncode != 0:
         return False, "git pull не прошёл: " + (r.stderr or r.stdout).strip()[:200]
-    pip = os.path.join(HERE, ".venv", "bin", "pip")
+    pip = os.path.join(HERE, ".venv", "Scripts" if sys.platform == "win32" else "bin", "pip.exe" if sys.platform == "win32" else "pip")
     if os.path.exists(pip):
         subprocess.run([pip, "install", "-q", "--disable-pip-version-check", "-r", os.path.join(HERE, "requirements.txt")],
                        capture_output=True, timeout=300)
@@ -105,8 +105,9 @@ def apply():
     if sys.platform == "darwin" and "helper/" in changed and os.path.exists(os.path.join(HERE, "helper", "build.sh")):
         # the menu-bar app changed: rebuild it (macOS may ask for its permissions again once)
         subprocess.run([os.path.join(HERE, "helper", "build.sh")], capture_output=True, timeout=600)
-    if sys.platform != "darwin":
+    if sys.platform.startswith("linux"):
         subprocess.run(["systemctl", "--user", "restart", "tabdock-tray.service"], capture_output=True, timeout=30)
+    # Windows: dock/windows/run.py restarts the server and the tray after exit code 3
     return True, "Обновлено — сервер перезапускается"
 
 

@@ -8,8 +8,11 @@ import threading
 import time
 
 MAC = sys.platform == "darwin"
-# Linux: the «Команды» widget runs your own scripts from this folder (Mac: Apple Shortcuts)
-COMMANDS_DIR = os.path.expanduser("~/.config/tabdock/commands")
+WIN = sys.platform == "win32"
+# Linux / Windows: the «Команды» widget runs your own scripts from this folder (Mac: Apple Shortcuts)
+COMMANDS_DIR = (os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "TabDock", "commands") if WIN
+                else os.path.expanduser("~/.config/tabdock/commands"))
+WIN_SCRIPTS = (".bat", ".cmd", ".ps1", ".exe", ".py", ".lnk")
 
 
 def _run(cmd, timeout=6):
@@ -20,6 +23,12 @@ def _run(cmd, timeout=6):
 
 
 def _gateway():
+    if WIN:
+        from .windows import ps
+        out = ps("$r=Get-NetRoute -DestinationPrefix 0.0.0.0/0 -ErrorAction SilentlyContinue|Sort RouteMetric|Select -First 1;"
+                 "\"$($r.NextHop)|$($r.InterfaceAlias)\"").strip()
+        gw, _, iface = out.partition("|")
+        return (gw if gw and gw != "0.0.0.0" else None), (iface or None)
     if not MAC:   # "default via 192.168.1.1 dev wlp2s0 …" — skip VPN default routes, prefer the real one
         for line in _run(["ip", "-4", "route", "show", "default"]).splitlines():
             m = re.search(r"via (\S+) dev (\S+)", line)
@@ -33,6 +42,11 @@ def _gateway():
 
 
 def _ping(host):
+    if WIN:
+        from .windows import icmp_ping
+        res = [icmp_ping(host) for _ in range(2)]
+        ok = [r for r in res if r is not None]
+        return (sum(ok) / len(ok) if ok else None), 100.0 * (len(res) - len(ok)) / len(res)
     out = _run(["/sbin/ping", "-c", "2", "-t", "3", host] if MAC else ["ping", "-c", "2", "-W", "3", host], timeout=6)
     m = re.search(r"= [\d.]+/([\d.]+)/", out)
     loss = re.search(r"([\d.]+)% packet loss", out)
@@ -90,8 +104,8 @@ def shortcuts_list():
     """Apple Shortcuts available on this Mac (cached for 5 minutes); on Linux — executable scripts in COMMANDS_DIR."""
     if not MAC:
         try:
-            return sorted(f for f in os.listdir(COMMANDS_DIR)
-                          if not f.startswith(".") and os.access(os.path.join(COMMANDS_DIR, f), os.X_OK))[:200]
+            return sorted(f for f in os.listdir(COMMANDS_DIR) if not f.startswith(".") and (
+                f.lower().endswith(WIN_SCRIPTS) if WIN else os.access(os.path.join(COMMANDS_DIR, f), os.X_OK)))[:200]
         except OSError:
             return []
     if time.time() - _sc_cache["at"] > 300:
@@ -102,7 +116,15 @@ def shortcuts_list():
 
 def run_shortcut(name):
     if name not in shortcuts_list():
-        return False, "Такой команды нет в «Командах» на Mac" if MAC else "Нет такого скрипта в ~/.config/tabdock/commands"
+        return False, "Такой команды нет в «Командах» на Mac" if MAC else "Нет такого скрипта в " + COMMANDS_DIR
+    if WIN:
+        p = os.path.join(COMMANDS_DIR, name)
+        cmd = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", p] if name.lower().endswith(".ps1") else None
+        if cmd:
+            subprocess.Popen(cmd, cwd=os.path.expanduser("~"), creationflags=0x08000000)
+        else:
+            os.startfile(p)
+        return True, "Запускаю «%s»" % name
     if not MAC:
         subprocess.Popen([os.path.join(COMMANDS_DIR, name)], cwd=os.path.expanduser("~"),
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)

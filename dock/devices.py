@@ -3,14 +3,10 @@ computer first. Only a hash of each key is stored."""
 import hashlib
 import re
 import secrets
-import subprocess
-import sys
-import threading
 import time
 
 MAX_PENDING = 5
 MAX_DEVICES = 64
-NOTIFY_MAC = 'on run argv\ndisplay notification (item 2 of argv) with title (item 1 of argv)\nend run'
 
 
 def _hash(key):
@@ -23,15 +19,8 @@ def clean_name(name):
 
 def notify(title, text):
     """Best effort, never blocks a request."""
-    def run():
-        try:
-            if sys.platform == "darwin":
-                subprocess.run(["/usr/bin/osascript", "-e", NOTIFY_MAC, title, text], capture_output=True, timeout=10)
-            else:
-                subprocess.run(["notify-send", "-a", "TabDock", title, text], capture_output=True, timeout=10)
-        except (OSError, subprocess.SubprocessError):
-            pass
-    threading.Thread(target=run, daemon=True).start()
+    from .osutil import notify as _n
+    return _n(title, text)
 
 
 class Devices:

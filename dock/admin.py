@@ -19,6 +19,7 @@ import urllib.request
 import uuid
 
 MAC = sys.platform == "darwin"
+WIN = sys.platform == "win32"
 HOST_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.\-:\[\]]{0,252}$")      # host name / IPv4 / IPv6; never starts with "-"
 MAC_RE = re.compile(r"^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$")
 GH_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
@@ -108,6 +109,10 @@ def check_host(h):
     """{"up", "ms", "err"} for one host."""
     t = time.time()
     try:
+        if h["kind"] == "ping" and WIN:
+            from .windows import icmp_ping
+            ms = icmp_ping(h["target"])
+            return {"up": ms is not None, "ms": ms, "err": None if ms is not None else "не отвечает"}
         if h["kind"] == "ping":
             if MAC:
                 cmd = ["/sbin/ping6", "-c", "1", h["target"]] if ":" in h["target"] else ["/sbin/ping", "-c", "1", "-t", "3", h["target"]]
@@ -274,7 +279,28 @@ def parse_udisks(dump):
     return [d for d in drives if d["raw"] != "нет данных" or d["name"] != "Диск"]
 
 
+def parse_physical_disks(out):
+    """Get-PhysicalDisk (Windows, no admin rights): HealthStatus Healthy / Warning / Unhealthy."""
+    try:
+        rows = json.loads(out or "[]")
+    except ValueError:
+        return []
+    rows = rows if isinstance(rows, list) else [rows]
+    st = {"healthy": "ok", "warning": "failing", "unhealthy": "failing"}
+    words = {"healthy": "в порядке", "warning": "предупреждение", "unhealthy": "сбой"}
+    res = []
+    for r in rows:
+        h = str(r.get("HealthStatus", "")).lower()
+        if h.isdigit():                       # older PowerShell prints the enum number: 0 healthy, 1 warning, 2 unhealthy
+            h = {"0": "healthy", "1": "warning", "2": "unhealthy"}.get(h, "")
+        res.append({"name": r.get("FriendlyName") or "Диск", "status": st.get(h, "unknown"), "raw": words.get(h, "нет данных")})
+    return res
+
+
 def smart():
+    if WIN:
+        from .windows import ps
+        return parse_physical_disks(ps("Get-PhysicalDisk|Select FriendlyName,@{n='HealthStatus';e={\"$($_.HealthStatus)\"}}|ConvertTo-Json -Compress"))
     if MAC:
         _, out, _ = _run(["/usr/sbin/diskutil", "list", "physical"], 15)
         res = []
@@ -290,7 +316,8 @@ def smart():
 
 # ---------------- Docker ----------------
 def docker_bin():
-    for p in [shutil.which("docker"), "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
+    for p in [shutil.which("docker"), r"C:\Program Files\Docker\Docker\resources\bin\docker.exe",
+              "/usr/local/bin/docker", "/opt/homebrew/bin/docker",
               "/Applications/Docker.app/Contents/Resources/bin/docker", "/usr/bin/docker"]:
         if p and os.path.exists(p):
             return p

@@ -148,6 +148,7 @@ def test_git_status_parse():
     assert admin.parse_git_status(out) == {"branch": "main", "upstream": "origin/main", "ahead": 2, "behind": 1, "changes": 2}
 
 
+@pytest.mark.skipif(not __import__("shutil").which("git"), reason="git is not installed")
 def test_real_repo(tmp_path):
     env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
     subprocess.run(["git", "init", "-q", "-b", "main", str(tmp_path)], check=True, env=env)

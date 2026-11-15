@@ -123,8 +123,8 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             }
             T("Уведомления приходят, пока приложение открыто или свёрнуто; если его закрыть совсем — не проверяется ничего.", 12.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
         }
-        // Capture One exists only on the Mac: a Linux computer shows folder-based shoots only
-        val mac = c.all.s("platform", "darwin") == "darwin"
+        // Capture One exists on the Mac and on Windows: a Linux computer shows folder-based shoots only
+        val mac = c.all.s("platform", "darwin") in setOf("darwin", "win32")
         if (mac) DeliveredRule(c)
         AppsSettings(c)
         if (mac) CatalogSettings(c)
@@ -266,7 +266,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
             Btn(icon = "plus", danger = true) { cfgPost(c, JSONObject().put("folder_roots", JSONArray(roots.filterIndexed { j, _ -> j != i }))) }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextInput(path, { path = it }, if (c.all.s("platform", "darwin") == "darwin") "/Volumes/SSD/Съёмки" else "/home/имя/Изображения/Съёмки", Modifier.fillMaxWidth())
+            TextInput(path, { path = it }, when (c.all.s("platform", "darwin")) { "darwin" -> "/Volumes/SSD/Съёмки"; "win32" -> "D:\\Съёмки"; else -> "/home/имя/Изображения/Съёмки" }, Modifier.fillMaxWidth())
             TextInput(app, { app = it }, "Программа", Modifier.fillMaxWidth())
             Btn("Добавить", primary = true) { if (path.isNotBlank()) { cfgPost(c, JSONObject().put("folder_roots", JSONArray(roots + JSONObject().put("path", path.trim()).put("app", app.ifBlank { "Папки" })))); path = "" } }
         }

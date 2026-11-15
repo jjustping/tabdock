@@ -32,7 +32,7 @@
 отбор, сроки сдачи, галереи клиентов в wfolio, диски и бэкапы каталога.
 
 Всё работает локально в домашней сети: без облака, аккаунтов и подписок (интернет нужен только для погоды
-и проверки ссылок wfolio). Сервер — компьютер с macOS 13+ или **Linux** (Ubuntu, Debian, Fedora, Arch), клиент — Android-приложение TabDock
+и проверки ссылок wfolio). Сервер — компьютер с macOS 13+, **Linux** (Ubuntu, Debian, Fedora, Arch) или **Windows 10/11**, клиент — Android-приложение TabDock
 или любой современный браузер на планшете, телефоне или самом компьютере.
 
 ### Передача файлов между телефоном и компьютером — как AirDrop, только для всех
@@ -275,6 +275,44 @@ journalctl --user -u tabdock -f   # журнал
 * **Скриншот** под Wayland делается через системный портал: в первый раз рабочий стол спросит «Разрешить?».
 * **Значок в трее** — то же меню, что в строке меню Mac (в GNOME нужен AppIndicator, в Ubuntu он включён).
 * Capture One на Linux нет; съёмки — по папкам (darktable/digiKam — в планах).
+
+### Установка на компьютер (Windows)
+
+Windows 10 и 11, обычные (x64) и ARM-компьютеры. Проверено на **Windows 11 ARM64** (Parallels).
+
+1. Поставьте **Python 3.9+** с [python.org](https://www.python.org/downloads/windows/) (галочка «Add python.exe to PATH»)
+   или командой `winget install Python.Python.3.12`.
+2. Скачайте TabDock (`git clone https://github.com/jjustping/tabdock.git` или ZIP со страницы репозитория) и распакуйте,
+   например, в `C:\Users\<вы>\tabdock`.
+3. В этой папке откройте PowerShell и выполните:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
+```
+
+Установщик создаёт `.venv`, ставит зависимости, открывает порт 8787 **только для частных (домашних) сетей** (Windows
+один раз спросит разрешение администратора), добавляет запуск при входе через **Планировщик заданий** и открывает панель
+с QR-кодом. Значок TabDock — в области уведомлений (в Windows 11 он может быть под стрелкой `^`): статус, устройства,
+«Передача файлов…», QR-код, автозапуск, перезапуск, журнал.
+
+```powershell
+.\install-windows.ps1 -Status      # работает ли и адрес для планшета
+.\install-windows.ps1 -Port 9000   # другой порт
+.\install-windows.ps1 -Uninstall   # убрать автозапуск (данные в data\ остаются)
+```
+
+Что работает так же, как на Mac и Linux: пространства и виджеты, напоминания, заметки, состояние компьютера (процессор,
+память, диски, сеть), музыка из любого плеера в системной панели Windows (Spotify, браузер, Apple Music) и громкость,
+быстрые действия (программы из меню «Пуск», сон, выключение экрана, скриншот, «не спать», извлечение дисков), свои
+кнопки (сочетания клавиш, вставка текста), передача файлов в обе стороны, HTTPS и ключи устройств, хосты, Docker, сборки
+GitHub, git, здоровье дисков. Отличия:
+* **Сеть Windows должна быть «Частной»** (Параметры → Сеть и Интернет → свойства сети), иначе планшет компьютер не увидит.
+* **Температуры нет**: у Windows нет общего способа её прочитать.
+* **«Команды»** — ваши скрипты (`.bat`, `.cmd`, `.ps1`, `.exe`) в `%LOCALAPPDATA%\TabDock\commands\`.
+* **Календарь** — из файлов `.ics` в `%LOCALAPPDATA%\TabDock\calendars\` (экспорт из Google, Outlook, iCloud).
+* **Capture One**: прогресс съёмок читается, но звёзды и метки с планшета ставятся только на Mac (у Capture One для Windows
+  нет AppleScript). Каталог на Windows ещё не проверялся на настоящих съёмках.
+* Без `git` обновление кнопкой в панели не работает: скачайте новую версию и запустите установщик ещё раз.
 
 ### Приложение TabDock для Android (бета)
 
@@ -567,13 +605,14 @@ v0.1:
 | ~~0.12 beta~~ | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
 | ~~0.13 beta~~ | ✅ **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); ✅ **HTTPS** с сертификатом, который приложение запоминает при подключении; ✅ **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
 | **0.14** (сейчас) · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
-| 0.15 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
+| **0.15** · Windows | ✅ **сервер на Windows 10/11** (x64 и ARM): установщик, значок в трее, автозапуск, музыка и громкость, быстрые действия, свои кнопки, передача файлов, HTTPS без openssl |
+| 0.16 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
 | 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
 | после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
 | отложено / думаем | **доступ не из дома** (Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
-Windows пока не планируется (оценка — [docs/WINDOWS.md](docs/WINDOWS.md)).
+Windows поддерживается с версии 0.15 (подробности переноса — [docs/WINDOWS.md](docs/WINDOWS.md)).
 
 **iPhone и iPad.** Сейчас на них работает веб-версия: откройте адрес компьютера в Safari и добавьте на экран «Домой».
 Нативное приложение возможно (Compose Multiplatform позволяет переиспользовать большую часть экранов), но требует
@@ -586,7 +625,7 @@ Windows пока не планируется (оценка — [docs/WINDOWS.md]
 fun, built with photographers in mind. On first launch you pick usage scenarios (**Photo**, **Work**, **Fun**,
 **System & network**); each becomes a space of widgets you can rearrange. Photographers get the most: Capture One
 (and folder-based Photon Studio / Photoshop) editing progress, culling, deadlines, wfolio galleries, disks and catalog
-backups. Local network only, no cloud. Server: macOS 13+ or **Linux** (Ubuntu, Debian, Fedora, Arch); client: the Android app or any browser.
+backups. Local network only, no cloud. Server: macOS 13+, **Linux** (Ubuntu, Debian, Fedora, Arch) or **Windows 10/11**; client: the Android app or any browser.
 
 ### Support the developer
 
@@ -738,6 +777,13 @@ Installs packages (asks for sudo), a venv, a systemd **user** service and a tray
 networks if `ufw` is on, and prints a QR code in the terminal. "Commands" on Linux are your executable scripts in
 `~/.config/tabdock/commands/`; the calendar reads `.ics` files (GNOME/Evolution or `~/.config/tabdock/calendars/`).
 
+### Install on Windows
+
+Windows 10/11 (x64 or ARM). Install Python 3.9+ (python.org or `winget install Python.Python.3.12`), get TabDock, then in
+its folder: `powershell -ExecutionPolicy Bypass -File .\install-windows.ps1`. It makes a venv, opens port 8787 for private
+networks only, starts TabDock at log on through Task Scheduler and adds a tray icon. Not available on Windows: temperatures,
+writing stars/tags to Capture One (no AppleScript there). The network must be set to «Private».
+
 ### Android app
 
 The **TabDock Android app** (`client-android/`, beta) is a fully native Kotlin + Jetpack Compose client: every screen, widget, skin,
@@ -779,12 +825,12 @@ tray icon, ✅ cheat sheets · **0.11** in-app QR scanner, update check with cha
 panel instead of the dock in the computer's own browser, deep-sleep check · **0.12** Stream-Deck-like custom buttons,
 file transfer both ways · **0.13** reliability & security: tests and CI builds, a new signing key, HTTPS with a pinned
 certificate, per-device keys with revoke and confirmation on the computer, a threat model, CHANGELOG; long-press to customize any element, zoom in photo culling · **0.14** host monitoring, Wake-on-LAN, backups,
-SMART, Docker, GitHub Actions, git repos · **0.15** darktable/digiKam, OBS + soundboard · **1.0** setup guide and packages (.dmg for Mac, .deb
+SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** darktable/digiKam, OBS + soundboard · **1.0** setup guide and packages (.dmg for Mac, .deb
 for Ubuntu/Debian), store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
 app closed, multiple computers, Lightroom Classic, Capture One sessions, LocalSend compatibility · on hold / thinking: access from outside the
 home (read-only Telegram bot, Tailscale/ZeroTier, relay), a Home Assistant "home hub" mode.
 Principle: a convenient dock for your computer, not an app that does everything badly.
-Windows is not planned for now ([docs/WINDOWS.md](docs/WINDOWS.md)).
+Windows is supported since 0.15 ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ### macOS permissions
 

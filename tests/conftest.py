@@ -28,8 +28,8 @@ class Client:
         self.ctx.verify_mode = ssl.CERT_NONE
 
     def request(self, method, path, body=None, headers=None):
-        conn = (http.client.HTTPSConnection("localhost", self.port, context=self.ctx, timeout=20) if self.tls
-                else http.client.HTTPConnection("localhost", self.port, timeout=20))
+        conn = (http.client.HTTPSConnection("127.0.0.1", self.port, context=self.ctx, timeout=20) if self.tls
+                else http.client.HTTPConnection("127.0.0.1", self.port, timeout=20))
         h = dict(headers or {})
         if isinstance(body, dict):
             body = json.dumps(body)

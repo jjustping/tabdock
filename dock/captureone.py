@@ -12,6 +12,7 @@ import glob
 import os
 import sqlite3
 import subprocess
+import sys
 import time
 
 # Core Data entity ids differ between versions; detect them by name/shape.
@@ -107,7 +108,7 @@ def _c1_prefs():
 
 def _container(path):
     """…/X.cocatalog/X.cocatalogdb -> …/X.cocatalog ; session file stays as is."""
-    path = path.rstrip("/")
+    path = path.rstrip("/\\")
     if path.endswith(".cocatalogdb"):
         return os.path.dirname(path)
     return path
@@ -119,18 +120,24 @@ def discover_detailed():
 
     def add(path, src):
         path = _container(path)
-        if not path.startswith("/") or "/Backups/" in path or "/.Trash" in path or "/._" in path:
+        if not os.path.isabs(path) or "/Backups/" in path or "/.Trash" in path or "/._" in path or "\\$Recycle" in path:
             return
         e = found.setdefault(path, {"path": path, "sources": [], "current": False,
                                     "kind": "session" if path.endswith(".cosessiondb") else "catalog"})
         if src not in e["sources"]:
             e["sources"].append(src)
 
-    current, recent = _c1_prefs()
+    current, recent = _c1_prefs() if sys.platform == "darwin" else (None, [])
     for r in recent:
         add(r, "Capture One")
     for p in glob.glob(os.path.expanduser("~/Pictures/*.cocatalog")):
         add(p, "Изображения")
+    if sys.platform == "win32":     # no Spotlight: Pictures plus the top two levels of every other drive
+        import string
+        for d in string.ascii_uppercase[2:]:
+            for pat in ("%s:\\*.cocatalog", "%s:\\*\\*.cocatalog", "%s:\\*\\*\\*.cocatalog"):
+                for p in glob.glob(pat % d):
+                    add(p, "диск")
     try:
         out = subprocess.run(["/usr/bin/mdfind", "kMDItemFSName == '*.cocatalog' || kMDItemFSName == '*.cosessiondb'"],
                              capture_output=True, text=True, timeout=8).stdout
@@ -386,7 +393,8 @@ def derive(shoot, manual, rule=None):
 
 
 def open_in_c1(catalog):
-    subprocess.Popen(["/usr/bin/open", "-a", "Capture One", catalog])
+    from .osutil import open_with
+    open_with("Capture One", catalog)
 
 
 if __name__ == "__main__":

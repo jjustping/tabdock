@@ -1,7 +1,19 @@
 # TabDock для Windows — план
 
-*Статус: только план (ноябрь 2026). Кода для Windows ещё нет.*
+*Статус: сделано в 0.15 (15 ноября 2026), проверено на Windows 11 ARM64. Ниже — исходный план; что вышло на деле — в разделе «Как сделано».*
 *English summary at the end.*
+
+## Как сделано (0.15)
+* `dock/windows/`: `sysinfo` (ctypes: GetSystemTimes, GlobalMemoryStatusEx, GetDiskFreeSpaceEx; имена — один вызов
+  PowerShell), `media` (Core Audio через ctypes, «сейчас играет» через пакеты `winrt`, медиаклавиши без них), `actions`
+  (ярлыки «Пуска», SetSuspendState, SC_MONITORPOWER, скриншот через System.Drawing, SetThreadExecutionState, «Извлечь»),
+  `bonjour` (`zeroconf`), `ics_calendar` (тот же разбор `.ics`, что на Linux), `tray` (`pystray`), `run` (перезапуск
+  сервера и трея, один экземпляр).
+* Без внешних программ: ping через IcmpSendEcho, буфер обмена и клавиши через user32, сертификат HTTPS генерируется на
+  чистом Python (у Windows нет `openssl`, а `cryptography` не имеет сборки под ARM64).
+* `install-windows.ps1`: venv, правило брандмауэра только для частных сетей, задача Планировщика «при входе» в сеансе
+  пользователя (не служба Windows), панель с QR-кодом.
+* Температуры нет; запись меток в Capture One — только на Mac.
 
 ## Что уже переносимо, а что завязано на macOS
 

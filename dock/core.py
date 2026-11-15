@@ -6,7 +6,6 @@ import os
 import re
 import secrets
 import socket
-import subprocess
 import sys
 import threading
 import time
@@ -20,6 +19,10 @@ if sys.platform == "darwin":
     from . import actions as act_mod, bonjour, sysinfo   # noqa: F401
     from .calendar_mac import CalendarFeed
     from .media import Media
+elif sys.platform == "win32":   # Windows: same interfaces, see dock/windows/
+    from .windows import actions as act_mod, bonjour, sysinfo   # noqa: F401
+    from .windows.ics_calendar import CalendarFeed
+    from .windows.media import Media
 else:   # Linux: same interfaces, see dock/linux/
     from .linux import actions as act_mod, bonjour, sysinfo   # noqa: F401
     from .linux.calendar import CalendarFeed
@@ -548,8 +551,9 @@ def op_action(app, body):
         path = app.folders.path(body.get("key", ""))
         if not path:
             return False, "Папка не найдена"
-        subprocess.Popen(["/usr/bin/open", path])
-        return True, "Открываю папку в Finder"
+        from .osutil import open_path
+        open_path(path)
+        return True, "Открываю папку на компьютере"
     if a == "open_shoot":
         cat = body.get("catalog")
         if cat not in app.catalogs():

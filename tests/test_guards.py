@@ -78,3 +78,38 @@ def test_secrets_never_leave(remote, device_key):
     assert st == 200
     for k in ("token", "identity_key", "password_hash"):
         assert k not in d["config"]
+
+
+def test_certificate_without_openssl(tmp_path):
+    """Windows has no openssl command: the pure-Python certificate must work for a real TLS connection."""
+    import socket
+    import ssl
+    import subprocess
+    import threading
+
+    from dock import tls
+    cert, key = str(tmp_path / "c.pem"), str(tmp_path / "k.pem")
+    tls.make_certificate_python(cert, key)
+    srv = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    srv.load_cert_chain(cert, key)
+    ls = socket.socket()
+    ls.bind(("127.0.0.1", 0))
+    ls.listen(1)
+
+    def serve():
+        c, _ = ls.accept()
+        with srv.wrap_socket(c, server_side=True) as s:
+            s.sendall(b"ok")
+    threading.Thread(target=serve, daemon=True).start()
+    cli = ssl.create_default_context()
+    cli.check_hostname, cli.verify_mode = False, ssl.CERT_NONE
+    with cli.wrap_socket(socket.create_connection(ls.getsockname(), 5)) as s:
+        assert s.recv(2) == b"ok"
+        der = s.getpeercert(binary_form=True)
+    assert tls.fingerprint(cert) == __import__("hashlib").sha256(der).hexdigest()
+    # the certificate's own signature is valid (openssl checks it when it is installed)
+    if __import__("shutil").which("openssl"):
+        r = subprocess.run(["openssl", "x509", "-in", cert, "-noout", "-text"], capture_output=True, text=True)
+        assert r.returncode == 0 and "Subject Alternative Name" in r.stdout and "CA:FALSE" in r.stdout
+        r = subprocess.run(["openssl", "verify", "-check_ss_sig", "-partial_chain", "-trusted", cert, cert], capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout + r.stderr

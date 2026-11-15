@@ -1,8 +1,6 @@
 """Phone → computer: files and photos land in ~/Downloads/TabDock, links open in the browser, text goes to the clipboard."""
 import os
 import re
-import subprocess
-import sys
 import time
 
 from . import buttons
@@ -12,7 +10,8 @@ INBOX = os.path.expanduser("~/Downloads/TabDock")
 
 
 def safe_name(name):
-    name = os.path.basename(str(name or "")).strip().replace("\x00", "")
+    # both separators on every system: a name from a phone must never reach another folder
+    name = re.split(r"[\\/]", str(name or ""))[-1].strip().replace("\x00", "")
     name = re.sub(r'[\\/:*?"<>|\r\n\t]', "_", name)[:180].lstrip(".") or time.strftime("файл %Y-%m-%d %H-%M-%S")
     return name
 
@@ -72,11 +71,9 @@ def receive(kind, value):
 
 
 def reveal(path):
-    """Show the received file in Finder / the file manager."""
-    if sys.platform == "darwin":
-        subprocess.Popen(["/usr/bin/open", "-R", path])
-    else:
-        subprocess.Popen(["xdg-open", os.path.dirname(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    """Show the received file in Finder / Explorer / the file manager."""
+    from .osutil import reveal as _r
+    _r(path)
 
 
 def recent(limit=12):
@@ -97,5 +94,5 @@ def recent(limit=12):
 
 def reveal_dir():
     os.makedirs(INBOX, exist_ok=True)
-    subprocess.Popen(["/usr/bin/open" if sys.platform == "darwin" else "xdg-open", INBOX],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    from .osutil import open_path
+    open_path(INBOX)

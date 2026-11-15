@@ -1,1 +1,9 @@
 qrcode>=7.4
+# Windows: tray icon, LAN announcement, «now playing» (all have ready-made wheels, also for ARM64)
+pystray>=0.19; sys_platform == "win32"
+Pillow>=10; sys_platform == "win32"
+zeroconf>=0.130; sys_platform == "win32"
+winrt-runtime>=2.0; sys_platform == "win32"
+winrt-Windows.Media.Control>=2.0; sys_platform == "win32"
+winrt-Windows.Foundation>=2.0; sys_platform == "win32"
+winrt-Windows.Storage.Streams>=2.0; sys_platform == "win32"

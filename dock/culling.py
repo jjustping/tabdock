@@ -9,6 +9,7 @@ import os
 import sqlite3
 import struct
 import subprocess
+import sys
 import threading
 import time
 
@@ -187,12 +188,10 @@ class Culling:
             with open(tmp, "wb") as f:
                 f.write(emb)
             src = tmp
-        cmd = ["/usr/bin/sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", "-Z", str(size)]
         rot = {3: 180, 6: 90, 8: 270}.get(jpeg_orientation(emb) if emb else 1)
-        if rot:
-            cmd += ["-r", str(rot)]
         try:
-            subprocess.run(cmd + [src, "--out", out], capture_output=True, timeout=90)
+            from .osutil import make_jpeg
+            make_jpeg(src, out, size, rot or 0)
         finally:
             if tmp and os.path.exists(tmp):
                 os.remove(tmp)
@@ -228,6 +227,8 @@ class Culling:
             args.append("%s|%s|%s|%s" % (r["vid"] or "", os.path.splitext(r["fn"])[0], rating, color))
         if not args:
             return False, "Нечего менять"
+        if sys.platform != "darwin":
+            return False, "Звёзды и метки записываются через Capture One только на Mac: на Windows у него нет AppleScript"
         cat_name = os.path.splitext(os.path.basename(catalog))[0]
         try:
             res = subprocess.run(["/usr/bin/osascript", "-e", TAG_SCRIPT, uuid, self._album_name(catalog, uuid), cat_name] + args,
