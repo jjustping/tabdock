@@ -4,16 +4,16 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.13.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.14.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android app TabDock 0.13.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.14.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать TabDock 0.13.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
+**⬇ [Скачать TabDock 0.14.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
 (Android 8+, планшет и телефон) и код сервера для Mac.
 
 | | |
@@ -123,7 +123,7 @@ TabDock делает один человек в свободное время. �
 | **Диски и бэкапы** (v0.5) | Внешние диски: модель, USB/Thunderbolt, файловая система, SMART, свободное место; отметка диска с каталогом и предупреждения «диск с каталогом не подключён», «мало места», «бэкап каталога N дней назад». |
 | **Галереи wfolio** (v0.2) | Ссылки на клиентские галереи со сроком хранения: сколько дней осталось, предупреждение за 14 дней, раз в 6 часов док проверяет, открывается ли ссылка. Привязка к съёмке Capture One. |
 
-### Для админов и программистов (0.14, предварительная версия)
+### Для админов и программистов (0.14)
 
 Шесть виджетов для пространства «Система» (настройки — значок ⚙ или долгое нажатие на виджет):
 
@@ -565,8 +565,8 @@ v0.1:
 | ~~0.10 beta~~ | ✅ **сервер на Linux** и `install-linux.sh`, ✅ значок в строке меню / трее (устройства, автозапуск), ✅ шпаргалки по сценариям |
 | ~~0.11 beta~~ | ✅ **кнопка «Сканировать QR-код»** в приложении; ✅ **проверка обновлений** со списком изменений (приложение предлагает скачать и поставить новую версию, значок в меню и панель — обновить сервер); ✅ **настраиваемая нижняя панель**; ✅ на компьютере вместо копии дока — **панель управления**; ✅ проверено: приложение не мешает глубокому сну телефона; осталось: запись меток в Capture One и обход VPN на компьютере |
 | ~~0.12 beta~~ | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
-| **0.13** (сейчас) | ✅ **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); ✅ **HTTPS** с сертификатом, который приложение запоминает при подключении; ✅ **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
-| **0.14** (pre-release, не проверено на устройствах) · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
+| ~~0.13 beta~~ | ✅ **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); ✅ **HTTPS** с сертификатом, который приложение запоминает при подключении; ✅ **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
+| **0.14** (сейчас) · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
 | 0.15 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
 | 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
 | после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
@@ -623,7 +623,7 @@ network, both ways, across systems:
 * **Any file, any size** — tested with 300 MB files, checksums match. Mac ↔ Android and Linux ↔ Android alike,
   directly between your devices — no cloud, nothing is uploaded anywhere.
 
-**Status: beta.** Server and native Android app **TabDock 0.13.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
+**Status: beta.** Server and native Android app **TabDock 0.14.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
@@ -669,7 +669,7 @@ UI in Safari for now.
   The dock checks every link every 6 hours (active / expired) and warns 14 days ahead. No wfolio credentials are
   used.
 
-### For admins and developers (0.14, pre-release)
+### For admins and developers (0.14)
 
 Widgets for the «Система» space: **hosts** (ping / HTTP / port, notifications when one goes down or comes back, Wake-on-LAN),
 **backups** (Time Machine or your own file/folder, red when too old), **disk health** (SMART, no root), **Docker** (start, stop,
