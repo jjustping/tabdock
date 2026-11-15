@@ -282,7 +282,7 @@ fun SettingsScreen(c: Ctx, openWeb: (String) -> Unit, onConnect: () -> Unit, onW
 private val USAGE = listOf(Triple("photo", "aperture", "Фото и съёмки" to "Capture One, Photon Studio, Photoshop: прогресс, отбор, сроки, wfolio"),
     Triple("work", "check", "Работа и задачи" to "Задачи, заметки, календарь, фокус-таймер"),
     Triple("fun", "note", "Отдых и музыка" to "Плеер, погода, часы, быстрые действия"),
-    Triple("admin", "computer", "Система и сеть" to "Нагрузка, диски, сеть, команды"))
+    Triple("admin", "computer", "Система и сеть" to "Нагрузка, сеть, хосты, Docker, git, бэкапы"))
 
 @Composable
 fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
@@ -302,7 +302,7 @@ fun SetupWizard(deck: Deck, all: JSONObject?, onDone: () -> Unit) {
         val order = listOf("photo", "work", "fun", "admin").filter { it in usage }
         val spaces = order.map { fromTemplate(it) }
         val body = JSONObject().put("setup_done", true).put("usage", JSONArray(order)).put("spaces", JSONArray(spaces))
-            .put("tabs", JSONArray(listOf("notes", "mac", "connect", "settings") + if ("photo" in usage && editor != "none") listOf("shoots") else emptyList()))
+            .put("tabs", JSONArray(listOf("notes", "files", "mac", "connect", "settings") + if ("photo" in usage && editor != "none") listOf("shoots") else emptyList()))
             .put("skin", deck.skin.value ?: "classic")
         if ("photo" in usage && editor == "c1") body.put("done_rule", rule)
         if ("photo" in usage && editor == "folders" && folder.isNotBlank())

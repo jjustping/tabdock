@@ -1,5 +1,6 @@
 package com.jjustping.tabdock.ui
 
+import androidx.compose.foundation.layout.imePadding
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebView
@@ -196,8 +197,9 @@ class Dialogs(val deck: Deck) {
 
     @Composable fun Host() {
         val d = current ?: return
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(.55f)).clickable(interactionSource = noRipple(), indication = null) { close() },
-            contentAlignment = Alignment.Center) {
+        // imePadding: the sheet shrinks above the keyboard, so the field being typed in stays visible
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(.55f)).clickable(interactionSource = noRipple(), indication = null) { close() }
+            .imePadding().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.widthIn(max = 760.dp).fillMaxWidth(.9f).clickable(interactionSource = noRipple(), indication = null) {}) { d() }
         }
     }

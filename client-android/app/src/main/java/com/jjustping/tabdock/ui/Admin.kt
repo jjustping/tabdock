@@ -189,7 +189,7 @@ private fun cfgList(c: Ctx, key: String) = c.all.o("config").a(key).objs()
                 x.i("changes").takeIf { it > 0 }?.let { "изменений: $it" },
                 x.i("ahead").takeIf { it > 0 }?.let { "↑$it" }, x.i("behind").takeIf { it > 0 }?.let { "↓$it" },
                 x.s("last").ifBlank { null }).joinToString(" · ")
-            AdminRow(if (err.isNotBlank()) false else if (x.i("behind") > 0 || x.i("changes") > 0) null else if (x == null) null else true,
+            AdminRow(if (err.isNotBlank()) false else if (x == null || x.i("behind") > 0 || x.i("ahead") > 0 || x.i("changes") > 0) null else true,
                 r.s("name"), if (x == null) "проверяю…" else sub, onClick = { open = if (open == r.s("id")) null else r.s("id") })
             if (open == r.s("id")) Row(Modifier.padding(start = 20.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Seg("Проверить сервер (fetch)", false) { c.deck.post("/api/action", JSONObject().put("action", "git").put("arg", r.s("id")).put("op", "fetch"), refresh = false) }
@@ -212,6 +212,10 @@ private fun cfgList(c: Ctx, key: String) = c.all.o("config").a(key).objs()
 // ---------------- settings of these widgets (shared by all devices of the computer) ----------------
 private val ADMIN_SETTINGS = mapOf(
     "hosts" to "Хосты", "backups" to "Бэкапы", "git" to "Git-репозитории", "ci" to "Сборки GitHub")
+
+@Composable private fun Labeled(label: String, content: @Composable () -> Unit) {
+    T(label, 12.sp, LocalSkin.current.muted, modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)); content()
+}
 
 @Composable fun AdminEditor(c: Ctx, type: String, onClose: () -> Unit) {
     val s = LocalSkin.current
@@ -243,9 +247,9 @@ private val ADMIN_SETTINGS = mapOf(
                         for ((k, n) in listOf("ping" to "Ping", "http" to "HTTP", "tcp" to "Порт")) Seg(n, it.s("kind") == k) { set(i, "kind", k) }
                     }
                     Spacer(Modifier.size(6.dp))
-                    TextInput(it.s("name"), { v -> set(i, "name", v.take(40)) }, "Название, например NAS", Modifier.fillMaxWidth())
-                    TextInput(it.s("target"), { v -> set(i, "target", v.trim()) }, when (it.s("kind")) { "http" -> "https://nas.local:5001"; "tcp" -> "nas.local:22"; else -> "192.168.1.10 или nas.local" }, Modifier.fillMaxWidth().padding(top = 6.dp))
-                    TextInput(it.s("mac"), { v -> set(i, "mac", v.trim()) }, "MAC для пробуждения (необязательно), aa:bb:cc:dd:ee:ff", Modifier.fillMaxWidth().padding(top = 6.dp))
+                    Labeled("Название") { TextInput(it.s("name"), { v -> set(i, "name", v.take(40)) }, "Название, например NAS", Modifier.fillMaxWidth()) }
+                    Labeled(when (it.s("kind")) { "http" -> "Адрес страницы"; "tcp" -> "Адрес и порт"; else -> "Адрес или имя" }) { TextInput(it.s("target"), { v -> set(i, "target", v.trim()) }, when (it.s("kind")) { "http" -> "https://nas.local:5001"; "tcp" -> "nas.local:22"; else -> "192.168.1.10 или nas.local" }, Modifier.fillMaxWidth()) }
+                    Labeled("MAC-адрес для пробуждения (необязательно)") { TextInput(it.s("mac"), { v -> set(i, "mac", v.trim()) }, "MAC для пробуждения (необязательно), aa:bb:cc:dd:ee:ff", Modifier.fillMaxWidth()) }
                 }
                 "backups" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -253,13 +257,13 @@ private val ADMIN_SETTINGS = mapOf(
                         if (c.all.s("platform") == "darwin") Seg("Time Machine", it.s("kind") == "timemachine") { set(i, "kind", "timemachine") }
                     }
                     Spacer(Modifier.size(6.dp))
-                    TextInput(it.s("name"), { v -> set(i, "name", v.take(40)) }, "Название", Modifier.fillMaxWidth())
-                    if (it.s("kind") != "timemachine") TextInput(it.s("path"), { v -> set(i, "path", v) }, "~/backups/last.log или /mnt/backup", Modifier.fillMaxWidth().padding(top = 6.dp))
-                    TextInput(it.i("hours", 26).toString(), { v -> set(i, "hours", v.filter(Char::isDigit).take(4).toIntOrNull() ?: 26) }, "Не старше, часов", Modifier.fillMaxWidth().padding(top = 6.dp))
+                    Labeled("Название") { TextInput(it.s("name"), { v -> set(i, "name", v.take(40)) }, "Название", Modifier.fillMaxWidth()) }
+                    if (it.s("kind") != "timemachine") Labeled("Файл или папка бэкапа") { TextInput(it.s("path"), { v -> set(i, "path", v) }, "~/backups/last.log или /mnt/backup", Modifier.fillMaxWidth()) }
+                    Labeled("Предупредить, если бэкап старше (часов)") { TextInput(it.i("hours", 26).toString(), { v -> set(i, "hours", v.filter(Char::isDigit).take(4).toIntOrNull() ?: 26) }, "Не старше, часов", Modifier.fillMaxWidth()) }
                 }
                 "git" -> {
-                    TextInput(it.s("name"), { v -> set(i, "name", v.take(40)) }, "Название (необязательно)", Modifier.fillMaxWidth())
-                    TextInput(it.s("path"), { v -> set(i, "path", v) }, "~/code/project", Modifier.fillMaxWidth().padding(top = 6.dp))
+                    Labeled("Название (необязательно)") { TextInput(it.s("name"), { v -> set(i, "name", v.take(40)) }, "Название (необязательно)", Modifier.fillMaxWidth()) }
+                    Labeled("Папка репозитория") { TextInput(it.s("path"), { v -> set(i, "path", v) }, "~/code/project", Modifier.fillMaxWidth()) }
                 }
                 else -> TextInput(it.s("repo"), { v -> set(i, "repo", v.trim()) }, "владелец/репозиторий", Modifier.fillMaxWidth())
             }
