@@ -11,10 +11,19 @@ from . import ps
 
 START_DIRS = [os.path.join(os.environ.get("ProgramData", r"C:\ProgramData"), r"Microsoft\Windows\Start Menu\Programs"),
               os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs")]
-# system tools that have no Start-menu shortcut of their own
-BUILTIN = {"Проводник": "explorer.exe", "File Explorer": "explorer.exe", "Параметры": "ms-settings:", "Settings": "ms-settings:",
-           "Диспетчер задач": "taskmgr.exe", "Task Manager": "taskmgr.exe", "Терминал": "wt.exe", "Terminal": "wt.exe",
-           "Блокнот": "notepad.exe", "Notepad": "notepad.exe", "Калькулятор": "calc.exe", "Calculator": "calc.exe"}
+# system tools that have no Start-menu shortcut of their own, named in the language of Windows
+BUILTIN_RU = {"Проводник": "explorer.exe", "Параметры": "ms-settings:", "Диспетчер задач": "taskmgr.exe", "Терминал": "wt.exe",
+              "Блокнот": "notepad.exe", "Калькулятор": "calc.exe"}
+BUILTIN_EN = {"File Explorer": "explorer.exe", "Settings": "ms-settings:", "Task Manager": "taskmgr.exe", "Terminal": "wt.exe",
+              "Notepad": "notepad.exe", "Calculator": "calc.exe"}
+
+
+def _builtin():
+    try:
+        russian = (ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF) == 0x19
+    except (AttributeError, OSError):
+        russian = False
+    return BUILTIN_RU if russian else BUILTIN_EN
 _cache = {"at": 0, "apps": {}}
 SKIP = ("uninstall", "удал", "readme", "help", "справка", "documentation", "website", "release notes")
 
@@ -25,9 +34,10 @@ def _apps():
         for d in START_DIRS:
             for f in glob.glob(os.path.join(d, "**", "*.lnk"), recursive=True):
                 name = os.path.splitext(os.path.basename(f))[0]
-                if name and name not in apps and not any(s in name.lower() for s in SKIP):
+                # «… (Mac)»: Parallels puts the Mac's own apps into the Start menu
+                if name and name not in apps and not any(s in name.lower() for s in SKIP) and not name.endswith(" (Mac)"):
                     apps[name] = f
-        for name, target in BUILTIN.items():
+        for name, target in _builtin().items():
             apps.setdefault(name, target)
         _cache.update(at=time.time(), apps=apps)
     return _cache["apps"]
@@ -73,6 +83,20 @@ $bmp.Save('%s',[Drawing.Imaging.ImageFormat]::Png)"""
 EJECT = "(New-Object -ComObject Shell.Application).Namespace(17).ParseName('%s').InvokeVerb('Eject')"
 
 
+def bring_forward():
+    """Windows lets only the process that got the last input bring a window to the front. TabDock runs in the
+    background, so before opening something it sends a key nobody uses (F24): the new window then opens on top."""
+    u = ctypes.windll.user32
+    u.keybd_event(0x87, 0, 0, 0)
+    u.keybd_event(0x87, 0, 2, 0)
+    u.AllowSetForegroundWindow(-1)        # ASFW_ANY: the program we start may take the front
+
+
+def start(target):
+    bring_forward()
+    os.startfile(target)
+
+
 class Actions:
     ES_CONTINUOUS, ES_SYSTEM, ES_DISPLAY = 0x80000000, 0x1, 0x2
 
@@ -95,10 +119,10 @@ class Actions:
             target = find_app(arg or "")
             if not target:
                 return False, "Программа не найдена"
-            os.startfile(target)
+            start(target)
             return True, "Открываю %s" % arg
         if action == "open_path":
-            os.startfile(os.path.expanduser(arg or "~"))
+            start(os.path.expanduser(arg or "~"))
             return True, "Открыто"
         if action == "sleep":
             # SetSuspendState(hibernate=False, force=False, wakeup=False); with hibernation turned on Windows may hibernate

@@ -61,10 +61,12 @@ class Store:
 
 DEFAULT_APPS = ["Capture One", "Serato DJ Pro", "Finder", "Safari", "Music", "Telegram",
                 "Photos", "System Settings", "Activity Monitor", "Terminal"]
-if sys.platform == "win32":     # Windows: Start-menu names (only installed ones appear)
-    DEFAULT_APPS = ["Проводник", "File Explorer", "Microsoft Edge", "Параметры", "Settings", "Диспетчер задач",
-                    "Task Manager", "Терминал", "Terminal", "Capture One", "Adobe Photoshop", "Adobe Lightroom Classic",
-                    "Telegram", "Spotify", "Visual Studio Code"]
+if sys.platform == "win32":     # Windows: Start-menu names in the language of Windows (only installed ones appear)
+    import ctypes
+    _ru = (ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF) == 0x19
+    DEFAULT_APPS = (["Проводник", "Microsoft Edge", "Параметры", "Диспетчер задач", "Терминал"] if _ru else
+                    ["File Explorer", "Microsoft Edge", "Settings", "Task Manager", "Terminal"]) + \
+        ["Capture One", "Adobe Photoshop", "Adobe Lightroom Classic", "Telegram", "Spotify", "Visual Studio Code"]
 elif sys.platform != "darwin":   # Linux: names as the .desktop files show them (only installed ones appear)
     DEFAULT_APPS = ["Files", "Firefox", "Terminal", "Settings", "Text Editor", "Resources", "darktable", "GIMP",
                     "digiKam", "Visual Studio Code", "Telegram", "Spotify",

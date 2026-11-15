@@ -13,7 +13,8 @@ NO_WINDOW = 0x08000000 if WIN else 0
 def open_path(target):
     """Open a file, folder or link with the default program."""
     if WIN:
-        os.startfile(target)
+        from .windows.actions import start
+        start(target)
     else:
         subprocess.Popen(["/usr/bin/open" if MAC else "xdg-open", target], stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, start_new_session=True)

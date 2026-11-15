@@ -56,7 +56,10 @@ def _win_clipboard(text):
     k.GlobalAlloc.restype = wintypes.HGLOBAL
     k.GlobalLock.restype = ctypes.c_void_p
     k.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    k.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+    u.OpenClipboard.argtypes = [wintypes.HWND]
     u.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    u.SetClipboardData.restype = wintypes.HANDLE
     data = (text + "\0").encode("utf-16-le")
     for _ in range(10):                     # another program may hold the clipboard for a moment
         if u.OpenClipboard(None):
