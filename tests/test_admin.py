@@ -175,3 +175,16 @@ def test_settings_through_the_api(remote, device_key, app):
     st, d, _ = remote.get("/api/state", key=device_key)
     assert st == 200 and "admin" in d
     app.store.update("config", dict, lambda c: [c.pop(k, None) for k in ("hosts", "gh_repos")])
+
+
+def test_time_machine_messages(tmp_path):
+    assert admin.tm_message("Failed to mount backup destination") == "Диск для копий не подключён"
+    assert "Полный доступ" in admin.tm_message("Operation not permitted")
+    assert admin.tm_message("") == "Копий пока нет"
+    import datetime
+    import plistlib
+    f = tmp_path / "tm.plist"
+    d = datetime.datetime(2026, 11, 1, 10, 0, 0)
+    f.write_bytes(plistlib.dumps({"Destinations": [{"SnapshotDates": [d - datetime.timedelta(days=1), d]}]}))
+    assert admin.tm_plist_date(str(f)) == d.timestamp()
+    assert admin.tm_plist_date(str(tmp_path / "none.plist")) is None

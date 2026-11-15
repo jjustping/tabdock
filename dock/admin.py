@@ -164,6 +164,28 @@ def parse_tm_date(text):
     return time.mktime(tuple(int(x) for x in m[-1]) + (0, 0, -1))
 
 
+def tm_message(text):
+    """Why `tmutil latestbackup` gave no date, in words."""
+    t = (text or "").lower()
+    if "mount" in t:
+        return "Диск для копий не подключён"
+    if "not permitted" in t or "full disk" in t:
+        return "Нет доступа: включите TabDock в «Полный доступ к диску»"
+    return "Копий пока нет"
+
+
+def tm_plist_date(path="/Library/Preferences/com.apple.TimeMachine.plist"):
+    """The newest backup date Time Machine keeps in its settings (works while the backup disk is unplugged)."""
+    import plistlib
+    try:
+        with open(path, "rb") as f:
+            p = plistlib.load(f)
+    except (OSError, ValueError, plistlib.InvalidFileException):
+        return None
+    dates = [d for dest in p.get("Destinations", []) for d in dest.get("SnapshotDates", []) if hasattr(d, "timestamp")]
+    return max(dates).timestamp() if dates else None
+
+
 def last_change(path):
     """When a backup last ran: the file's time, or the newest item at the top of a folder."""
     p = os.path.expanduser(path)
@@ -187,11 +209,13 @@ def check_backup(b, now=None):
         if b["kind"] == "timemachine":
             if not MAC:
                 return {"ok": False, "at": None, "err": "Time Machine есть только на Mac"}
-            code, out, err = _run(["/usr/bin/tmutil", "latestbackup"], 20)
-            at = parse_tm_date(out)
+            _, out, err = _run(["/usr/bin/tmutil", "destinationinfo"], 20)
+            if "No destinations" in out + err:
+                return {"ok": False, "at": None, "err": "Time Machine не настроена"}
+            _, out, err = _run(["/usr/bin/tmutil", "latestbackup"], 20)
+            at = parse_tm_date(out) or tm_plist_date()      # the disk may be unplugged: the settings remember the dates
             if not at:
-                return {"ok": False, "at": None, "err": "Нет копий или нет доступа (TabDock нужен «Полный доступ к диску»)"
-                        if code else "Копий пока нет"}
+                return {"ok": False, "at": None, "err": tm_message(out + err)}
         else:
             at = last_change(b["path"])
         return {"ok": now - at <= b["hours"] * 3600, "at": at, "err": None}
