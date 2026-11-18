@@ -16,7 +16,7 @@ sys.path.insert(0, HERE)
 import pystray                                      # noqa: E402
 from PIL import Image, ImageDraw                    # noqa: E402
 
-from dock.windows import NO_WINDOW, appdata         # noqa: E402
+from dock.windows import NO_WINDOW, appdata, follow_runner, kill_tree  # noqa: E402
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8787
 LOCAL = "http://localhost:%d" % PORT
@@ -108,13 +108,13 @@ class Tray:
     def restart(self):
         p = pids().get("server")
         if p:      # run.py starts it again
-            subprocess.run(["taskkill.exe", "/PID", str(p), "/F"], capture_output=True, creationflags=NO_WINDOW)
+            kill_tree(p)
 
     def stop(self):
         p = pids()
         for k in ("runner", "server"):
             if p.get(k):
-                subprocess.run(["taskkill.exe", "/PID", str(p[k]), "/F"], capture_output=True, creationflags=NO_WINDOW)
+                kill_tree(p[k])
         self.icon.stop()
 
     def poll(self):
@@ -131,4 +131,5 @@ class Tray:
 
 
 if __name__ == "__main__":
+    follow_runner()
     Tray().run()

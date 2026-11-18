@@ -4,16 +4,16 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.15.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.16.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android app TabDock 0.15.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.16.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать TabDock 0.15.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
+**⬇ [Скачать TabDock 0.16.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
 (Android 8+, планшет и телефон) и код сервера для Mac.
 
 | | |
@@ -609,10 +609,10 @@ v0.1:
 | ~~0.13 beta~~ | ✅ **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); ✅ **HTTPS** с сертификатом, который приложение запоминает при подключении; ✅ **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
 | ~~0.14 beta~~ · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
 | ~~0.15 beta~~ · Windows | ✅ **сервер на Windows 10/11** (x64 и ARM): установщик, значок в трее, автозапуск, музыка и громкость, быстрые действия, свои кнопки, передача файлов, HTTPS без openssl |
-| **0.16** (сейчас) · файлы | ✅ **большие файлы** (проверено 20 ГБ) частями с докачкой после обрыва, ✅ **папки целиком** в обе стороны, ✅ прогресс и скорость на обеих сторонах |
-| 0.17 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
+| ~~0.16 beta~~ · файлы | ✅ **большие файлы** (проверено 20 ГБ) частями с докачкой после обрыва, ✅ **папки целиком** в обе стороны, ✅ прогресс и скорость на обеих сторонах |
+| **0.17** (сейчас) · творчество | фотографам: **Lightroom Classic** (каталог только для чтения, как Capture One), готовые кнопки для **Photoshop, Photon Studio, Lightroom, Capture One, darktable**; художникам: **Krita, Clip Studio Paint**, доска референсов на планшете, таймер набросков, палитры; **кнопки по активной программе** — набор меняется сам, когда на компьютере переключаешься между программами; **«Недавние работы»** — открыть файл одним касанием |
 | 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
-| после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
+| после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, **OBS** (сцены, запись, звук) и звуковая панель, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
 | отложено / думаем | **доступ не из дома** (Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
 
@@ -667,7 +667,7 @@ network, both ways, across systems:
   connection**. **Whole folders** too: «Отправить папку» in the app or drop a folder into the window on the computer. Mac ↔ Android and Linux ↔ Android alike,
   directly between your devices — no cloud, nothing is uploaded anywhere.
 
-**Status: beta.** Server and native Android app **TabDock 0.15.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
+**Status: beta.** Server and native Android app **TabDock 0.16.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
@@ -830,9 +830,9 @@ tray icon, ✅ cheat sheets · **0.11** in-app QR scanner, update check with cha
 panel instead of the dock in the computer's own browser, deep-sleep check · **0.12** Stream-Deck-like custom buttons,
 file transfer both ways · **0.13** reliability & security: tests and CI builds, a new signing key, HTTPS with a pinned
 certificate, per-device keys with revoke and confirmation on the computer, a threat model, CHANGELOG; long-press to customize any element, zoom in photo culling · **0.14** host monitoring, Wake-on-LAN, backups,
-SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** big files with resume, whole folders · **0.17** darktable/digiKam, OBS + soundboard · **1.0** setup guide and packages (.dmg for Mac, .deb
+SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** big files with resume, whole folders · **0.17** creative tools: Lightroom Classic (read-only), ready-made buttons for Photoshop, Photon Studio, Lightroom, Capture One, darktable, Krita, Clip Studio Paint that follow the active program, recent works, a reference board and gesture timer for artists · **1.0** setup guide and packages (.dmg for Mac, .deb
 for Ubuntu/Debian), store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
-app closed, multiple computers, Lightroom Classic, Capture One sessions, LocalSend compatibility · on hold / thinking: access from outside the
+app closed, multiple computers, OBS + soundboard, Capture One sessions, LocalSend compatibility · on hold / thinking: access from outside the
 home (read-only Telegram bot, Tailscale/ZeroTier, relay), a Home Assistant "home hub" mode.
 Principle: a convenient dock for your computer, not an app that does everything badly.
 Windows is supported since 0.15 ([docs/WINDOWS.md](docs/WINDOWS.md)).

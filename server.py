@@ -39,6 +39,9 @@ def main():
         st.update("config", default_config, lambda c: c.__setitem__("password_hash", h))
         print("Пароль сохранён. Перезапустите службу, если она работает.")
         return
+    if sys.platform == "win32":
+        from dock.windows import follow_runner
+        follow_runner()                 # started by run.py: stop together with it
     app = App(os.path.abspath(a.data), a.port, demo_mode=a.demo)
     if a.print_url:
         print(app.url())

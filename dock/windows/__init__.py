@@ -60,5 +60,40 @@ def icmp_ping(host, timeout_ms=3000):
         iphlp.IcmpCloseHandle(h)
 
 
+def kill_tree(pid):
+    """End a process with everything it started: the venv's pythonw.exe is only a launcher of the real Python."""
+    subprocess.run(["taskkill.exe", "/PID", str(pid), "/T", "/F"], capture_output=True, creationflags=NO_WINDOW)
+
+
+def alive(pid):
+    k = ctypes.windll.kernel32
+    k.OpenProcess.restype = ctypes.c_void_p
+    h = k.OpenProcess(0x1000, False, int(pid))                 # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return False
+    try:
+        code = ctypes.c_ulong()
+        k.GetExitCodeProcess(ctypes.c_void_p(h), ctypes.byref(code))
+        return code.value == 259                               # STILL_ACTIVE
+    finally:
+        k.CloseHandle(ctypes.c_void_p(h))
+
+
+def follow_runner():
+    """Server and tray quit by themselves when run.py is gone (the task was stopped, the runner was killed):
+    otherwise an orphaned server keeps the port and an orphaned tray leaves a second icon."""
+    pid = os.environ.get("TABDOCK_RUNNER")
+    if not pid or not pid.isdigit():
+        return
+    import threading
+    import time
+
+    def watch():
+        while alive(pid):
+            time.sleep(3)
+        os._exit(0)
+    threading.Thread(target=watch, name="follow-runner", daemon=True).start()
+
+
 def appdata(*parts):
     return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "TabDock", *parts)
