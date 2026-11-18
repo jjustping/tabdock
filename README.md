@@ -4,17 +4,17 @@
 · *A work dock made from an idle tablet — for everyday use, built with photographers in mind*
 
 > [!WARNING]
-> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.16.0-beta**. Всё работает в домашней
+> **Проект в бете.** Сервер и Android-приложение **TabDock** — **0.17.0-beta**. Всё работает в домашней
 > сети, но настройки и API ещё меняются, возможны ошибки. Не для «боевых» каталогов без резервной копии:
 > TabDock читает каталог Capture One только для чтения, а звёзды и метки ставит через сам Capture One.
-> *Beta: server and Android app TabDock 0.16.0-beta — things still change and may break.*
+> *Beta: server and Android app TabDock 0.17.0-beta — things still change and may break.*
 
 [Русский](#русский) · [English](#english) · [Что готово сейчас](#что-готово-сейчас) · [Дорожная карта](#дорожная-карта) · [Поддержать](#поддержать-разработчика)
 
 ![TabDock — обзор / overview](docs/img/overview.png)
 
-**⬇ [Скачать TabDock 0.16.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
-(Android 8+, планшет и телефон) и код сервера для Mac.
+**⬇ [Скачать TabDock 0.17.0-beta / Download](https://github.com/jjustping/tabdock/releases/latest)** — APK для Android
+(Android 8+, планшет и телефон) и сервер для Mac, Linux и Windows.
 
 | | |
 |---|---|
@@ -28,8 +28,11 @@
 **TabDock превращает планшет (или телефон), который лежит без дела, в док для работы на компьютере.**
 Это не только для фотографов: при первом запуске вы выбираете сценарии — **Фото**, **Работа**, **Отдых**,
 **Система и сеть** — и для каждого получаете своё пространство с виджетами, которые можно переставлять и менять.
-Фотографам — больше всего: прогресс обработки съёмок в Capture One (и по папкам для Photon Studio, Photoshop),
-отбор, сроки сдачи, галереи клиентов в wfolio, диски и бэкапы каталога.
+Фотографам — больше всего: прогресс обработки съёмок в Capture One, Lightroom Classic и darktable (и по папкам для
+Photon Studio, Photoshop), отбор, сроки сдачи, галереи клиентов в wfolio, диски и бэкапы каталога, кнопки для своей
+программы, которые меняются сами, когда переключаешься между программами. Художникам — референсы на планшете рядом с
+холстом, таймер набросков, палитра и готовые кнопки для Krita и Clip Studio Paint. И передача файлов и целых папок
+между телефоном и компьютером — любого размера.
 
 Всё работает локально в домашней сети: без облака, аккаунтов и подписок (интернет нужен только для погоды
 и проверки ссылок wfolio). Сервер — компьютер с macOS 13+, **Linux** (Ubuntu, Debian, Fedora, Arch) или **Windows 10/11**, клиент — Android-приложение TabDock
@@ -582,7 +585,7 @@ v0.1:
 
 ### Что готово сейчас
 
-Состояние на 7 ноября 2026. ✅ — работает и проверено на настоящих устройствах (Mac mini M4, Honor Pad 9, Pixel 8);
+Состояние на 18 ноября 2026. ✅ — работает и проверено на настоящих устройствах (Mac mini M4, Honor Pad 9, Pixel 8);
 🧪 — сделано, но проверено не до конца; ⏳ — в планах.
 
 | Часть | Статус |
@@ -608,7 +611,15 @@ v0.1:
 | VPN на компьютере: устройства дома подключаются напрямую, мимо туннеля | ✅ проверено (MacBook с VPN) |
 | VPN на телефоне/планшете | ✅ если VPN разрешает обход; иначе — в настройках VPN-клиента добавьте TabDock в исключения (приложение подсказывает) |
 | Старое WebView-приложение (`android-webview/`) | заменено нативным приложением |
-| Мастер установки «что и откуда поставить», darktable/digiKam, публикация в магазинах, iPhone/iPad | ⏳ |
+| **Сервер на Windows 10/11** (x64 и ARM): установщик, трей, автозапуск | ✅ Windows 11 ARM64 |
+| **Передача файлов** в обе стороны: файлы любого размера с докачкой после обрыва, папки целиком | ✅ 21,5 ГБ и папки, контрольные суммы совпали |
+| **Свои кнопки** (сочетания клавиш, текст, сайт/папка/приложение, команда) | ✅ |
+| **Кнопки по активной программе** и готовые наборы (Photoshop, Photon Studio, Lightroom, Capture One, darktable, Krita, Clip Studio Paint) | ✅ Mac и Windows; Linux — только X11 |
+| Съёмки из **Lightroom Classic** | 🧪 только на искусственном каталоге (программы нет на тестовых машинах) |
+| Съёмки из **darktable** | ✅ настоящий каталог darktable 5.6 (Windows) |
+| **«Недавние работы»**, **референсы** с таймером набросков и палитрой | ✅ |
+| Виджеты для админов: хосты, бэкапы, SMART, Docker, GitHub Actions, git | ✅ кроме Docker |
+| Действия Photoshop с планшета, мастер установки «что и откуда поставить», публикация в магазинах, iPhone/iPad | ⏳ |
 
 ### Дорожная карта
 
@@ -627,8 +638,8 @@ v0.1:
 | ~~0.14 beta~~ · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
 | ~~0.15 beta~~ · Windows | ✅ **сервер на Windows 10/11** (x64 и ARM): установщик, значок в трее, автозапуск, музыка и громкость, быстрые действия, свои кнопки, передача файлов, HTTPS без openssl |
 | ~~0.16 beta~~ · файлы | ✅ **большие файлы** (проверено 20 ГБ) частями с докачкой после обрыва, ✅ **папки целиком** в обе стороны, ✅ прогресс и скорость на обеих сторонах |
-| **0.17** (сейчас) · творчество | фотографам: **Lightroom Classic** и **darktable** (каталоги только для чтения, как Capture One), готовые кнопки для **Photoshop, Photon Studio, Lightroom, Capture One, darktable**; художникам: **Krita, Clip Studio Paint**, доска референсов на планшете, таймер набросков, палитры; **кнопки по активной программе** — набор меняется сам, когда на компьютере переключаешься между программами; **«Недавние работы»** — открыть файл одним касанием |
-| 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
+| ~~0.17 beta~~ · творчество | фотографам: **Lightroom Classic** и **darktable** (каталоги только для чтения, как Capture One), готовые кнопки для **Photoshop, Photon Studio, Lightroom, Capture One, darktable**; художникам: **Krita, Clip Studio Paint**, доска референсов на планшете, таймер набросков, палитры; **кнопки по активной программе** — набор меняется сам, когда на компьютере переключаешься между программами; **«Недавние работы»** — открыть файл одним касанием |
+| **1.0** (дальше) · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
 | после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, **OBS** (сцены, запись, звук) и звуковая панель, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
 | отложено / думаем | **доступ не из дома** (Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
 | iPhone / iPad | пока — веб-версия в Safari (Поделиться → «На экран Домой»); нативное приложение — после 1.0, если будет спрос (подробнее ниже) |
@@ -684,7 +695,7 @@ network, both ways, across systems:
   connection**. **Whole folders** too: «Отправить папку» in the app or drop a folder into the window on the computer. Mac ↔ Android and Linux ↔ Android alike,
   directly between your devices — no cloud, nothing is uploaded anywhere.
 
-**Status: beta.** Server and native Android app **TabDock 0.16.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
+**Status: beta.** Server and native Android app **TabDock 0.17.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
 spaces & 16 widgets, 7 skins, Capture One progress with a configurable "delivered" rule, native Android app
 (tablet + phone layouts), culling from the tablet/phone (thumbnails, full-screen viewer, filters), **0.9**: in-app skin builder (accent, colour /
 gradient / blurred shoot-cover background, glass/gloss cards, copy-paste between devices), "stand" mode (big clock,
@@ -697,7 +708,10 @@ connected devices, start at login, restart, log), ready-made cheat sheets per sc
 Photoshop, Capture One, Lightroom, sysadmin, git + VS Code, terminal fun).
 **0.13**: HTTPS, a separate key per device and approving new devices on the computer, long press to customize, zoom in culling. **0.12**: file transfer both ways between the phone and the computer (see above) and Stream-Deck-like custom
 buttons (key combos, paste text, open a site/folder/app, run a command).
-Planned: setup guide for the computer, darktable/digiKam, store releases (RuStore) at 1.0; iPhone/iPad use the web
+**0.14**: widgets for admins and developers. **0.15**: Windows server. **0.16**: files of any size with resume and whole
+folders both ways. **0.17**: buttons that follow the program in front with ready-made sets, Lightroom Classic and
+darktable shoots, recent works, a reference board with a gesture-drawing timer and a palette.
+Planned: Photoshop actions, setup guide for the computer, store releases (RuStore) at 1.0; iPhone/iPad use the web
 UI in Safari for now.
 
 ![Spaces](docs/img/spaces/work.png)
