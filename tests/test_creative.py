@@ -147,3 +147,44 @@ def test_reference_board(tmp_path):
 def test_copy_color_checks_the_value(remote, device_key):
     st, d, _ = remote.post("/api/action", {"action": "copy_color", "arg": "; rm -rf /"}, key=device_key)
     assert d["ok"] is False
+
+
+def make_darktable(cfg, photos):
+    lib = cfg / "library.db"
+    con = sqlite3.connect(str(lib))
+    con.executescript("""
+    CREATE TABLE film_rolls (id INTEGER PRIMARY KEY, access_timestamp INTEGER, folder VARCHAR(1024));
+    CREATE TABLE images (id INTEGER PRIMARY KEY, film_id INTEGER, filename VARCHAR, flags INTEGER, datetime_taken INTEGER);
+    CREATE TABLE color_labels (imgid INTEGER, color INTEGER);
+    CREATE TABLE tagged_images (imgid INTEGER, tagid INTEGER, position INTEGER);
+    """)
+    con.execute("INSERT INTO film_rolls VALUES (1, 0, ?)", (str(photos),))
+    t = (1793836800 + 62135596800) * 10 ** 6            # 2026-11-05 as darktable stores it
+    for i, flags in enumerate([5, 4 | 0, 1 | 8, 6, 1], start=1):   # ★5, ★4, rejected (new flag), rejected (old ★6), ★1
+        con.execute("INSERT INTO images VALUES (?, 1, ?, ?, ?)", (i, "DSC_%d.NEF" % i, flags, t + i * 10 ** 6))
+    con.executemany("INSERT INTO color_labels VALUES (?, ?)", [(1, 2), (2, 2), (3, 0)])
+    con.executemany("INSERT INTO tagged_images VALUES (?, 7, 0)", [(1,), (2,), (5,)])
+    con.commit()
+    con.close()
+    data = sqlite3.connect(str(cfg / "data.db"))
+    data.executescript("CREATE TABLE tags (id INTEGER PRIMARY KEY, name VARCHAR); INSERT INTO tags VALUES (7, 'darktable|exported');")
+    data.commit()
+    data.close()
+    return lib
+
+
+def test_darktable_film_rolls(tmp_path):
+    from dock import darktable
+    photos = tmp_path / "2026-11-05 Прогулка"
+    photos.mkdir()
+    (photos / "DSC_1.NEF").write_bytes(b"x")
+    lib = make_darktable(tmp_path, photos)
+    before = lib.read_bytes()
+    [s] = darktable.read_library(str(lib))
+    assert lib.read_bytes() == before                                   # never written
+    assert s["name"] == "2026-11-05 Прогулка" and s["source"] == "dt"
+    assert s["total"] == 5 and s["rejected"] == 2 and s["picked"] == 3
+    assert s["ratings"] == {"5": 1, "4": 1, "1": 1} and s["colors"] == {"4": 2, "1": 1} and s["exported"] == 3
+    assert s["cover_file"].endswith("DSC_1.NEF") and abs(s["shot_from"] - 1793836801) < 2
+    assert captureone.derive(s, {}, {"type": "color", "color": 4})["done"] == 2
+    assert captureone.derive(dict(s), {}, {"type": "export"})["done"] == 3

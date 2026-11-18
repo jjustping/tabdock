@@ -144,6 +144,23 @@ TabDock делает один человек в свободное время. �
 С устройства можно сделать только то, что перечислено в настройках этих виджетов: разбудить указанный хост, управлять
 контейнерами из списка, подтянуть указанный репозиторий.
 
+### Фотографам и художникам (0.17)
+
+* **Кнопки по активной программе.** Виджет «Свои кнопки» сам меняет набор, когда на компьютере переключаешься между
+  программами: в Photoshop — кисть, ластик, размер кисти, слои; в Lightroom — флажки, звёзды и метки. Включается в настройках
+  виджета (⚙ → «По активной программе»). Работает на Mac, Windows и Linux с X11 (на Wayland система не сообщает, какое окно
+  активно, — там кнопки просто не переключаются).
+* **Готовые наборы** со стандартными сочетаниями: Photoshop / Photon Studio / Affinity, Lightroom Classic, Capture One, Krita,
+  Clip Studio Paint, darktable. Добавляются одним касанием и дальше правятся как обычные кнопки. «mod» = ⌘ на Mac и Ctrl на
+  Windows и Linux.
+* **Lightroom Classic и darktable** — так же, как Capture One: коллекции Lightroom и плёнки darktable становятся съёмками со
+  звёздами, отклонёнными, цветными метками и прогрессом по правилу «отдано». Каталоги только читаются.
+* **«Недавние работы»** — файлы, которые недавно открывали в Photon Studio, Photoshop, Krita и других программах; касание
+  открывает файл на компьютере.
+* **Референсы** — картинки из папки «Изображения → TabDock Референсы» (подпапки — отдельные доски) на планшете рядом с
+  холстом: приближение, отражение, чёрно-белый режим для проверки тонов, **таймер набросков** (30 секунд – 10 минут, по
+  порядку или вперемешку) и **палитра** — касание кладёт HEX-код цвета в буфер обмена компьютера.
+
 ### Как это работает
 
 ![Схема работы](docs/img/diagram.png)
@@ -610,7 +627,7 @@ v0.1:
 | ~~0.14 beta~~ · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
 | ~~0.15 beta~~ · Windows | ✅ **сервер на Windows 10/11** (x64 и ARM): установщик, значок в трее, автозапуск, музыка и громкость, быстрые действия, свои кнопки, передача файлов, HTTPS без openssl |
 | ~~0.16 beta~~ · файлы | ✅ **большие файлы** (проверено 20 ГБ) частями с докачкой после обрыва, ✅ **папки целиком** в обе стороны, ✅ прогресс и скорость на обеих сторонах |
-| **0.17** (сейчас) · творчество | фотографам: **Lightroom Classic** (каталог только для чтения, как Capture One), готовые кнопки для **Photoshop, Photon Studio, Lightroom, Capture One, darktable**; художникам: **Krita, Clip Studio Paint**, доска референсов на планшете, таймер набросков, палитры; **кнопки по активной программе** — набор меняется сам, когда на компьютере переключаешься между программами; **«Недавние работы»** — открыть файл одним касанием |
+| **0.17** (сейчас) · творчество | фотографам: **Lightroom Classic** и **darktable** (каталоги только для чтения, как Capture One), готовые кнопки для **Photoshop, Photon Studio, Lightroom, Capture One, darktable**; художникам: **Krita, Clip Studio Paint**, доска референсов на планшете, таймер набросков, палитры; **кнопки по активной программе** — набор меняется сам, когда на компьютере переключаешься между программами; **«Недавние работы»** — открыть файл одним касанием |
 | 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
 | после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, **OBS** (сцены, запись, звук) и звуковая панель, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
 | отложено / думаем | **доступ не из дома** (Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
@@ -719,6 +736,14 @@ Widgets for the «Система» space: **hosts** (ping / HTTP / port, notific
 **backups** (Time Machine or your own file/folder, red when too old), **disk health** (SMART, no root), **Docker** (start, stop,
 restart, logs), **GitHub Actions** (last run per repository) and **git repositories** (branch, changes, fetch, pull --ff-only).
 A device can only act on what is listed in these widgets' settings.
+
+### For photographers and artists (0.17)
+
+**Buttons that follow the program in front** (Mac, Windows, Linux on X11) with ready-made sets for Photoshop / Photon Studio /
+Affinity, Lightroom Classic, Capture One, Krita, Clip Studio Paint and darktable («mod» = ⌘ on a Mac, Ctrl elsewhere);
+**Lightroom Classic and darktable** shoots like Capture One's (read only); **recent works** to reopen with one tap; a
+**reference board** with zoom, mirror, black and white, a **gesture-drawing timer** and a **palette** that copies HEX to the
+computer's clipboard.
 
 ### How it works
 
@@ -830,7 +855,7 @@ tray icon, ✅ cheat sheets · **0.11** in-app QR scanner, update check with cha
 panel instead of the dock in the computer's own browser, deep-sleep check · **0.12** Stream-Deck-like custom buttons,
 file transfer both ways · **0.13** reliability & security: tests and CI builds, a new signing key, HTTPS with a pinned
 certificate, per-device keys with revoke and confirmation on the computer, a threat model, CHANGELOG; long-press to customize any element, zoom in photo culling · **0.14** host monitoring, Wake-on-LAN, backups,
-SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** big files with resume, whole folders · **0.17** creative tools: Lightroom Classic (read-only), ready-made buttons for Photoshop, Photon Studio, Lightroom, Capture One, darktable, Krita, Clip Studio Paint that follow the active program, recent works, a reference board and gesture timer for artists · **1.0** setup guide and packages (.dmg for Mac, .deb
+SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** big files with resume, whole folders · **0.17** creative tools: Lightroom Classic and darktable (read-only), ready-made buttons for Photoshop, Photon Studio, Lightroom, Capture One, darktable, Krita, Clip Studio Paint that follow the active program, recent works, a reference board and gesture timer for artists · **1.0** setup guide and packages (.dmg for Mac, .deb
 for Ubuntu/Debian), store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
 app closed, multiple computers, OBS + soundboard, Capture One sessions, LocalSend compatibility · on hold / thinking: access from outside the
 home (read-only Telegram bot, Tailscale/ZeroTier, relay), a Home Assistant "home hub" mode.

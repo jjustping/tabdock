@@ -342,7 +342,7 @@ def catalog_volume(catalog):
     return None
 
 
-CATALOGS = ("c1", "lr")      # sources with labels and stars: Capture One and Lightroom Classic
+CATALOGS = ("c1", "lr", "dt")   # sources with labels and stars: Capture One, Lightroom Classic, darktable
 
 
 def done_count(shoot, rule):

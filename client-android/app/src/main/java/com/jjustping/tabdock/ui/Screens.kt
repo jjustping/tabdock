@@ -136,10 +136,13 @@ class Dialogs(val deck: Deck) {
             Spacer(Modifier.height(8.dp))
             T("${sh.i("total")} кадров · ${sh.i("picked")} отобрано · ${sh.i("done")} ${sh.s("done_label")} · ${sh.s("catalog_name")}", 13.sp, s.muted)
             Actions {
-                if (sh.s("source") != "folder") Btn("Отбор и метки", "star", primary = false) { close(); onCull(sh) }
-                Btn(if (sh.s("source") == "folder") "Открыть папку" else "Открыть в Capture One") {
+                // culling reads Capture One's previews; the other catalogs open in their own program
+                if (sh.s("source") == "c1") Btn("Отбор и метки", "star", primary = false) { close(); onCull(sh) }
+                val openIn = when (sh.s("source")) { "folder" -> "Открыть папку"; "lr" -> "Открыть в Lightroom"; "dt" -> "Открыть в darktable"
+                    "manual" -> null; else -> "Открыть в Capture One" }
+                if (openIn != null) Btn(openIn) {
                     if (sh.s("source") == "folder") deck.post("/api/action", JSONObject().put("action", "open_folder").put("key", sh.s("key")), false)
-                    else deck.post("/api/action", JSONObject().put("action", "open_shoot").put("catalog", sh.s("catalog")), false)
+                    else deck.post("/api/action", JSONObject().put("action", "open_shoot").put("catalog", sh.s("catalog")).put("key", sh.s("key")), false)
                 }
                 Btn("Отмена") { close() }
                 Btn("Сохранить", primary = true) {

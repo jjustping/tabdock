@@ -11,7 +11,7 @@ import threading
 import time
 import urllib.parse
 
-from . import admin, buttons, uploads, captureone, frontapp, lightroom, presets, recent, refs, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
+from . import admin, buttons, uploads, captureone, darktable, frontapp, lightroom, presets, recent, refs, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
 from .store import Store, default_config, default_notes, new_id
 from .version import VERSION
 
@@ -76,6 +76,8 @@ class App:
         self.actions = act_mod.Actions()
         self.c1 = captureone.CaptureOne()
         self.lr = lightroom.Lightroom()
+        self.dt = darktable.Darktable()
+        self._dt_found = []
         self._lr_found = []
         self.front = frontapp.FrontApp()
         self.recent = recent.Recent(lambda: not self.demo)
@@ -164,6 +166,7 @@ class App:
                     cur = [e["path"] for e in found if e["current"] and e["exists"]]
                     self._catalogs = cur or [e["path"] for e in found if e["exists"] and e["kind"] == "catalog"]
                     self._lr_found = lightroom.discover()
+                    self._dt_found = darktable.discover()
             except Exception:
                 pass
             self._discover_done.set()
@@ -179,10 +182,17 @@ class App:
     def refs_dir(self):
         return "" if self.demo else (self.config().get("refs_dir") or refs.default_dir())
 
+    def dt_libraries(self):
+        if self.demo:
+            return []
+        return self.config().get("dt_libraries") or self._dt_found
+
     def catalog_shoots(self):
         items, errors = self.c1.shoots(self.catalogs())
-        lr_items, lr_errors = self.lr.shoots(self.lr_catalogs())
-        return items + lr_items, errors + lr_errors
+        for reader, cats in ((self.lr, self.lr_catalogs()), (self.dt, self.dt_libraries())):
+            more, errs = reader.shoots(cats)
+            items, errors = items + more, errors + errs
+        return items, errors
 
     def shoots(self):
         data = self.store.load("shoots", {"manual": {}, "custom": []})
@@ -540,6 +550,9 @@ def op_config(app, body):
                                   if isinstance(c, str) and c.strip()][:12]
         if "refs_dir" in body:
             cfg["refs_dir"] = os.path.expanduser(str(body["refs_dir"] or "").strip())[:500]
+        if "dt_libraries" in body and isinstance(body["dt_libraries"], list):
+            cfg["dt_libraries"] = [os.path.expanduser(c.strip()) for c in body["dt_libraries"]
+                                   if isinstance(c, str) and c.strip().endswith("library.db")][:4]
         if "lr_catalogs" in body and isinstance(body["lr_catalogs"], list):
             cfg["lr_catalogs"] = [os.path.expanduser(c.strip()) for c in body["lr_catalogs"]
                                   if isinstance(c, str) and c.strip().endswith(".lrcat")][:12]
@@ -589,6 +602,12 @@ def op_action(app, body):
         if cat in app.lr_catalogs():
             lightroom.open_catalog(cat)
             return True, "Открываю Lightroom Classic"
+        if cat in app.dt_libraries():      # darktable: open that film roll's folder in it
+            s = next((x for x in app.catalog_shoots()[0] if x["key"] == body.get("key")), None)
+            if not s:
+                return False, "Плёнка не найдена"
+            darktable.open_folder(s["folder"])
+            return True, "Открываю darktable"
         if cat not in app.catalogs():
             return False, "Каталог не найден"
         captureone.open_in_c1(cat)
