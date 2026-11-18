@@ -361,7 +361,7 @@ def gh_token():
     if tok:
         return tok.strip()
     try:
-        with open(os.path.expanduser("~/.config/tabdock/github-token")) as f:
+        with open(os.path.expanduser("~/.config/tabdock/github-token"), encoding="utf-8") as f:
             return f.read().strip() or None
     except OSError:
         return None

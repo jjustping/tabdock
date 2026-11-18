@@ -132,6 +132,33 @@ class Api(val base: String, @Volatile var key: String?, val pin: String? = null)
         } finally { c.disconnect() }
     }
 
+    /** One part of a big file (phone → computer). Returns the HTTP code and the server's answer. */
+    fun putChunk(id: String, offset: Long, buf: ByteArray, n: Int, sha: String): Pair<Int, JSONObject> {   // call from Dispatchers.IO
+        val c = open("/api/upload/chunk?id=$id&offset=$offset", 20000)
+        try {
+            c.requestMethod = "PUT"; c.doOutput = true; c.readTimeout = 180000
+            c.setRequestProperty("Content-Type", "application/octet-stream")
+            c.setRequestProperty("X-Chunk-Sha256", sha)
+            c.setFixedLengthStreamingMode(n)
+            c.outputStream.use { it.write(buf, 0, n) }
+            val code = c.responseCode
+            val stream = if (code in 200..299) c.inputStream else c.errorStream
+            return code to runCatching { JSONObject(stream?.use { String(it.readBytes()) } ?: "{}") }.getOrDefault(JSONObject())
+        } finally { c.disconnect() }
+    }
+
+    /** Download continuing at byte [from] (Range); [body] gets the HTTP code (200 = from the start, 206 = continued). */
+    fun downloadFrom(path: String, from: Long, body: (Int, java.io.InputStream) -> Unit) {   // call from Dispatchers.IO
+        val c = open(path, 20000)
+        try {
+            c.readTimeout = 120000
+            if (from > 0) c.setRequestProperty("Range", "bytes=$from-")
+            val code = c.responseCode
+            if (code != 200 && code != 206) throw HttpError(code, "HTTP $code")
+            c.inputStream.use { body(code, it) }
+        } finally { c.disconnect() }
+    }
+
     /** Computer → phone: stream a file into [out] (no size limit, no buffering in memory). */
     fun download(path: String, out: java.io.OutputStream) {   // call from Dispatchers.IO
         val c = open(path, 15000)
@@ -218,10 +245,10 @@ class Discovery(private val ctx: Context, private val store: Store) {
     private val nsdBases = Collections.synchronizedSet(mutableSetOf<String>())
 
     /** Ask the server to prove it knows our pinned key (HMAC over nonce|id). */
-    suspend fun verify(base: String): FoundServer? {
+    suspend fun verify(base: String, timeoutMs: Int = 1500): FoundServer? {
         val n = Crypto.nonce()
         val api = Api(base, null)
-        val h = runCatching { api.obj("/api/hello?nonce=$n", 1500) }.getOrNull() ?: return null
+        val h = runCatching { api.obj("/api/hello?nonce=$n", timeoutMs) }.getOrNull() ?: return null
         val cert = api.certSeen.orEmpty()
         if (h.optString("app") != "tabdock") return null
         val id = h.optString("id")

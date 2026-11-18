@@ -5,7 +5,7 @@ import time
 
 from . import buttons
 
-MAX_FILE = 2 * 1024 ** 3        # 2 GB per file
+MAX_FILE = 2 * 1024 ** 3        # one request without parts (older apps); big files go through dock/uploads.py
 INBOX = os.path.expanduser("~/Downloads/TabDock")
 
 
@@ -88,7 +88,21 @@ def recent(limit=12):
             st = os.stat(os.path.join(INBOX, n))
         except OSError:
             continue
-        items.append({"name": n, "size": st.st_size, "at": st.st_mtime})
+        p = os.path.join(INBOX, n)
+        if os.path.isdir(p):              # a folder sent from a phone: count its files (bounded)
+            size, count = 0, 0
+            for root, _, files in os.walk(p):
+                for f in files:
+                    try:
+                        size += os.path.getsize(os.path.join(root, f))
+                    except OSError:
+                        pass
+                    count += 1
+                if count > 20000:
+                    break
+            items.append({"name": n, "size": size, "at": st.st_mtime, "dir": True, "files": count})
+        else:
+            items.append({"name": n, "size": st.st_size, "at": st.st_mtime})
     return sorted(items, key=lambda x: -x["at"])[:limit]
 
 

@@ -1,3 +1,3 @@
 package com.jjustping.tabdock
 
-object BuildConfigShim { const val VERSION = "0.15.0-beta" }
+object BuildConfigShim { const val VERSION = "0.16.0-beta" }

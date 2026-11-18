@@ -41,12 +41,17 @@ import java.util.Locale
     val s = LocalSkin.current
     val ctx = LocalContext.current
     val history by c.deck.transfers.list.collectAsState()
-    val sending by c.deck.sending.collectAsState()
+    val moving by com.jjustping.tabdock.data.TransferHub.progress.collectAsState()
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         // keep the right to read them, so they can be opened from the history later
         for (u in uris) runCatching { ctx.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         c.deck.sendFiles(uris)
+    }
+    val pickDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree: Uri? ->
+        if (tree == null) return@rememberLauncherForActivityResult
+        runCatching { ctx.contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        c.deck.sendFolder(tree)
     }
     val compact = LocalCompact.current
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -55,12 +60,28 @@ import java.util.Locale
                 T("Файлы с компьютера приходят в «Загрузки → TabDock» на этом устройстве. На компьютере: значок TabDock → «Передача файлов…».",
                     14.sp, s.muted)
                 Spacer(Modifier.size(12.dp))
-                val send: @Composable (Modifier) -> Unit = { m -> Btn("Отправить на компьютер", "transfer", primary = true, modifier = m, enabled = sending == null) { pick.launch(arrayOf("*/*")) } }
+                val send: @Composable (Modifier) -> Unit = { m -> Btn("Отправить на компьютер", "transfer", primary = true, modifier = m) { pick.launch(arrayOf("*/*")) } }
+                val sendDir: @Composable (Modifier) -> Unit = { m -> Btn("Отправить папку", "folder", modifier = m) { pickDir.launch(null) } }
                 val folder: @Composable (Modifier) -> Unit = { m -> Btn("Открыть папку", "folder", modifier = m) { Files.openFolder(ctx) } }
-                if (compact) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { send(Modifier.fillMaxWidth()); folder(Modifier.fillMaxWidth()) }
-                else Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { send(Modifier); folder(Modifier) }
-                sending?.let { T("Отправляю $it…", 14.sp, s.accent, modifier = Modifier.padding(top = 10.dp), maxLines = 1) }
-                T("Из любого приложения: «Поделиться» → TabDock.", 12.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
+                if (compact) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { send(Modifier.fillMaxWidth()); sendDir(Modifier.fillMaxWidth()); folder(Modifier.fillMaxWidth()) }
+                else Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { send(Modifier); sendDir(Modifier); folder(Modifier) }
+                moving?.let { p ->
+                    // what is moving right now, both ways: file, how much, speed; a lost connection resumes by itself
+                    Column(Modifier.padding(top = 12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            T((if (p.out) "На компьютер" else "С компьютера") + (if (p.count > 1) " · ${p.index} из ${p.count}" else "") + " · " + p.file,
+                                14.sp, s.accent, FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+                            T("Отменить", 14.sp, s.muted, modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                .clickable { com.jjustping.tabdock.data.TransferHub.cancel() }.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                        Bar(if (p.total > 0) (p.done.toFloat() / p.total) else 0f, modifier = Modifier.padding(vertical = 6.dp))
+                        T(if (p.waiting) "Нет связи с компьютером — продолжу с того же места, когда связь вернётся"
+                          else "${Fmt.bytes(p.done.toDouble())} из ${Fmt.bytes(p.total.toDouble())}" + (if (p.speed > 0) " · ${Fmt.bytes(p.speed)}/с" else "") +
+                            (if (p.queued > 0) " · ещё в очереди: ${p.queued}" else ""),
+                            12.sp, s.muted, maxLines = 1)
+                    }
+                }
+                T("Из любого приложения: «Поделиться» → TabDock. Файлы любого размера и папки целиком; если связь прервётся, передача продолжится с того же места.", 12.sp, s.dim, modifier = Modifier.padding(top = 10.dp))
             }
         }
         item {

@@ -11,7 +11,7 @@ import threading
 import time
 import urllib.parse
 
-from . import admin, buttons, captureone, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
+from . import admin, buttons, uploads, captureone, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
 from .store import Store, default_config, default_notes, new_id
 from .version import VERSION
 
@@ -78,6 +78,7 @@ class App:
         self.weather = weather.Weather()
         self.updates = updates.Updates(VERSION)
         self.outbox = outbox.Outbox(data_dir)
+        self.uploads = uploads.Uploads()
         self.admin = admin.Admin(self.config, self.add_event)
         self.calendar = CalendarFeed(lambda: not self.demo and self.config().get("calendar", True))
         self._catalogs = None

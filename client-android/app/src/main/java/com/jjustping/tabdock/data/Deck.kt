@@ -26,7 +26,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
     val discovery = Discovery(ctx, store)
     init { Lan.init(ctx); Notify.init(ctx); com.jjustping.tabdock.ui.Themes.load(store) }
     val transfers = Transfers(store)
-    private val receiver = Receiver(ctx, store, transfers)
+    init { TransferHub.init(ctx, store, transfers); TransferHub.toast = { toast(it) } }
 
     @Volatile var api: Api? = null
         private set
@@ -85,7 +85,10 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         val order = listOfNotNull(store.current) + pins.keys().asSequence().filter { it != store.current }.toList()
         for (id in order) {
             val e = pins.optJSONObject(id) ?: continue
-            val s = discovery.verify(e.optString("base")) ?: continue
+            // the computer used last gets more time and a second try: a busy computer (a big transfer)
+            // must not make the app jump to another known computer
+            val s = (if (id == store.current) discovery.verify(e.optString("base"), 5000) ?: discovery.verify(e.optString("base"), 5000)
+                     else discovery.verify(e.optString("base"))) ?: continue
             if (gen != pairGen) return true   // a QR code / link paired a computer meanwhile — it wins
             if (s.state == "pinned" && s.id == id) { useServer(e.optString("base"), e.optString("token"), e.optString("name"), e.optString("cert")); store.current = id; return true }
         }
@@ -189,22 +192,21 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
         upload(a, uris)
     }
 
-    /** True while files are going to the computer (the «Файлы» screen shows it). */
-    val sending = MutableStateFlow<String?>(null)
+    /** A folder picked on the «Файлы» screen: it arrives on the computer as a folder, with its sub-folders. */
+    fun sendFolder(tree: android.net.Uri) = scope.launch {
+        val a = api ?: run { toast("Сначала подключитесь к компьютеру"); return@launch }
+        val (name, items) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { TransferHub.folderItems(ctx, tree) }
+        if (items.isEmpty()) { toast("В папке «$name» нет файлов"); return@launch }
+        toast("Отправляю папку «$name»: ${items.size} файлов")
+        TransferHub.send(a, items, "папка «$name»")
+    }
 
     private suspend fun upload(a: Api, uris: List<android.net.Uri>) {
-        toast(if (uris.size == 1) "Отправляю на компьютер…" else "Отправляю ${uris.size} файла(ов)…")
-        var ok = 0; var last = ""
-        for ((i, u) in uris.withIndex()) {
-            val (name, size) = queryName(u)
-            sending.value = if (uris.size == 1) name else "${i + 1} из ${uris.size}: $name"
-            val r = runCatching { ctx.contentResolver.openInputStream(u)!!.let { a.putFile(name, size, it) } }
-                .getOrElse { JSONObject().put("ok", false).put("message", Lan.explain(it)) }
-            if (r.optBoolean("ok")) { ok++; transfers.add("out", name, size, u.toString()) } else last = r.optString("message")
+        val items = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            uris.map { u -> val (name, size) = queryName(u); TransferHub.Item(u, name, size) }
         }
-        sending.value = null
-        toast(if (ok == uris.size) (if (ok == 1) "Готово: «Загрузки → TabDock» на компьютере" else "Готово: $ok файла(ов) в «Загрузки → TabDock»")
-              else "Отправлено $ok из ${uris.size}. $last")
+        toast(if (items.size == 1) "Отправляю на компьютер…" else "Отправляю ${items.size} файла(ов)…")
+        TransferHub.send(a, items, if (items.size == 1) items[0].name else "${items.size} файла(ов)")
     }
 
     private fun queryName(u: android.net.Uri): Pair<String, Long> {
@@ -217,6 +219,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
                 }
             }
         }
+        if (size < 0) size = runCatching { ctx.contentResolver.openAssetFileDescriptor(u, "r")!!.use { it.length } }.getOrDefault(-1L)
         return name to size
     }
 
@@ -249,7 +252,7 @@ class Deck(private val ctx: Context, private val scope: CoroutineScope) {
                         fails = 0
                         if (conn.value == Conn.LOST) { conn.value = Conn.CONNECTED; loadAll() }
                         val s = r.getOrThrow(); state.value = s; handleEvents(s)
-                        s.optJSONArray("outbox")?.objs()?.takeIf { it.isNotEmpty() }?.let { files -> scope.launch { receiver.take(a, files) { toast(it) } } }
+                        s.optJSONArray("outbox")?.objs()?.takeIf { it.isNotEmpty() }?.let { files -> TransferHub.fetch(a, files) }
                         if (++tick % (if (visible) 12 else 2) == 0) loadAll()
                     } else if ((r.exceptionOrNull() as? Api.HttpError)?.code == 401) {
                         // switched off on the computer: this key will never work again

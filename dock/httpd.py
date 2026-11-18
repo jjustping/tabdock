@@ -151,18 +151,30 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def _stream(self, path, name):
-        """Send a (possibly big) file in chunks, as a download."""
+        """Send a (possibly big) file in chunks, as a download. «Range: bytes=N-» continues an interrupted download."""
         try:
             size = os.path.getsize(path)
             f = open(path, "rb")
         except OSError:
             return self._send(404, {"error": "not found"})
+        m = re.match(r"bytes=(\d+)-$", (self.headers.get("Range") or "").strip())
+        start = int(m.group(1)) if m else 0
         with f:
-            self.send_response(200)
+            if start and start >= size:
+                self.send_response(416)
+                self.send_header("Content-Range", "bytes */%d" % size)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(206 if start else 200)
             self.send_header("Content-Type", mimetypes.guess_type(name)[0] or "application/octet-stream")
-            self.send_header("Content-Length", str(size))
+            self.send_header("Content-Length", str(size - start))
+            self.send_header("Accept-Ranges", "bytes")
+            if start:
+                self.send_header("Content-Range", "bytes %d-%d/%d" % (start, size - 1, size))
             self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(name))
             self.end_headers()
+            f.seek(start)
             shutil.copyfileobj(f, self.wfile, 1024 * 1024)
 
     def _device(self):
@@ -199,8 +211,25 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length") or 0)
             to = qs.get("to", [""])[0][:60]
             expected = [c["name"] for c in self.app.clients(600) if c.get("kind") == "app"]
-            ok, msg, item = self.app.outbox.add(self.rfile, n, qs.get("name", [""])[0], to, expected)
+            ok, msg, item = self.app.outbox.add(self.rfile, n, qs.get("name", [""])[0], to, expected,
+                                                qs.get("folder", [""])[0], qs.get("rel", [""])[0], qs.get("batch", [""])[0])
+            self.body_read = True
             return self._send(200, {"ok": ok, "message": msg, "item": item})
+        if u.path == "/api/upload/chunk":   # phone → computer, one part of a big file
+            if not self.headers.get("X-Dock-Key") and not self._is_local():
+                return self._send(401, {"error": "unauthorized"})
+            if not self._token_ok():
+                return self._send(401, {"error": "unauthorized"})
+            try:
+                offset = int(qs.get("offset", ["-1"])[0])
+            except ValueError:
+                offset = -1
+            n = int(self.headers.get("Content-Length") or 0)
+            code, body = self.app.uploads.put(qs.get("id", [""])[0], offset, self.rfile, n, self.headers.get("X-Chunk-Sha256"))
+            self.body_read = True
+            if body.get("done"):
+                self.app.add_event(type="received", name=body.get("name") or "")
+            return self._send(code, body)
         if u.path != "/api/send/file":
             return self._send(404, {"error": "not found"})
         # the key must be in the header, not a cookie: a page on another site cannot set it without a preflight
@@ -307,6 +336,8 @@ class Handler(BaseHTTPRequestHandler):
             if self._device():      # the app: files waiting for this device (computer → phone)
                 d = dict(d, outbox=app.outbox.for_device(self._device()))
             return self._send(200, d)
+        if p == "/api/upload/status":
+            return self._send(200, app.uploads.status(qs.get("id", [""])[0]))
         if p == "/api/outbox/file":
             fid = qs.get("id", [""])[0]
             f = app.outbox.path(fid)
@@ -316,7 +347,7 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/transfer":     # the «Передача файлов» window, on the computer itself
             if not self._is_local():
                 return self._send(403, {"error": "local only"})
-            return self._send(200, {"outbox": app.outbox.listing(), "inbox": inbox.recent(),
+            return self._send(200, {"outbox": app.outbox.listing(), "inbox": inbox.recent(), "incoming": app.uploads.active(),
                                     "devices": [c for c in app.clients(600) if c.get("kind") == "app"]})
         if p == "/api/all":
             d = app.everything()
@@ -410,6 +441,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._login(body)
         if p == "/api/devices/request":
             return self._request_device(body)
+        if p == "/api/upload/start":        # phone → computer: begin (or continue) a big file or a folder's file
+            if not self._token_ok():
+                return self._send(401, {"error": "unauthorized"})
+            ok, msg, r = app.uploads.start(self._device() or self.client_address[0], body.get("name"), body.get("size"),
+                                           body.get("folder") or "", body.get("rel") or "", body.get("batch") or "")
+            if r and r.get("done"):
+                app.add_event(type="received", name=body.get("name") or "")
+            return self._send(200, dict(r or {}, ok=ok, message=msg))
         if not self._token_ok(qs):
             return self._send(401, {"error": "unauthorized"})
         try:

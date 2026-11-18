@@ -2,7 +2,9 @@
 
 Each file is addressed to one device (by its name, as the app reports it) or to all devices. The app downloads it,
 saves it to Downloads/TabDock on the phone and says «готово»; a file addressed to all devices stays until every
-device that was connected when it was sent has taken it. Files are kept for 24 hours at most.
+device that was connected when it was sent has taken it. Files are kept for 48 hours at most. A folder arrives as its
+files, each with the folder's name and its path inside it, and is recreated on the phone. There is no size limit
+other than the free space on the disk; the app downloads with Range requests, so a dropped connection resumes.
 """
 import json
 import os
@@ -13,8 +15,8 @@ import uuid
 
 from .inbox import safe_name
 
-KEEP = 24 * 3600
-MAX_FILE = 4 * 1024 ** 3     # 4 GB
+KEEP = 48 * 3600
+RESERVE = 512 * 1024 * 1024     # always leave this much free on the disk
 
 
 class Outbox:
@@ -24,7 +26,7 @@ class Outbox:
         self._meta = os.path.join(self.dir, "index.json")
         self._lock = threading.Lock()
         try:
-            with open(self._meta) as f:
+            with open(self._meta, encoding="utf-8") as f:
                 self.items = json.load(f)
         except (OSError, ValueError):
             self.items = []
@@ -32,7 +34,7 @@ class Outbox:
 
     def _save(self):
         tmp = self._meta + ".tmp"
-        with open(tmp, "w") as f:
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(self.items, f, ensure_ascii=False)
         os.replace(tmp, self._meta)
 
@@ -48,12 +50,15 @@ class Outbox:
             self.items = keep
             self._save()
 
-    def add(self, rfile, length, name, to, expected):
-        """Store an uploaded file. `to` = device name or "" for all; `expected` = devices that should take it."""
-        if length <= 0:
-            return False, "Пустой файл", None
-        if length > MAX_FILE:
-            return False, "Файл больше 4 ГБ", None
+    def add(self, rfile, length, name, to, expected, folder="", rel="", batch=""):
+        """Store an uploaded file. `to` = device name or "" for all; `expected` = devices that should take it;
+        folder / rel / batch: the file belongs to a folder that is being sent."""
+        from .uploads import safe_rel
+        if length < 0:
+            return False, "Неизвестный размер", None
+        free = shutil.disk_usage(self.dir).free
+        if length + RESERVE > free:
+            return False, "На компьютере мало места: свободно %.1f ГБ" % (free / 1e9), None
         fid = uuid.uuid4().hex[:12]
         d = os.path.join(self.dir, fid)
         os.makedirs(d)
@@ -72,7 +77,9 @@ class Outbox:
             shutil.rmtree(d, ignore_errors=True)
             return False, "Не получилось принять файл: %s" % str(e)[:100], None
         item = {"id": fid, "name": name, "size": length, "at": time.time(), "to": to or "",
-                "expected": sorted(set([to] if to else expected)), "got": []}
+                "expected": sorted(set([to] if to else expected)), "got": [],
+                "folder": safe_name(folder) if folder else "", "rel": "/".join(safe_rel(rel)),
+                "batch": "".join(c for c in str(batch or "") if c.isalnum() or c in "-_")[:40]}
         with self._lock:
             self.items.append(item)
             self._save()
@@ -82,7 +89,8 @@ class Outbox:
         """Files this device has not taken yet."""
         now = time.time()
         with self._lock:
-            return [{"id": it["id"], "name": it["name"], "size": it["size"], "at": it["at"]}
+            return [{"id": it["id"], "name": it["name"], "size": it["size"], "at": it["at"],
+                     "folder": it.get("folder", ""), "rel": it.get("rel", ""), "batch": it.get("batch", "")}
                     for it in self.items
                     if now - it["at"] < KEEP and not it.get("delivered") and device not in it["got"]
                     and (not it["to"] or it["to"] == device)]

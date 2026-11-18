@@ -154,15 +154,15 @@ def make_certificate_python(cert, key, days=3650):
     der = _seq(tbs, sha_rsa, _bits(sig))
     rsa = _seq(_int(0), _int(n), _int(e), _int(d), _int(p), _int(q), _int(d % (p - 1)), _int(d % (q - 1)), _int(pow(q, -1, p)))
     os.makedirs(os.path.dirname(cert), exist_ok=True)
-    with open(key, "w") as f:
+    with open(key, "w", encoding="utf-8") as f:
         f.write(_pem("RSA PRIVATE KEY", rsa))
     os.chmod(key, 0o600)
-    with open(cert, "w") as f:
+    with open(cert, "w", encoding="utf-8") as f:
         f.write(_pem("CERTIFICATE", der))
 
 
 def fingerprint(cert):
-    with open(cert) as f:
+    with open(cert, encoding="utf-8") as f:
         return hashlib.sha256(ssl.PEM_cert_to_DER_cert(f.read())).hexdigest()
 
 

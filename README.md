@@ -50,8 +50,11 @@
 * **Кнопка «Файлы» в нижней панели приложения** — история всего, что передано в обе стороны: нажмите на файл —
   он откроется, значок папки — откроется «Загрузки → TabDock» в системных «Файлах». Оттуда же кнопка «Отправить на
   компьютер» — выбрать любые файлы на телефоне. Кнопку, как и остальные внизу, можно убрать в настройках.
-* **Любые файлы и любой размер**: фото, видео, PDF, архивы, программы — проверено с файлами по 300 МБ, файлы
-  приходят без изменений (контрольные суммы совпадают). Скорость — как у вашей домашней сети.
+* **Любые файлы и любой размер**: фото, видео, PDF, архивы, программы — проверено с файлом на 20 ГБ. Большие файлы
+  идут частями, каждая проверяется контрольной суммой; **если связь прервётся, передача продолжится с того же места**.
+  Скорость — как у вашей домашней сети. Прогресс и скорость видны и на телефоне (в уведомлении), и на компьютере.
+* **Папки целиком**: «Отправить папку» в приложении или перетаскивание папки в окно на компьютере — на той стороне
+  появится такая же папка со всеми подпапками. Ничего не нужно упаковывать и распаковывать.
 * **Mac ↔ Android и Linux ↔ Android** одинаково. Файлы идут напрямую между устройствами в вашей сети — без
   облака и посредников, никуда не загружаются.
 
@@ -605,8 +608,9 @@ v0.1:
 | ~~0.12 beta~~ | ✅ **передача файлов** в обе стороны (телефон ↔ Mac / Linux, любые файлы, окно на компьютере и экран «Файлы» с историей в приложении); ✅ **свои кнопки, как у Stream Deck** (сочетание клавиш, сайт/папка/приложение, команда, вставить текст); ✅ доработаны установщики Mac и Linux, самообновление сервера проверено на Linux |
 | ~~0.13 beta~~ | ✅ **автотесты и сборка на GitHub** (проверки на Ubuntu и macOS, APK собирается и подписывается автоматически); **новый ключ подписи** приложения (один раз переустановить); ✅ **HTTPS** с сертификатом, который приложение запоминает при подключении; ✅ **отдельный ключ на каждое устройство**: список, отзыв, подтверждение нового устройства на компьютере; описание модели угроз; список изменений `CHANGELOG.md`; **удобство**: настройка любого элемента по долгому нажатию, приближение фото при отборе |
 | ~~0.14 beta~~ · админам и программистам | ✅ **хосты** (ping, HTTP, порт; уведомление, когда пропал или вернулся) и **пробуждение по сети** (Wake-on-LAN); ✅ **бэкапы** (Time Machine или свой файл/папка — когда был последний); ✅ **здоровье дисков** (SMART); ✅ **Docker** (запуск, остановка, журнал); ✅ **сборки GitHub Actions**; ✅ **git-репозитории** (ветка, изменения, fetch и pull) |
-| **0.15** (сейчас) · Windows | ✅ **сервер на Windows 10/11** (x64 и ARM): установщик, значок в трее, автозапуск, музыка и громкость, быстрые действия, свои кнопки, передача файлов, HTTPS без openssl |
-| 0.16 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
+| ~~0.15 beta~~ · Windows | ✅ **сервер на Windows 10/11** (x64 и ARM): установщик, значок в трее, автозапуск, музыка и громкость, быстрые действия, свои кнопки, передача файлов, HTTPS без openssl |
+| **0.16** (сейчас) · файлы | ✅ **большие файлы** (проверено 20 ГБ) частями с докачкой после обрыва, ✅ **папки целиком** в обе стороны, ✅ прогресс и скорость на обеих сторонах |
+| 0.17 · творчество | **darktable / digiKam** на Linux; **OBS** (сцены, запись, звук) и **звуковая панель** для стримеров |
 | 1.0 · стабильный релиз | **простая установка**: пошаговый мастер «что и откуда поставить» и готовые пакеты — `.dmg` для Mac, `.deb` для Ubuntu/Debian; политика конфиденциальности, демо-скриншоты; **публикация в RuStore** (и, возможно, Google Play) |
 | после 1.0 | виджеты на экране Android, уведомления при закрытом приложении, несколько компьютеров в одном доке, Lightroom Classic, сеансы Capture One, обмен файлами с устройствами без TabDock (совместимость с LocalSend) |
 | отложено / думаем | **доступ не из дома** (Telegram-бот только для чтения, Tailscale/ZeroTier, сервер-посредник); **режим «домашнего центра»** с Home Assistant — планшет в доке как панель умного дома |
@@ -659,7 +663,8 @@ network, both ways, across systems:
 * **«Файлы» button in the app's bottom bar**: the history of transfers both ways — tap a file to open it, the folder
   icon opens Downloads/TabDock in the system Files app, «Send to computer» picks any files on the phone. It can be
   removed from the bottom bar like the other buttons.
-* **Any file, any size** — tested with 300 MB files, checksums match. Mac ↔ Android and Linux ↔ Android alike,
+* **Any file, any size** — tested with a 20 GB file; big files go in checked parts and **resume after a dropped
+  connection**. **Whole folders** too: «Отправить папку» in the app or drop a folder into the window on the computer. Mac ↔ Android and Linux ↔ Android alike,
   directly between your devices — no cloud, nothing is uploaded anywhere.
 
 **Status: beta.** Server and native Android app **TabDock 0.15.0-beta** ([download](https://github.com/jjustping/tabdock/releases/latest)). Ready and tested on real devices:
@@ -825,7 +830,7 @@ tray icon, ✅ cheat sheets · **0.11** in-app QR scanner, update check with cha
 panel instead of the dock in the computer's own browser, deep-sleep check · **0.12** Stream-Deck-like custom buttons,
 file transfer both ways · **0.13** reliability & security: tests and CI builds, a new signing key, HTTPS with a pinned
 certificate, per-device keys with revoke and confirmation on the computer, a threat model, CHANGELOG; long-press to customize any element, zoom in photo culling · **0.14** host monitoring, Wake-on-LAN, backups,
-SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** darktable/digiKam, OBS + soundboard · **1.0** setup guide and packages (.dmg for Mac, .deb
+SMART, Docker, GitHub Actions, git repos · **0.15** Windows server · **0.16** big files with resume, whole folders · **0.17** darktable/digiKam, OBS + soundboard · **1.0** setup guide and packages (.dmg for Mac, .deb
 for Ubuntu/Debian), store release (RuStore, maybe Google Play) · after 1.0: Android home-screen widgets, notifications with the
 app closed, multiple computers, Lightroom Classic, Capture One sessions, LocalSend compatibility · on hold / thinking: access from outside the
 home (read-only Telegram bot, Tailscale/ZeroTier, relay), a Home Assistant "home hub" mode.
