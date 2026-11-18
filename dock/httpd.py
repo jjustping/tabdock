@@ -14,7 +14,7 @@ import urllib.parse
 from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import auth, inbox, lanbind, netcheck, notesets, updates, weather
+from . import auth, inbox, lanbind, netcheck, notesets, refs, updates, weather
 from .core import (act_mod, op_action, op_config, op_notes, op_reminders, op_shoots, op_wfolio, qr_svg)
 from .store import default_config, default_notes
 from .version import VERSION
@@ -357,6 +357,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, app.shoots())
         if p == "/api/shoots/cover":
             f = app.cover_file(qs.get("key", [""])[0])
+            return self._file(f, "image/jpeg", cache=True) if f else self._send(404, {})
+        if p == "/api/refs":          # reference board (pictures from a folder on the computer)
+            return self._send(200, refs.listing(app.refs_dir()))
+        if p == "/api/refs/img":
+            f = None if app.demo else refs.image(app.refs_dir(), qs.get("rel", [""])[0], qs.get("size", ["thumb"])[0], app.cache_dir)
             return self._file(f, "image/jpeg", cache=True) if f else self._send(404, {})
         if p == "/api/media/cover":
             return self._file(os.path.join(app.cache_dir, "cover.jpg"), "image/jpeg", cache=True)

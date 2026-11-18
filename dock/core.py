@@ -11,7 +11,7 @@ import threading
 import time
 import urllib.parse
 
-from . import admin, buttons, uploads, captureone, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
+from . import admin, buttons, uploads, captureone, frontapp, lightroom, presets, recent, refs, culling, demo, devices, folders, lanbind, netcheck, notesets, outbox, tls, updates, weather, wfolio
 from .store import Store, default_config, default_notes, new_id
 from .version import VERSION
 
@@ -75,6 +75,10 @@ class App:
         self.cull = culling.Culling(self.cache_dir)
         self.actions = act_mod.Actions()
         self.c1 = captureone.CaptureOne()
+        self.lr = lightroom.Lightroom()
+        self._lr_found = []
+        self.front = frontapp.FrontApp()
+        self.recent = recent.Recent(lambda: not self.demo)
         self.weather = weather.Weather()
         self.updates = updates.Updates(VERSION)
         self.outbox = outbox.Outbox(data_dir)
@@ -159,15 +163,30 @@ class App:
                     self.discovered = found
                     cur = [e["path"] for e in found if e["current"] and e["exists"]]
                     self._catalogs = cur or [e["path"] for e in found if e["exists"] and e["kind"] == "catalog"]
+                    self._lr_found = lightroom.discover()
             except Exception:
                 pass
             self._discover_done.set()
             self._discover_kick.wait(600)
             self._discover_kick.clear()
 
+    def lr_catalogs(self):
+        """Lightroom Classic catalogs: the ones chosen in Settings, else the ones found in Pictures."""
+        if self.demo:
+            return []
+        return self.config().get("lr_catalogs") or self._lr_found
+
+    def refs_dir(self):
+        return "" if self.demo else (self.config().get("refs_dir") or refs.default_dir())
+
+    def catalog_shoots(self):
+        items, errors = self.c1.shoots(self.catalogs())
+        lr_items, lr_errors = self.lr.shoots(self.lr_catalogs())
+        return items + lr_items, errors + lr_errors
+
     def shoots(self):
         data = self.store.load("shoots", {"manual": {}, "custom": []})
-        items, errors = (demo.shoots(), []) if self.demo else self.c1.shoots(self.catalogs())
+        items, errors = (demo.shoots(), []) if self.demo else self.catalog_shoots()
         items = items + [dict(x) for x in self.folders.items]
         errors = errors + list(self.folders.errors)
         for c in data.get("custom", []):
@@ -193,7 +212,7 @@ class App:
             v = captureone.catalog_volume(c)
             if v:
                 vols.append({"catalog": c, "mount": v, "name": v.split("/")[-1], "connected": os.path.isdir(v)})
-        return {"items": out, "errors": errors, "catalogs": cats, "backups": backups, "volumes": vols}
+        return {"items": out, "errors": errors, "catalogs": cats, "lr_catalogs": self.lr_catalogs(), "backups": backups, "volumes": vols}
 
     def c1_shoot(self, key):
         """(catalog, album uuid) for a Capture One shoot key, only for catalogs we serve."""
@@ -211,7 +230,7 @@ class App:
             return None
         if key.startswith("dir:"):
             return self.folders.thumb(key)
-        items, _ = self.c1.shoots(self.catalogs())
+        items, _ = self.catalog_shoots()
         for s in items:
             if s["key"] == key:
                 return s.get("cover_file")
@@ -219,7 +238,8 @@ class App:
 
     def state(self):
         return {"events": self.events, "net": self.net.data, "sys": self.sysdata(), "media": self.media.data, "awake": self.actions.awake, "vpn": lanbind.VPN,
-                "now": time.time(), "version": VERSION, "admin": self.admin.data}
+                "now": time.time(), "version": VERSION, "admin": self.admin.data,
+                "front_app": None if self.demo else self.front.name}
 
     def everything(self):
         cfg = self.config()
@@ -238,6 +258,8 @@ class App:
             "export_dirs_default": folders.DEFAULT_EXPORT_DIRS,
             "auth": {"password": bool(cfg.get("password_hash"))},
             "platform": sys.platform,
+            "presets": presets.listing(),
+            "recent": demo.recent() if self.demo else self.recent.items,
         }
 
     def galleries(self):
@@ -452,7 +474,7 @@ def op_wfolio(app, body):
 
 WIDGET_TYPES = {"reminders", "shoots", "calendar", "player", "quick", "clock", "weather", "deadlines", "events",
                 "macstat", "disks", "note", "focus", "network", "shortcuts", "wfolio", "buttons",
-                "hosts", "backups", "docker", "ci", "git"}
+                "hosts", "backups", "docker", "ci", "git", "recent", "refs"}
 USAGES = {"photo", "work", "fun", "admin"}
 TABS = {"shoots", "notes", "files", "mac", "connect", "settings"}
 
@@ -506,6 +528,8 @@ def op_config(app, body):
             cfg["skin"] = re.sub(r"[^a-z0-9-]", "", str(body["skin"]))[:30]
         if isinstance(body.get("buttons"), list):
             cfg["buttons"] = buttons.clean(body["buttons"])
+        if body.get("add_preset"):      # a ready-made set for a program: its buttons join the user's own
+            cfg["buttons"] = buttons.clean(list(cfg.get("buttons", [])) + presets.buttons_for(str(body["add_preset"]), new_id))
         if "folder_roots" in body and isinstance(body["folder_roots"], list):
             cfg["folder_roots"] = [{"path": str(r.get("path", ""))[:500], "app": str(r.get("app", ""))[:60]}
                                    for r in body["folder_roots"] if isinstance(r, dict) and r.get("path")][:12]
@@ -514,6 +538,11 @@ def op_config(app, body):
         if "c1_catalogs" in body and isinstance(body["c1_catalogs"], list):
             cfg["c1_catalogs"] = [os.path.expanduser(c.strip()).rstrip("/") for c in body["c1_catalogs"]
                                   if isinstance(c, str) and c.strip()][:12]
+        if "refs_dir" in body:
+            cfg["refs_dir"] = os.path.expanduser(str(body["refs_dir"] or "").strip())[:500]
+        if "lr_catalogs" in body and isinstance(body["lr_catalogs"], list):
+            cfg["lr_catalogs"] = [os.path.expanduser(c.strip()) for c in body["lr_catalogs"]
+                                  if isinstance(c, str) and c.strip().endswith(".lrcat")][:12]
         for key, clean in (("hosts", admin.clean_hosts), ("backups", admin.clean_backups), ("repos", admin.clean_repos),
                            ("gh_repos", admin.clean_gh)):
             if isinstance(body.get(key), list):
@@ -557,12 +586,34 @@ def op_action(app, body):
         return True, "Открываю папку на компьютере"
     if a == "open_shoot":
         cat = body.get("catalog")
+        if cat in app.lr_catalogs():
+            lightroom.open_catalog(cat)
+            return True, "Открываю Lightroom Classic"
         if cat not in app.catalogs():
             return False, "Каталог не найден"
         captureone.open_in_c1(cat)
         return True, "Открываю Capture One"
     if a == "shortcut":
         return netcheck.run_shortcut(str(arg or ""))
+    if a == "open_refs":         # the reference folder on the computer (made on first use)
+        d = app.refs_dir()
+        if not d:
+            return False, "Недоступно в демо"
+        os.makedirs(d, exist_ok=True)
+        from .osutil import open_path
+        open_path(d)
+        return True, "Открываю папку референсов — положите туда картинки"
+    if a == "copy_color":        # palette of a reference → HEX in the computer's clipboard
+        hexv = str(arg or "").strip().upper()
+        if not re.fullmatch(r"#[0-9A-F]{6}", hexv):
+            return False, "Не цвет"
+        return (True, "%s в буфере обмена компьютера" % hexv) if buttons.set_clipboard(hexv) else (False, "Буфер обмена недоступен")
+    if a == "open_recent":       # «Недавние работы»: only a file that is in the list right now
+        if app.demo or not app.recent.allowed(str(arg or "")):
+            return False, "Файла нет в списке недавних"
+        from .osutil import open_path
+        open_path(arg)
+        return True, "Открываю «%s»" % os.path.basename(arg)
     if a == "button":            # «Свои кнопки»: only buttons saved in the config can be pressed
         b = next((x for x in app.config().get("buttons", []) if x.get("id") == arg), None)
         if not b:

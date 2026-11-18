@@ -342,15 +342,19 @@ def catalog_volume(catalog):
     return None
 
 
+CATALOGS = ("c1", "lr")      # sources with labels and stars: Capture One and Lightroom Classic
+
+
 def done_count(shoot, rule):
     """How many frames count as delivered, by the user's rule:
     export (has process history) | color (that colour tag) | rating (>= N stars)."""
     rule = rule or {}
     kind = rule.get("type", "export")
-    if shoot.get("source") == "c1" and kind in ("color", "color_or_export"):
+    catalog = shoot.get("source") in CATALOGS
+    if catalog and kind in ("color", "color_or_export"):
         tagged = int(shoot.get("colors", {}).get(str(rule.get("color", 4)), 0))
         return max(tagged, shoot.get("exported", 0)) if kind == "color_or_export" else tagged
-    if shoot.get("source") == "c1" and kind == "rating":
+    if catalog and kind == "rating":
         need = int(rule.get("rating", 5))
         return sum(int(n) for r, n in shoot.get("ratings", {}).items() if int(r) >= need)
     return shoot.get("exported", 0)
@@ -388,7 +392,7 @@ def derive(shoot, manual, rule=None):
                   "deadline": m.get("deadline"), "note": m.get("note", ""), "client": m.get("client", ""),
                   "hidden": bool(m.get("hidden")), "target_manual": bool(m.get("target")),
                   "done_label": "готово" if shoot.get("source") == "manual" else
-                  (rule_label(rule) if shoot.get("source") == "c1" else "в папке экспорта")})
+                  (rule_label(rule) if shoot.get("source") in CATALOGS else "в папке экспорта")})
     return shoot
 
 

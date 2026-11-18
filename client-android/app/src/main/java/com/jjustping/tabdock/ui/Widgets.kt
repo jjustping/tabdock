@@ -98,30 +98,35 @@ val WIDGETS = linkedMapOf(
     "docker" to WidgetDef("Docker", "frame", "Контейнеры: запуск, остановка, журнал", 4, 3, true),
     "ci" to WidgetDef("Сборки GitHub", "check", "Последний запуск GitHub Actions по репозиториям", 4, 2, true),
     "git" to WidgetDef("Git", "pencil", "Локальные репозитории: ветка, изменения, pull", 4, 3, true),
+    "refs" to WidgetDef("Референсы", "frame", "Картинки из папки на компьютере: просмотр, таймер набросков, палитра", 4, 3, true),
+    "recent" to WidgetDef("Недавние работы", "frame", "Файлы Photon Studio, Photoshop, Krita… — открыть одним касанием", 4, 3, true),
 )
 
 /** Everything a widget needs: the latest data and the actions. */
 class Ctx(val deck: Deck, val all: JSONObject?, val state: JSONObject?, val openShoot: (JSONObject) -> Unit,
-          val openNote: (JSONObject?) -> Unit, val goTab: (String) -> Unit, val editWidget: (JSONObject) -> Unit)
+          val openNote: (JSONObject?) -> Unit, val goTab: (String) -> Unit, val editWidget: (JSONObject) -> Unit,
+          val openRefs: (String) -> Unit = {})
 
 @Composable
 fun Widget(type: String, w: JSONObject, c: Ctx, modifier: Modifier) {
     val def = WIDGETS[type] ?: return
     when (type) {
         "clock" -> ClockW(modifier)
-        else -> DeckCard(cardTitle(type, def, c), modifier, action = headerAction(type, c, w)) {
+        else -> DeckCard(cardTitle(type, def, c, w), modifier, action = headerAction(type, c, w)) {
             when (type) {
                 "reminders" -> RemindersW(c); "shoots" -> ShootsW(c); "calendar" -> CalendarW(c)
                 "player" -> PlayerW(c); "quick" -> QuickW(c); "weather" -> WeatherW(c); "deadlines" -> DeadlinesW(c)
                 "events" -> EventsW(c); "macstat" -> MacW(c); "disks" -> DisksW(c); "note" -> NoteW(c, w)
                 "focus" -> FocusW(c); "network" -> NetW(c); "shortcuts" -> ShortcutsW(c, w); "wfolio" -> WfolioW(c); "buttons" -> ButtonsW(c, w)
                 "hosts" -> HostsW(c); "backups" -> BackupsW(c); "docker" -> DockerW(c); "ci" -> CiW(c); "git" -> GitW(c)
+                "recent" -> RecentW(c); "refs" -> RefsW(c)
             }
         }
     }
 }
 
-private fun cardTitle(type: String, def: WidgetDef, c: Ctx): String = when (type) {
+private fun cardTitle(type: String, def: WidgetDef, c: Ctx, w: JSONObject): String = when (type) {
+    "buttons" -> buttonsTitle(c, w)
     "macstat" -> c.state.o("sys").s("hostname").ifBlank { "Компьютер" }
     "reminders" -> "Напоминания"
     else -> def.name
@@ -142,14 +147,15 @@ private fun headerAction(type: String, c: Ctx, w: JSONObject): (@Composable andr
     }
 }
 
-@Composable fun RemoteImage(deck: Deck, path: String?, modifier: Modifier, crop: Boolean = true, transparentBg: Boolean = false) {
+@Composable fun RemoteImage(deck: Deck, path: String?, modifier: Modifier, crop: Boolean = true, transparentBg: Boolean = false,
+                            filter: androidx.compose.ui.graphics.ColorFilter? = null) {
     val s = LocalSkin.current
     val img by produceState<ImageBitmap?>(deck.cached(path), path) {
         if (value != null || path == null) return@produceState
         for (attempt in 0 until 3) { value = deck.image(path); if (value != null) break; delay(1500L * (attempt + 1)) }
     }
     Box(if (transparentBg) modifier else modifier.background(s.inner)) {
-        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = if (crop) ContentScale.Crop else ContentScale.Fit) }
+        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = if (crop) ContentScale.Crop else ContentScale.Fit, colorFilter = filter) }
     }
 }
 
@@ -590,5 +596,25 @@ private const val REST = 5 * 60L
         val dl = g.d("days_left")
         Tag(when { st == "expired" -> "истекла"; dl == null -> "бессрочно"; else -> "ещё ${dl.toInt()} дн." },
             when { st == "expired" || (dl != null && dl <= 3) -> s.red; dl != null && dl <= 14 -> s.amber; else -> null })
+    }
+}
+
+/** «Недавние работы»: work files opened lately on the computer; a tap opens the file there in its program. */
+@Composable fun RecentW(c: Ctx) {
+    val s = LocalSkin.current
+    val list = c.all.a("recent").objs()
+    if (list.isEmpty()) { Empty("Здесь появятся файлы, которые недавно открывали в Photon Studio, Photoshop, Krita и других программах"); return }
+    val now = System.currentTimeMillis() / 1000.0
+    for (f in list.take(8)) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { c.deck.action("open_recent", f.s("path")) }
+        .padding(vertical = 6.dp, horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(width = 46.dp, height = 30.dp).clip(RoundedCornerShape(8.dp)).background(s.inner), contentAlignment = Alignment.Center) {
+            T(f.s("ext").uppercase().take(5), 11.sp, s.accent, FontWeight.Bold, maxLines = 1)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            T(f.s("name"), 15.sp, weight = FontWeight.SemiBold, maxLines = 1)
+            val ago = (now - (f.d("at") ?: now)).let { d -> when { d < 3600 -> "${(d / 60).toInt().coerceAtLeast(1)} мин назад"; d < 86400 -> "${(d / 3600).toInt()} ч назад"; else -> "${(d / 86400).toInt()} дн. назад" } }
+            T(listOf(f.s("app"), f.s("folder"), ago).filter { it.isNotBlank() }.joinToString(" · "), 12.sp, s.muted, maxLines = 1)
+        }
     }
 }

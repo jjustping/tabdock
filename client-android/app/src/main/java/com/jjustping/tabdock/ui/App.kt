@@ -69,6 +69,7 @@ fun TabDockApp(deck: Deck) {
     var web by remember { mutableStateOf<String?>(null) }
     var forceConnect by remember { mutableStateOf(false) }
     var cull by remember { mutableStateOf<JSONObject?>(null) }
+    var refs by remember { mutableStateOf<String?>(null) }
     var wizard by remember { mutableStateOf(false) }
     var setupSeen by remember { mutableStateOf(false) }
     var stand by remember { mutableStateOf(false) }
@@ -79,6 +80,10 @@ fun TabDockApp(deck: Deck) {
     val synced by deck.syncedAt.collectAsState()
     val dialogs = remember { Dialogs(deck) }
     dialogs.onCull = { cull = it }
+    // the system Back button closes what is open on top (a sheet, the viewer, culling) instead of leaving the app
+    androidx.activity.compose.BackHandler(enabled = dialogs.current != null || refs != null || cull != null || web != null) {
+        when { dialogs.current != null -> dialogs.close(); refs != null -> refs = null; cull != null -> cull = null; else -> web = null }
+    }
     var toast by remember { mutableStateOf<String?>(null) }
     var banner by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(Unit) { deck.toasts.collect { toast = it; delay(2400); if (toast == it) toast = null } }
@@ -107,12 +112,14 @@ fun TabDockApp(deck: Deck) {
                 all != null && (wizard || (!setupSeen && !all.o("config").b("setup_done"))) -> SetupWizard(deck, all) { wizard = false; setupSeen = true; tab = "home" }
                 all != null && (stand || (autoStand && !standDismissed)) && conn != Conn.NEED_PAIRING ->
                     StandScreen(Ctx(deck, all, state, {}, {}, {}, {})) { stand = false; standDismissed = true }
+                refs != null -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(if (compact) 10.dp else 20.dp)) { RefsScreen(deck, refs!!) { refs = null } }
                 cull != null -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(if (compact) 10.dp else 20.dp)) { CullScreen(deck, cull!!) { cull = null } }
                 else -> {
                     val tabsShown = all.o("config").a("tabs")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
                     val c = Ctx(deck, all, state, openShoot = { dialogs.shoot(it) }, openNote = { dialogs.note(it) },
                         goTab = { tab = it; deck.store.put("tab", it) },
-                        editWidget = { w -> dialogs.widgetOpts(w, all) { opts -> saveWidgetOpts(deck, all, w, opts) } })
+                        editWidget = { w -> dialogs.widgetOpts(w, all) { opts -> saveWidgetOpts(deck, all, w, opts) } },
+                        openRefs = { refs = it })
                     Column(Modifier.fillMaxSize().imePadding()) {
                         TopBar(c) { stand = true }
                         Box(Modifier.weight(1f).padding(horizontal = if (compact) 12.dp else 20.dp, vertical = 6.dp)) {

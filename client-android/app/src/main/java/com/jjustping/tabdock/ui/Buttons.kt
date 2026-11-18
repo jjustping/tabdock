@@ -53,12 +53,29 @@ private val BUTTON_COLORS = listOf("", "#4FD1C5", "#0A84FF", "#BF5AF2", "#FF375F
 
 fun buttonsOf(c: Ctx) = c.all.o("config").a("buttons").objs()
 
+/** Same rule as the server's presets.matches: a button without programs is always shown. */
+fun shownFor(b: JSONObject, app: String): Boolean {
+    val apps = b.a("apps").strs()
+    if (apps.isEmpty()) return true
+    return app.isNotBlank() && apps.any { app.contains(it, ignoreCase = true) }
+}
+
+/** «по активной программе»: the widget's title says which program the buttons are for. */
+fun buttonsTitle(c: Ctx, w: JSONObject): String {
+    val app = c.state.s("front_app")
+    return if ((w.o("opts")?.optBoolean("follow") == true) && app.isNotBlank()) "Кнопки · $app" else "Свои кнопки"
+}
+
 /** «Свои кнопки» widget: big tiles, one tap = one action on the computer. Long-press opens the editor. */
 @Composable fun ButtonsW(c: Ctx, w: JSONObject) {
     val all = buttonsOf(c)
     val ids = w.o("opts").a("ids").strs()
-    val list = if (ids.isEmpty()) all else ids.mapNotNull { id -> all.firstOrNull { it.s("id") == id } }
-    if (list.isEmpty()) { Empty("Своих кнопок пока нет — значок ⚙ выше"); return }
+    val chosen = if (ids.isEmpty()) all else ids.mapNotNull { id -> all.firstOrNull { it.s("id") == id } }
+    val follow = (w.o("opts")?.optBoolean("follow") == true)
+    val app = c.state.s("front_app")
+    val list = if (follow) chosen.filter { shownFor(it, app) } else chosen
+    if (all.isEmpty()) { Empty("Своих кнопок пока нет — значок ⚙ выше"); return }
+    if (list.isEmpty()) { Empty(if (app.isBlank()) "Нет кнопок для этой программы" else "Для «$app» кнопок нет — значок ⚙ выше, «Готовые наборы»"); return }
     Grid(list, if (LocalCompact.current) 3 else 4) { b ->
         val col = Themes.parse(b.s("color"))
         Box(Modifier.fillMaxWidth()) {
@@ -69,7 +86,7 @@ fun buttonsOf(c: Ctx) = c.all.o("config").a("buttons").objs()
 }
 
 /** Editor of all custom buttons (shared by every device of this computer). */
-@Composable fun ButtonsEditor(c: Ctx, onClose: () -> Unit) {
+@Composable fun ButtonsEditor(c: Ctx, follow: Boolean? = null, onFollow: (Boolean) -> Unit = {}, onClose: () -> Unit) {
     val s = LocalSkin.current
     var list by remember { mutableStateOf(buttonsOf(c).map { JSONObject(it.toString()) }) }
     var editing by remember { mutableStateOf<JSONObject?>(null) }
@@ -89,7 +106,7 @@ fun buttonsOf(c: Ctx) = c.all.o("config").a("buttons").objs()
             }
             Spacer(Modifier.height(10.dp))
             TextInput(value, { value = it }, BUTTON_KINDS.first { it.first == kind }.third, Modifier.fillMaxWidth())
-            if (kind == "hotkey") T("Клавиши через «+»: cmd/ctrl/alt/shift + буква, цифра, f1–f12, enter, space, стрелки. На Mac один раз нужно разрешить TabDock «Универсальный доступ».",
+            if (kind == "hotkey") T("Клавиши через «+»: mod (⌘ на Mac, Ctrl на Windows и Linux)/cmd/ctrl/alt/shift + буква, цифра, f1–f12, enter, space, стрелки. На Mac один раз нужно разрешить TabDock «Универсальный доступ».",
                 12.sp, s.dim, modifier = Modifier.padding(top = 6.dp))
             T("Значок и цвет", 13.sp, s.muted, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -107,7 +124,7 @@ fun buttonsOf(c: Ctx) = c.all.o("config").a("buttons").objs()
                 Btn("Отмена") { editing = null }
                 Btn("Сохранить", primary = true, enabled = title.isNotBlank() && value.isNotBlank()) {
                     val b = JSONObject().put("id", e.s("id")).put("title", title.trim()).put("kind", kind).put("value", value.trim())
-                        .put("icon", icon).put("color", color)
+                        .put("icon", icon).put("color", color).put("apps", e.a("apps"))      // keep the programs it belongs to
                     save(if (list.any { it.s("id") == e.s("id") }) list.map { if (it.s("id") == e.s("id")) b else it } else list + b)
                     editing = null
                 }
@@ -120,20 +137,48 @@ fun buttonsOf(c: Ctx) = c.all.o("config").a("buttons").objs()
         T("Каждая кнопка делает одно действие на компьютере: нажимает сочетание клавиш, вставляет текст, открывает сайт, папку или приложение, запускает команду. Кнопки общие для всех устройств этого компьютера.",
             14.sp, s.muted)
         Spacer(Modifier.height(10.dp))
+        if (follow != null) {
+            var on by remember { mutableStateOf(follow) }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(s.inner).clickable { on = !on; onFollow(on) }.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    T("По активной программе", 15.sp, weight = FontWeight.SemiBold)
+                    T("Виджет показывает кнопки той программы, что сейчас открыта на компьютере, и кнопки без программы", 12.sp, s.muted)
+                }
+                Seg(if (on) "Вкл" else "Выкл", on) { on = !on; onFollow(on) }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+        val presets = c.all.a("presets").objs()
+        if (presets.isNotEmpty()) {
+            T("Готовые наборы — добавятся к вашим кнопкам, с привязкой к программе", 13.sp, s.muted, modifier = Modifier.padding(bottom = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (p in presets) {
+                    val added = p.a("apps").strs().let { apps -> list.any { b -> b.a("apps").strs() == apps } }
+                    Seg(p.s("name") + (if (added) " ✓" else " +"), added) {
+                        c.deck.post("/api/config", JSONObject().put("add_preset", p.s("id"))) { r ->
+                            list = r.o("config").a("buttons").objs().map { JSONObject(it.toString()) }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
         if (list.isEmpty()) Empty("Пока пусто — добавьте первую кнопку")
         for ((i, b) in list.withIndex()) Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(12.dp)).background(s.inner)
             .clickable { editing = b }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Ic(b.s("icon", "star"), 22.dp, Themes.parse(b.s("color")) ?: s.accent); Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 T(b.s("title"), 15.sp, weight = FontWeight.SemiBold, maxLines = 1)
-                T(BUTTON_KINDS.firstOrNull { it.first == b.s("kind") }?.second.orEmpty() + " · " + b.s("value"), 12.sp, s.muted, maxLines = 1)
+                T(BUTTON_KINDS.firstOrNull { it.first == b.s("kind") }?.second.orEmpty() + " · " + b.s("value") +
+                    b.a("apps").strs().let { a -> if (a.isEmpty()) "" else " · " + a.joinToString(", ") }, 12.sp, s.muted, maxLines = 1)
             }
             if (i > 0) Box(Modifier.size(36.dp).clickable { save(list.toMutableList().also { l -> val t = l[i]; l[i] = l[i - 1]; l[i - 1] = t }) },
                 contentAlignment = Alignment.Center) { Ic("prev", 18.dp, s.muted) }
         }
         Actions {
             Btn("Закрыть") { onClose() }
-            Btn("Добавить кнопку", "plus", primary = true, enabled = list.size < 48) {
+            Btn("Добавить кнопку", "plus", primary = true, enabled = list.size < 160) {
                 editing = JSONObject().put("id", java.lang.Long.toString(System.currentTimeMillis(), 36)).put("kind", "hotkey").put("icon", "star")
             }
         }

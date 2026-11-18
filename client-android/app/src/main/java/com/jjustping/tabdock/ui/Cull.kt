@@ -146,7 +146,8 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
             Column(Modifier.fillMaxSize()) {
                 HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), key = { list[it].img }, userScrollEnabled = !zoomed) { p ->
                     val f = list[p]
-                    ZoomablePhoto(deck, "key=$ek&img=${f.img}", isCurrent = p == pager.currentPage) { zoomed = it }
+                    val q = "key=$ek&img=${f.img}"
+                    ZoomablePhoto(deck, "/api/cull/thumb?$q", "/api/cull/preview?$q", "/api/cull/preview?$q&hi=1", isCurrent = p == pager.currentPage) { zoomed = it }
                 }
                 val f = list.getOrNull(pager.currentPage)
                 if (f != null) {
@@ -192,14 +193,16 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
 
 
 /** One photo of the viewer: pinch or double-tap to zoom, drag to look around; a sharper picture loads once zoomed in. */
-@Composable private fun ZoomablePhoto(deck: Deck, query: String, isCurrent: Boolean, onZoomed: (Boolean) -> Unit) {
+/** A photo that zooms with two fingers or a double tap: the small copy at once, the bigger ones as they arrive. */
+@Composable fun ZoomablePhoto(deck: Deck, thumb: String, preview: String, hi: String?, isCurrent: Boolean,
+                               filter: androidx.compose.ui.graphics.ColorFilter? = null, flip: Boolean = false, onZoomed: (Boolean) -> Unit) {
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var box by remember { mutableStateOf(IntSize.Zero) }
     fun limit(o: Offset, z: Float): Offset {
         // the photo itself, not its black margins, decides how far it can be moved
         val w = box.width.toFloat(); val h = box.height.toFloat()
-        val aspect = deck.cached("/api/cull/thumb?$query")?.let { it.width.toFloat() / it.height } ?: (w / h.coerceAtLeast(1f))
+        val aspect = deck.cached(thumb)?.let { it.width.toFloat() / it.height } ?: (w / h.coerceAtLeast(1f))
         val cw = minOf(w, h * aspect); val ch = cw / aspect
         val mx = ((cw * z - w) / 2).coerceAtLeast(0f); val my = ((ch * z - h) / 2).coerceAtLeast(0f)
         return Offset(o.x.coerceIn(-mx, mx), o.y.coerceIn(-my, my))
@@ -240,10 +243,10 @@ fun CullScreen(deck: Deck, shoot: JSONObject, onClose: () -> Unit) {
             }
         }
     }, contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)) {
-            RemoteImage(deck, "/api/cull/thumb?$query", Modifier.fillMaxSize(), crop = false, transparentBg = true)
-            RemoteImage(deck, "/api/cull/preview?$query", Modifier.fillMaxSize(), crop = false, transparentBg = true)
-            if (scale > 1.4f) RemoteImage(deck, "/api/cull/preview?$query&hi=1", Modifier.fillMaxSize(), crop = false, transparentBg = true)
+        Box(Modifier.fillMaxSize().graphicsLayer(scaleX = if (flip) -scale else scale, scaleY = scale, translationX = offset.x, translationY = offset.y)) {
+            RemoteImage(deck, thumb, Modifier.fillMaxSize(), crop = false, transparentBg = true, filter = filter)
+            RemoteImage(deck, preview, Modifier.fillMaxSize(), crop = false, transparentBg = true, filter = filter)
+            if (scale > 1.4f && hi != null) RemoteImage(deck, hi, Modifier.fillMaxSize(), crop = false, transparentBg = true, filter = filter)
         }
     }
 }

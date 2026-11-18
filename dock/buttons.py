@@ -78,13 +78,14 @@ def _win_clipboard(text):
         u.CloseClipboard()
 KINDS = ("hotkey", "text", "url", "folder", "app", "command")
 ICONS = ("frame", "link", "folder", "app", "star", "play", "note", "computer", "display", "cup", "moon", "check",
-         "calendar", "book", "gear", "volume", "qr", "reset", "drive", "pencil")
+         "calendar", "book", "gear", "volume", "qr", "reset", "drive", "pencil", "drop", "plus", "archive", "sun",
+         "expand", "prev", "next")
 
 
 def clean(lst):
     """Validate the list of buttons sent by a client."""
     out = []
-    for b in (lst or [])[:48]:
+    for b in (lst or [])[:160]:
         if not isinstance(b, dict) or b.get("kind") not in KINDS:
             continue
         value = str(b.get("value") or "")[:2000]
@@ -92,7 +93,9 @@ def clean(lst):
             continue
         out.append({"id": str(b.get("id") or uuid.uuid4().hex[:8])[:16], "title": str(b.get("title") or "Кнопка")[:40],
                     "icon": b.get("icon") if b.get("icon") in ICONS else "star", "kind": b["kind"], "value": value,
-                    "color": str(b.get("color") or "")[:9] if re.match(r"^#[0-9a-fA-F]{6}$", str(b.get("color") or "")) else ""})
+                    "color": str(b.get("color") or "")[:9] if re.match(r"^#[0-9a-fA-F]{6}$", str(b.get("color") or "")) else "",
+                    # the programs this button belongs to (ready-made sets); empty = always shown
+                    "apps": [str(a)[:40] for a in (b.get("apps") or []) if isinstance(a, str) and a.strip()][:8]})
     return out
 
 
@@ -129,7 +132,9 @@ def parse_combo(s):
     parts = [p.strip().lower() for p in re.split(r"\s*\+\s*", s.strip()) if p.strip()]
     if not parts:
         return [], ""
-    return parts[:-1], parts[-1]
+    # «mod»: the main modifier of the system — ⌘ on a Mac, Ctrl elsewhere (ready-made sets use it)
+    mods = [("cmd" if MAC else "ctrl") if p == "mod" else p for p in parts[:-1]]
+    return mods, parts[-1]
 
 
 def _osa(script):
@@ -168,7 +173,9 @@ def press(combo):
              "alt": "alt", "option": "alt", "shift": "shift"}
     xkey = {"enter": "Return", "return": "Return", "esc": "Escape", "escape": "Escape", "space": "space", "tab": "Tab",
             "delete": "Delete", "backspace": "BackSpace", "left": "Left", "right": "Right", "up": "Up", "down": "Down",
-            "home": "Home", "end": "End", "pageup": "Prior", "pagedown": "Next"}.get(key, key.upper() if re.match(r"^f\d+$", key) else key)
+            "home": "Home", "end": "End", "pageup": "Prior", "pagedown": "Next", "[": "bracketleft", "]": "bracketright",
+            "\\": "backslash", "-": "minus", "=": "equal", ",": "comma", ".": "period", "/": "slash", ";": "semicolon",
+            "'": "apostrophe", "`": "grave"}.get(key, key.upper() if re.match(r"^f\d+$", key) else key)
     combo_x = "+".join([xmods.get(m, m) for m in mods] + [xkey])
     if os.environ.get("WAYLAND_DISPLAY"):
         if shutil.which("wtype"):

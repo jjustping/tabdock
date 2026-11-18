@@ -53,3 +53,10 @@ def sysinfo(real):
     if d.get("mem"):
         d["mem"] = dict(d["mem"], total=16 * g, used=int(16 * g * d["mem"]["pct"] / 100))
     return d
+
+
+def recent():
+    now = time.time()
+    return [{"path": "/demo/%s" % n, "name": n, "ext": n.rsplit(".", 1)[1], "app": a, "folder": f, "at": now - h * 3600}
+            for n, a, f, h in [("Портрет_ретушь.psd", "Photon Studio", "Портреты", 1), ("Скетч_дракон.kra", "", "Рисунки", 3),
+                               ("Обложка.afdesign", "", "Дизайн", 26)]]

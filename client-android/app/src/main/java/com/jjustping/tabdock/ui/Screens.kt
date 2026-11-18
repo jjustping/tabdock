@@ -177,7 +177,8 @@ class Dialogs(val deck: Deck) {
     } }
 
     fun widgetOpts(w: JSONObject, all: JSONObject?, save: (JSONObject) -> Unit) { current = {
-        if (w.s("type") == "buttons") ButtonsEditor(Ctx(deck, all, null, {}, {}, {}, {})) { close() }
+        if (w.s("type") == "buttons") ButtonsEditor(Ctx(deck, all, null, {}, {}, {}, {}), (w.o("opts")?.optBoolean("follow") == true),
+            { on -> save(JSONObject((w.o("opts") ?: JSONObject()).toString()).put("follow", on)) }) { close() }
         else if (w.s("type") in setOf("hosts", "backups", "git", "ci")) AdminEditor(Ctx(deck, all, null, {}, {}, {}, {}), w.s("type")) { close() }
         else if (w.s("type") == "note") Sheet("Какую заметку показывать") {
             Grid(all.a("notes").objs(), 3) { n -> Inner(Modifier.fillMaxWidth(), onClick = { save(JSONObject().put("noteId", n.s("id"))); close() }) { T(n.s("title"), 15.sp, maxLines = 2) } }
