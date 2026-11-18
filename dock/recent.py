@@ -7,6 +7,7 @@ Spotlight on a Mac, ~/.local/share/recently-used.xbel on Linux, the Recent folde
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -83,6 +84,8 @@ def _linux_xbel():
         if not href.startswith("file://"):
             continue
         p = urllib.parse.unquote(urllib.parse.urlparse(href).path)
+        if re.match(r"^/[A-Za-z]:", p):          # file:///C:/… on Windows
+            p = p[1:]
         at = b.get("visited") or b.get("modified") or ""
         try:
             t = time.mktime(time.strptime(at[:19], "%Y-%m-%dT%H:%M:%S"))

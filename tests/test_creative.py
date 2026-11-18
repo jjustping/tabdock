@@ -100,16 +100,16 @@ def test_recent_works(tmp_path, monkeypatch):
         (work / n).write_bytes(b"x")
     ps = tmp_path / ".config" / "Photon Studio"
     ps.mkdir(parents=True)
-    (ps / "preferences.json").write_text('{"recentFiles": ["%s", "%s/нет-такого.psd"]}' % (work / "фото.tif", work),
+    import json
+    (ps / "preferences.json").write_text(json.dumps({"recentFiles": [str(work / "фото.tif"), str(work / "нет-такого.psd")]}),
                                          encoding="utf-8")
     xbel = tmp_path / ".local" / "share"
     xbel.mkdir(parents=True)
-    from urllib.parse import quote
     (xbel / "recently-used.xbel").write_text(
         '<?xml version="1.0"?><xbel version="1.0" xmlns:bookmark="http://www.freedesktop.org/standards/desktop-bookmarks">'
-        + "".join('<bookmark href="file://%s" visited="2026-11-1%dT10:00:00Z"><info><metadata><bookmark:applications>'
+        + "".join('<bookmark href="%s" visited="2026-11-1%dT10:00:00Z"><info><metadata><bookmark:applications>'
                   '<bookmark:application name="%s"/></bookmark:applications></metadata></info></bookmark>'
-                  % (quote(str(work / n)), i, a) for i, (n, a) in enumerate([("портрет.psd", "GIMP"), ("скетч.kra", "Krita"),
+                  % ((work / n).as_uri(), i, a) for i, (n, a) in enumerate([("портрет.psd", "GIMP"), ("скетч.kra", "Krita"),
                                                                                ("отчёт.pdf", "Evince")]))
         + "</xbel>", encoding="utf-8")
     items = recent.collect()
@@ -133,7 +133,7 @@ def test_reference_board(tmp_path):
     (root / "Позы").mkdir(parents=True)
     (root / "Позы" / "поза1.jpg").write_bytes(b"x")
     (root / "свет.png").write_bytes(b"x")
-    (root / "заметки.txt").write_text("не картинка")
+    (root / "заметки.txt").write_text("не картинка", encoding="utf-8")
     (tmp_path / "секрет.jpg").write_bytes(b"x")
     d = refs.listing(str(root))
     assert sorted(i["rel"] for i in d["items"]) == ["Позы/поза1.jpg", "свет.png"]
